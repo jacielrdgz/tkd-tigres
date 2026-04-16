@@ -1,0 +1,36 @@
+# Root .gitignore for DojoCloud SaaS
+
+# Backend
+backend/.env
+backend/vendor/
+backend/storage/*.key
+backend/storage/framework/cache/data/*
+backend/storage/framework/sessions/*
+backend/storage/framework/testing/*
+backend/storage/framework/views/*.php
+backend/storage/logs/*.log
+backend/storage/app/public/alumnos/*
+backend/public/storage
+backend/bootstrap/cache/*.php
+backend/.phpunit.result.cache
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.vscode/
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
