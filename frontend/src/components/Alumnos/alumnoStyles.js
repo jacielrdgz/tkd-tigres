@@ -64,4 +64,4 @@
   input:            { width: '100%', fontSize: '14px', padding: '9px 12px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#e2e8f0', outline: 'none' },
   select:           { width: '100%', padding: '9px 12px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#e2e8f0', outline: 'none' },
   modalFooter:      { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #1e2130', paddingTop: '20px' },
-}
+}*/

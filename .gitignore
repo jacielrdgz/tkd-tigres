@@ -34,3 +34,5 @@ frontend/.vscode/
 Thumbs.db
 *.bak
 *.tmp
+
+storage/app/public/fotos
