@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAlumnoRequest;
+use App\Http\Requests\UpdateAlumnoRequest;
 use App\Models\Alumno;
 use App\Models\Asistencia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Carbon\Carbon;
 
 class AlumnoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Alumno::query();
+        $query = Alumno::query()->with('ultimoPago');
 
         // Filtros de búsqueda existentes
         if ($request->filled('search')) {
@@ -40,8 +41,7 @@ class AlumnoController extends Controller
         $alumnos->map(function ($alumno) {
             
             // 1. LÓGICA DEL SEMÁFORO (Último pago)
-            $ultimoPago = $alumno->pagos()->orderBy('fecha_pago', 'desc')->first();
-            $alumno->estatus_pago = $ultimoPago ? $ultimoPago->estado : 'pendiente';
+            $alumno->estatus_pago = $alumno->ultimoPago?->estado ?? 'pendiente';
 
             // 2. LÓGICA DE RACHA DE FALTAS (Últimas 5 asistencias)
             $ultimasAsistencias = Asistencia::where('alumno_id', $alumno->id)
@@ -66,21 +66,9 @@ class AlumnoController extends Controller
         return response()->json($alumnos);
     }
 
-    public function store(Request $request)
+    public function store(StoreAlumnoRequest $request)
     {
-        $validated = $request->validate([
-            'nombre'           => 'required|string|max:100',
-            'apellido_paterno' => 'required|string|max:100',
-            'apellido_materno' => 'required|string|max:100',
-            'nombre_tutor'     => 'required|string|max:100',
-            'telefono_tutor'   => 'required|string|max:20',
-            'email'            => 'nullable|email|max:150',
-            'fecha_nacimiento' => 'required|date|before:today',
-            'foto'             => 'nullable|image|max:2048',
-            'cinta'            => 'required|in:blanca,blanca_avanzada,amarilla,amarilla_avanzada,naranja,naranja_avanzada,verde,verde_avanzada,azul,azul_avanzada,marrón,marrón_avanzada,roja,roja_avanzada,negra',
-            'estatus'          => 'in:activo,inactivo',
-            'horario'          => 'nullable|string|max:50', // <--- CAMBIO: Se agregó horario
-        ]);
+        $validated = $request->validated();
 
         if ($request->hasFile('foto')) {
             $validated['foto'] = $request->file('foto')->store('fotos', 'public');
@@ -95,21 +83,9 @@ class AlumnoController extends Controller
         return response()->json($alumno->load(['pagos', 'asistencias']));
     }
 
-    public function update(Request $request, Alumno $alumno)
+    public function update(UpdateAlumnoRequest $request, Alumno $alumno)
     {
-        $validated = $request->validate([
-            'nombre'           => 'sometimes|string|max:100',
-            'apellido_paterno' => 'sometimes|string|max:100',
-            'apellido_materno' => 'sometimes|string|max:100',
-            'nombre_tutor'     => 'sometimes|string|max:100',
-            'telefono_tutor'   => 'sometimes|string|max:20',
-            'email'            => 'nullable|email|max:150',
-            'fecha_nacimiento' => 'sometimes|date|before:today',
-            'foto'             => 'nullable|image|max:2048',
-            'cinta'            => 'sometimes|in:blanca,blanca_avanzada,amarilla,amarilla_avanzada,naranja,naranja_avanzada,verde,verde_avanzada,azul,azul_avanzada,marrón,marrón_avanzada,roja,roja_avanzada,negra',
-            'estatus'          => 'sometimes|in:activo,inactivo',
-            'horario'          => 'sometimes|nullable|string|max:50', // <--- CAMBIO: Se agregó horario
-        ]);
+        $validated = $request->validated();
 
         if ($request->has('eliminar_foto') && $request->eliminar_foto == '1') {
             if ($alumno->foto) {
@@ -126,6 +102,16 @@ class AlumnoController extends Controller
         }
 
         $alumno->update($validated);
+        return response()->json($alumno);
+    }
+
+    public function quitarFoto(Alumno $alumno)
+    {
+        if ($alumno->foto) {
+            Storage::disk('public')->delete($alumno->foto);
+        }
+        $alumno->update(['foto' => null]);
+
         return response()->json($alumno);
     }
 

@@ -44,6 +44,12 @@ class Alumno extends Model
         return $this->hasMany(Pago::class);
     }
 
+    public function ultimoPago()
+    {
+        // Último pago por fecha de pago.
+        return $this->hasOne(Pago::class)->latestOfMany('fecha_pago');
+    }
+
     public function asistencias()
     {
         return $this->hasMany(Asistencia::class);
