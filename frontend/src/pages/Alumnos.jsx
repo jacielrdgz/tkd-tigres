@@ -25,13 +25,18 @@ const COLOR_CINTA = {
   negra: '#1e293b',
 }
 
+const limpiarDato = (val) => {
+  if (val === null || val === undefined || val === 'null' || val === 'NULL' || val === '') return '-'
+  return typeof val === 'string' ? val.trim() : val
+}
+
 const capitalizar = (str) =>
   str ? str.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ') : ''
 
 const obtenerIniciales = (nombre, apellido) => {
   if (!nombre) return '?'
-  const n = nombre.trim().charAt(0)
-  const a = apellido ? apellido.trim().charAt(0) : ''
+  const n = limpiarDato(nombre).charAt(0)
+  const a = apellido ? limpiarDato(apellido).charAt(0) : ''
   return (n + a).toUpperCase()
 }
 
@@ -98,9 +103,6 @@ export default function Alumnos() {
 
   const cargar = () => {
     setCargando(true)
-    
-    // Siempre traemos los totales reales al iniciar o cambiar búsqueda
-    // Para que los números no salgan como '--'
     const params = { search: busqueda }
     if (estatusFiltro !== 'todos') params.estatus = estatusFiltro
 
@@ -108,18 +110,10 @@ export default function Alumnos() {
       .then(res => {
         setAlumnos(res.data)
         
-        // Si estamos en un filtro específico, solo conocemos ese total.
-        // Pero para que NUNCA salga '--', lo ideal es tener un endpoint de totales
-        // O traer todos y filtrar en el front si la lista no es gigante.
-        // Como solución rápida y efectiva: si es la carga inicial o búsqueda, actualizamos el total actual.
-        setTotales(prev => ({ ...prev, [estatusFiltro]: res.data.length }))
-
-        // Para obtener los OTROS totales sin recargar todo:
-        if (estatusFiltro === 'todos') {
-          const act = res.data.filter(a => a.estatus === 'activo').length
-          const ina = res.data.filter(a => a.estatus === 'inactivo').length
-          setTotales({ activo: act, inactivo: ina, todos: res.data.length })
-        }
+        // Sincronización inteligente de totales en cada carga
+        const act = res.data.filter(a => a.estatus === 'activo').length
+        const ina = res.data.filter(a => a.estatus === 'inactivo').length
+        setTotales({ activo: act, inactivo: ina, todos: res.data.length })
       })
       .catch(() => {
         setAlumnos([])
@@ -127,6 +121,7 @@ export default function Alumnos() {
       })
       .finally(() => setCargando(false))
   }
+
   const alternarEstatus = async (alumno) => {
     try {
       await api.patch(`/alumnos/${alumno.id}/toggle-estatus`)
@@ -138,15 +133,6 @@ export default function Alumnos() {
   };
 
   useEffect(() => { cargar() }, [busqueda, estatusFiltro])
-
-  // Carga inicial de totales para que no aparezca '--'
-  useEffect(() => {
-    api.get('/alumnos').then(res => {
-      const act = res.data.filter(a => a.estatus === 'activo').length
-      const ina = res.data.filter(a => a.estatus === 'inactivo').length
-      setTotales({ activo: act, inactivo: ina, todos: res.data.length })
-    })
-  }, [])
 
   useEffect(() => {
     const handleEsc = (event) => {
@@ -295,31 +281,39 @@ export default function Alumnos() {
   }
 
   const abrirEliminar = (alumno) => {
-    setAlumnoEliminar(alumno)
-    setModalEliminar(true)
+    if (!alumno) return
+    
+    Swal.fire({
+      title: '¿Eliminar alumno?',
+      text: `Estás a punto de borrar a ${alumno.nombre}. Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#334155',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#13151f',
+      color: '#fff',
+      customClass: {
+        popup: 'swal-custom-premium'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        confirmarEliminar(alumno.id)
+      }
+    })
   }
 
-  const confirmarEliminar = async () => {
-    if (!alumnoEliminar) return
-
+  const confirmarEliminar = async (id) => {
     try {
-      setEliminandoId(alumnoEliminar.id)
-
-      // Espera para que se vea la animación
-      setTimeout(async () => {
-        await api.delete(`/alumnos/${alumnoEliminar.id}`)
-
-        toastSuccess('Alumno eliminado correctamente 🗑️')
-
-        setModalEliminar(false)
-        setAlumnoEliminar(null)
-        setEliminandoId(null)
-
-        cargar()
-      }, 300)
+      setEliminandoId(id)
+      await api.delete(`/alumnos/${id}`)
+      toastSuccess('Alumno eliminado correctamente 🗑️')
+      cargar()
     } catch (err) {
-      setEliminandoId(null)
       toastError('No se pudo eliminar el alumno')
+    } finally {
+      setEliminandoId(null)
     }
   }
 
@@ -358,15 +352,26 @@ export default function Alumnos() {
   // ----------------------------------------------
 
   const exportarExcel = () => {
+    if (alumnosMostrados.length === 0) {
+      return Swal.fire({
+        title: 'Reporte Vacío',
+        text: 'No hay alumnos que coincidan con los filtros actuales para exportar.',
+        icon: 'info',
+        confirmButtonColor: '#3b82f6',
+        background: '#13151f',
+        color: '#fff'
+      })
+    }
+
     try {
       const data = alumnosMostrados.map(a => ({
         ID: a.id,
-        Nombre: `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno}`,
-        Edad: `${a.edad} años`,
-        Cinta: capitalizar(a.cinta),
-        Teléfono: a.telefono_tutor || '-',
-        Estatus: capitalizar(a.estatus),
-        Horario: a.horario || '-'
+        Nombre: `${limpiarDato(a.nombre)} ${limpiarDato(a.apellido_paterno)} ${limpiarDato(a.apellido_materno)}`,
+        Edad: `${a.edad || 0} años`,
+        Cinta: capitalizar(a.cinta || 'blanca'),
+        Teléfono: limpiarDato(a.telefono_tutor),
+        Estatus: capitalizar(a.estatus || 'activo'),
+        Horario: limpiarDato(a.horario)
       }))
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
@@ -379,6 +384,17 @@ export default function Alumnos() {
   }
 
   const exportarPDF = () => {
+    if (alumnosMostrados.length === 0) {
+      return Swal.fire({
+        title: 'Reporte Vacío',
+        text: 'No hay alumnos que coincidan con los filtros actuales para exportar.',
+        icon: 'info',
+        confirmButtonColor: '#3b82f6',
+        background: '#13151f',
+        color: '#fff'
+      })
+    }
+
     try {
       const doc = new jsPDF()
       doc.setFontSize(20)
@@ -393,10 +409,10 @@ export default function Alumnos() {
       const tableColumn = ["ID", "Nombre Alumno", "Edad", "Cinta", "Teléfono Tutor", "Estatus"]
       const tableRows = alumnosMostrados.map(a => [
         a.id || '-',
-        `${a.nombre || ''} ${a.apellido_paterno || ''} ${a.apellido_materno || ''}`.trim(),
+        `${limpiarDato(a.nombre)} ${limpiarDato(a.apellido_paterno)} ${limpiarDato(a.apellido_materno)}`,
         `${a.edad || 0} años`,
         capitalizar(a.cinta || 'blanca'),
-        a.telefono_tutor || '-',
+        limpiarDato(a.telefono_tutor),
         capitalizar(a.estatus || 'activo')
       ])
 
@@ -726,8 +742,8 @@ export default function Alumnos() {
                 <InfoItem label="F. Nac." value={alumnoVer.fecha_nacimiento} />
                 <InfoItem label="Edad" value={alumnoVer.edad + ' años'} />
                 <InfoItem label="Cinta" value={capitalizar(alumnoVer.cinta)} />
-                <InfoItem label="Tutor" value={alumnoVer.nombre_tutor || 'N/A'} />
-                <InfoItem label="Teléfono" value={alumnoVer.telefono_tutor || 'N/A'} />
+                <InfoItem label="Tutor" value={limpiarDato(alumnoVer.nombre_tutor)} />
+                <InfoItem label="Teléfono" value={limpiarDato(alumnoVer.telefono_tutor)} />
                 <InfoItem label="Correo" value={(alumnoVer.email && alumnoVer.email !== 'NULL' && alumnoVer.email !== 'null') ? alumnoVer.email : 'N/A'} />
                 <InfoItem label="Status" value={capitalizar(alumnoVer.estatus)} />
               </div>
@@ -750,122 +766,7 @@ export default function Alumnos() {
         </div>
       )}
 
-      {modalEliminar && alumnoEliminar && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            backdropFilter: 'blur(4px)'
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '420px',
-              background: '#13151f',
-              border: '1px solid #1e2130',
-              borderRadius: '18px',
-              padding: '28px',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
-              animation: 'fadeIn .25s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '22px' }}>
-              {alumnoEliminar.foto_url ? (
-                <img
-                  src={alumnoEliminar.foto_url}
-                  alt="Alumno"
-                  style={{
-                    width: '62px',
-                    height: '62px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '2px solid #1e2130'
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '62px',
-                    height: '62px',
-                    borderRadius: '50%',
-                    background: '#1e2130',
-                    color: '#e2e8f0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '22px',
-                    fontWeight: 700
-                  }}
-                >
-                  {obtenerIniciales(
-                    alumnoEliminar.nombre,
-                    alumnoEliminar.apellido_paterno
-                  )}
-                </div>
-              )}
-              <div>
-                <div
-                  style={{
-                    color: '#fff',
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    marginBottom: '4px'
-                  }}
-                >
-                  ¿Eliminar alumno?
-                </div>
-
-                <div style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.5 }}>
-                  {alumnoEliminar.nombre} {alumnoEliminar.apellido_paterno}
-                  <br />
-                  Esta acción no se puede deshacer.
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                onClick={() => {
-                  setModalEliminar(false)
-                  setAlumnoEliminar(null)
-                }}
-                style={{
-                  background: '#1e2130',
-                  color: '#cbd5e1',
-                  border: '1px solid #2a2f45',
-                  borderRadius: '10px',
-                  padding: '10px 18px',
-                  cursor: 'pointer',
-                  fontWeight: 600
-                }}
-              >
-                Cancelar
-              </button>
-
-              <button
-                onClick={confirmarEliminar}
-                style={{
-                  background: '#ef4444',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '10px 18px',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  boxShadow: '0 10px 25px rgba(239,68,68,.25)'
-                }}
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Deletion modal replaced by Swal.fire */}
 
       {modal && (
         <div style={s.overlay}>
@@ -1061,8 +962,8 @@ const s = {
   tabActiveVerde: { padding: '8px 16px', background: '#14532d', border: 'none', color: '#4ade80', borderRadius: '8px', fontWeight: '600', fontSize: '13px', minWidth: '120px', textAlign: 'center' },
   tabActiveRojo: { padding: '8px 16px', background: '#450a0a', border: 'none', color: '#f87171', borderRadius: '8px', fontWeight: '600', fontSize: '13px', minWidth: '120px', textAlign: 'center' },
   tabActiveAzul: { padding: '8px 16px', background: '#1e3a8a', border: 'none', color: '#60a5fa', borderRadius: '8px', fontWeight: '600', fontSize: '13px', minWidth: '120px', textAlign: 'center' },
-  filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' },
-  selectFiltro: { padding: '8px 8px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#cbd5e1', outline: 'none', fontSize: '13px', cursor: 'pointer' },
+  filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap', gap: '12px' },
+  selectFiltro: { padding: '8px 8px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#cbd5e1', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '140px' },
   btnLimpiarWrapper: { display: 'inline-block', width: '90px' },
   btnLimpiar: { width: '100%', padding: '8px 10px', background: '#1e2130', border: '1px solid #334155', color: '#cbd5e1', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
   btnExportExcel: { background: '#065f46', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', whiteSpace: 'nowrap' },
