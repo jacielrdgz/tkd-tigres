@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import api from '../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 const CINTAS = [
   'blanca', 'blanca_avanzada', 'amarilla', 'amarilla_avanzada',
@@ -95,10 +98,28 @@ export default function Alumnos() {
 
   const cargar = () => {
     setCargando(true)
-    api.get('/alumnos', { params: { search: busqueda, estatus: estatusFiltro } })
+    
+    // Siempre traemos los totales reales al iniciar o cambiar búsqueda
+    // Para que los números no salgan como '--'
+    const params = { search: busqueda }
+    if (estatusFiltro !== 'todos') params.estatus = estatusFiltro
+
+    api.get('/alumnos', { params })
       .then(res => {
         setAlumnos(res.data)
+        
+        // Si estamos en un filtro específico, solo conocemos ese total.
+        // Pero para que NUNCA salga '--', lo ideal es tener un endpoint de totales
+        // O traer todos y filtrar en el front si la lista no es gigante.
+        // Como solución rápida y efectiva: si es la carga inicial o búsqueda, actualizamos el total actual.
         setTotales(prev => ({ ...prev, [estatusFiltro]: res.data.length }))
+
+        // Para obtener los OTROS totales sin recargar todo:
+        if (estatusFiltro === 'todos') {
+          const act = res.data.filter(a => a.estatus === 'activo').length
+          const ina = res.data.filter(a => a.estatus === 'inactivo').length
+          setTotales({ activo: act, inactivo: ina, todos: res.data.length })
+        }
       })
       .catch(() => {
         setAlumnos([])
@@ -117,6 +138,15 @@ export default function Alumnos() {
   };
 
   useEffect(() => { cargar() }, [busqueda, estatusFiltro])
+
+  // Carga inicial de totales para que no aparezca '--'
+  useEffect(() => {
+    api.get('/alumnos').then(res => {
+      const act = res.data.filter(a => a.estatus === 'activo').length
+      const ina = res.data.filter(a => a.estatus === 'inactivo').length
+      setTotales({ activo: act, inactivo: ina, todos: res.data.length })
+    })
+  }, [])
 
   useEffect(() => {
     const handleEsc = (event) => {
@@ -327,8 +357,71 @@ export default function Alumnos() {
   })
   // ----------------------------------------------
 
+  const exportarExcel = () => {
+    try {
+      const data = alumnosMostrados.map(a => ({
+        ID: a.id,
+        Nombre: `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno}`,
+        Edad: `${a.edad} años`,
+        Cinta: capitalizar(a.cinta),
+        Teléfono: a.telefono_tutor || '-',
+        Estatus: capitalizar(a.estatus),
+        Horario: a.horario || '-'
+      }))
+      const ws = XLSX.utils.json_to_sheet(data)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "Alumnos")
+      XLSX.writeFile(wb, `Lista_Alumnos_${new Date().toISOString().split('T')[0]}.xlsx`)
+      toastSuccess("Archivo Excel generado 📊")
+    } catch (err) {
+      toastError("Error al generar Excel")
+    }
+  }
+
+  const exportarPDF = () => {
+    try {
+      const doc = new jsPDF()
+      doc.setFontSize(20)
+      doc.setTextColor(20, 30, 40)
+      doc.text("Reporte de Alumnos - TKD Tigres", 14, 20)
+      
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+      doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 28)
+      doc.text(`Total de alumnos listados: ${alumnosMostrados.length}`, 14, 34)
+
+      const tableColumn = ["ID", "Nombre Alumno", "Edad", "Cinta", "Teléfono Tutor", "Estatus"]
+      const tableRows = alumnosMostrados.map(a => [
+        a.id || '-',
+        `${a.nombre || ''} ${a.apellido_paterno || ''} ${a.apellido_materno || ''}`.trim(),
+        `${a.edad || 0} años`,
+        capitalizar(a.cinta || 'blanca'),
+        a.telefono_tutor || '-',
+        capitalizar(a.estatus || 'activo')
+      ])
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 40,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 8 },
+        columnStyles: {
+          1: { cellWidth: 60 }
+        }
+      })
+      
+      doc.save(`Reporte_Alumnos_${new Date().toISOString().split('T')[0]}.pdf`)
+      toastSuccess("Documento PDF generado 📄")
+    } catch (err) {
+      console.error(err)
+      toastError("Error al generar PDF")
+    }
+  }
+
   return (
-    <div>
+    <div style={s.container}>
       <div style={s.header}>
         <div>
           <h2 style={s.titulo}>Alumnos</h2>
@@ -354,56 +447,75 @@ export default function Alumnos() {
         />
         <div style={s.tabs}>
           <button
+            style={estatusFiltro === 'todos' ? s.tabActiveAzul : s.tab}
+            onClick={() => setEstatusFiltro('todos')}
+          >
+            Todos ({cargando && estatusFiltro === 'todos' ? '--' : (estatusFiltro === 'todos' ? alumnos.length : (totales.todos || '--'))})
+          </button>
+          <button
             style={estatusFiltro === 'activo' ? s.tabActiveVerde : s.tab}
             onClick={() => setEstatusFiltro('activo')}
           >
-            Activos ({cargando ? '--' : (estatusFiltro === 'activo' ? alumnos.length : totales.activo)})
+            Activos ({cargando && estatusFiltro === 'activo' ? '--' : (estatusFiltro === 'activo' ? alumnos.length : totales.activo)})
           </button>
           <button
             style={estatusFiltro === 'inactivo' ? s.tabActiveRojo : s.tab}
             onClick={() => setEstatusFiltro('inactivo')}
           >
-            Inactivos ({cargando ? '--' : (estatusFiltro === 'inactivo' ? alumnos.length : totales.inactivo)})
+            Inactivos ({cargando && estatusFiltro === 'inactivo' ? '--' : (estatusFiltro === 'inactivo' ? alumnos.length : totales.inactivo)})
           </button>
         </div>
       </div>
 
       <div style={s.filtrosSecundarios}>
-        <select style={s.selectFiltro} value={cintaFiltro} onChange={e => setCintaFiltro(e.target.value)}>
-          <option value="">Todas las cintas</option>
-          {CINTAS.map(c => <option key={c} value={c}>{capitalizar(c)}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select style={{ ...s.selectFiltro, width: '150px' }} value={cintaFiltro} onChange={e => setCintaFiltro(e.target.value)}>
+            <option value="">Todas las cintas</option>
+            {CINTAS.map(c => <option key={c} value={c}>{capitalizar(c)}</option>)}
+          </select>
+  
+          <select style={{ ...s.selectFiltro, width: '140px' }} value={edadFiltro} onChange={e => setEdadFiltro(e.target.value)}>
+            <option value="">Todas las edades</option>
+            <option value="infantil">Infantil (3-11)</option>
+            <option value="cadete">Cadete (12-14)</option>
+            <option value="juvenil">Juvenil (15-17)</option>
+            <option value="adultos">Adultos (+18)</option>
+          </select>
+  
+          <select style={{ ...s.selectFiltro, width: '160px' }} value={horarioFiltro} onChange={e => setHorarioFiltro(e.target.value)}>
+            <option value="">Todos los horarios</option>
+            {horariosUnicos.map(h => <option key={h} value={h}>{h}</option>)}
+          </select>
+  
+          <select style={{ ...s.selectFiltro, width: '160px' }} value={orden} onChange={e => setOrden(e.target.value)}>
+            <option value="id">Ordenar por ID</option>
+            <option value="cinta_desc">Cinta (Mayor a menor)</option>
+            <option value="cinta_asc">Cinta (Menor a mayor)</option>
+            <option value="edad_asc">Edad (Menor a mayor)</option>
+            <option value="edad_desc">Edad (Mayor a menor)</option>
+            <option value="horario_asc">Horario (Temprano a tarde)</option>
+          </select>
+  
+          <div style={{ ...s.btnLimpiarWrapper, visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id') ? 'visible' : 'hidden' }}>
+            <button
+              style={s.btnLimpiar}
+              onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id') }}
+            >
+              ↻ Limpiar
+            </button>
+          </div>
+        </div>
 
-        <select style={s.selectFiltro} value={edadFiltro} onChange={e => setEdadFiltro(e.target.value)}>
-          <option value="">Todas las edades</option>
-          <option value="infantil">Infantil (3-11)</option>
-          <option value="cadete">Cadete (12-14)</option>
-          <option value="juvenil">Juvenil (15-17)</option>
-          <option value="adultos">Adultos (+18)</option>
-        </select>
-
-        <select style={s.selectFiltro} value={horarioFiltro} onChange={e => setHorarioFiltro(e.target.value)}>
-          <option value="">Todos los horarios</option>
-          {horariosUnicos.map(h => <option key={h} value={h}>{h}</option>)}
-        </select>
-
-        <select style={s.selectFiltro} value={orden} onChange={e => setOrden(e.target.value)}>
-          <option value="id">Ordenar por ID</option>
-          <option value="cinta_desc">Cinta (Mayor a menor)</option>
-          <option value="cinta_asc">Cinta (Menor a mayor)</option>
-          <option value="edad_asc">Edad (Menor a mayor)</option>
-          <option value="edad_desc">Edad (Mayor a menor)</option>
-          <option value="horario_asc">Horario (Temprano a tarde)</option>
-        </select>
-
-        {(cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id') && (
-          <button
-            style={s.btnLimpiar}
-            onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id') }}
-          >
-            ↻ Limpiar
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button style={s.btnExportExcel} onClick={exportarExcel}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Excel
           </button>
-        )}
+          <button style={s.btnExportPdf} onClick={exportarPDF}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+            PDF
+          </button>
+        </div>
       </div>
 
       {/* Skeleton pulse animation */}
@@ -416,20 +528,26 @@ export default function Alumnos() {
 
       <div style={s.tabla}>
         <div style={s.tablaScroll}>
-          <table style={s.table}>
+          <table style={{ ...s.table, tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '57px' }} />
-              <col style={{ width: '295px' }} />
-              <col style={{ width: '40px' }} />
-              <col style={{ width: '130px' }} />
-              <col style={{ width: '120px' }} />
-              <col style={{ width: '100px' }} />
-              <col style={{ width: '180px' }} />
+              <col style={{ width: '65px' }} />  {/* Foto */}
+              <col style={{ width: '260px' }} /> {/* Alumno */}
+              <col style={{ width: '90px' }} /> {/* Edad */}
+              <col style={{ width: '150px' }} /> {/* Cinta */}
+              <col style={{ width: '130px' }} /> {/* Teléfono */}
+              <col style={{ width: '110px' }} /> {/* Estatus */}
+              <col style={{ width: '150px' }} /> {/* Acciones */}
             </colgroup>
             <thead>
+              {/* Reemplaza el <tr> de los títulos por este: */}
               <tr>
                 {['Foto', 'Alumno', 'Edad', 'Cinta', 'Teléfono', 'Estatus', 'Acciones'].map(h => (
-                  <th key={h} style={s.th}>{h}</th>
+                  <th
+                    key={h}
+                    style={{ ...s.th, textAlign: h === 'Alumno' ? 'left' : 'center' }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -438,83 +556,138 @@ export default function Alumnos() {
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} style={s.tr}>
                     <td style={s.td}><SkeletonCircle /></td>
-                    <td style={s.td}><SkeletonLines /></td> {/* Nombre y ID */}
-                    <td style={s.td}><SkeletonBlock w="40px" /></td> {/* Edad */}
-                    <td style={s.td}><SkeletonBlock w="100px" h={24} /></td> {/* Cinta */}
-                    <td style={s.td}><SkeletonBlock w="90px" /></td> {/* Teléfono */}
-                    <td style={s.td}><SkeletonBlock w="80px" h={24} /></td> {/* Estatus */}
+                    <td style={{ ...s.td, textAlign: 'left' }}><SkeletonLines /></td>
+                    <td style={s.td}><SkeletonBlock w="40px" /></td>
+                    <td style={s.td}><SkeletonBlock w="100px" h={24} /></td>
+                    <td style={s.td}><SkeletonBlock w="90px" /></td>
+                    <td style={s.td}><SkeletonBlock w="80px" h={24} /></td>
                     <td style={s.td}>
                       <div style={s.acciones}>
-                        <SkeletonBlock w={45} h={28} />
-                        <SkeletonBlock w={45} h={28} />
-                        <SkeletonBlock w={45} h={28} />
+                        <SkeletonBlock w={35} h={32} />
+                        <SkeletonBlock w={35} h={32} />
+                        <SkeletonBlock w={35} h={32} />
                       </div>
                     </td>
                   </tr>
                 ))
               ) : alumnosMostrados.length === 0 ? (
-                <tr><td colSpan={8} style={s.tdCenter}>No hay alumnos registrados que coincidan con los filtros</td></tr>
-              ) : alumnosMostrados.map(a => (
-                <tr key={a.id} style={s.tr}>
-                  <td style={s.td}>
-                    <div style={{ position: 'relative', width: '36px', height: '36px' }}>
-                      {tieneFoto(a.foto_url) ? (
-                        <img
-                          src={limpiarUrl(a.foto_url)}
-                          alt="foto"
-                          style={s.fotoTabla}
-                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
-                        />
-                      ) : null}
-                      <div style={{ ...s.fotoVacia, display: tieneFoto(a.foto_url) ? 'none' : 'flex' }}>
-                        {obtenerIniciales(a.nombre, a.apellido_paterno)}
-                      </div>
-                    </div>
-                  </td>
-                  <td style={s.td}>
-                    <div style={s.nombreNom} title={`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno}`}>
-                      {a.nombre} {a.apellido_paterno} {a.apellido_materno}
-                    </div>
-                    <div style={s.emailSub} title={`ID: ${a.id}${a.email ? ` | ${a.email}` : ''}`}>
-                      ID: {a.id} {a.email && a.email !== 'NULL' && a.email !== 'null' && <>&nbsp;|&nbsp; {a.email}</>}
-                    </div>
-                  </td>
-                  <td style={s.td}>{a.edad} años</td>
-                  <td style={s.td}>
-                    <span style={{
-                      ...s.cinta,
-                      background: COLOR_CINTA[a.cinta] || '#334155',
-                      color: a.cinta && a.cinta.includes('blanca') ? '#0f172a' : '#fff'
-                    }}>
-                      {capitalizar(a.cinta)}
-                    </span>
-                  </td>
-                  <td style={s.td}>{a.nombre_tutor || '-'}</td>
-                  <td style={s.td}>{a.telefono_tutor || '-'}</td>
-                  <td style={s.td}>
-                    <span
-                      onClick={() => alternarEstatus(a)}
-                      style={{
-                        ...s.badge,
-                        background: a.estatus === 'activo' ? s.statusActivoBg : s.statusInactivoBg,
-                        color: a.estatus === 'activo' ? s.statusActivoText : s.statusInactivoText,
-                        cursor: 'pointer',
-                        userSelect: 'none'
-                      }}
-                      title="Clic para cambiar status"
-                    >
-                      {capitalizar(a.estatus)}
-                    </span>
-                  </td>
-                  <td style={s.td}>
-                    <div style={s.acciones}>
-                      <button style={s.btnVer} onClick={() => abrirVer(a)}>Ver</button>
-                      <button style={s.btnEdit} onClick={() => abrirEditar(a)}>Editar</button>
-                      <button style={s.btnDel} onClick={() => abrirEliminar(a)}>Borrar</button>
-                    </div>
+                <tr>
+                  <td colSpan={7} style={{ ...s.td, padding: '40px', color: '#64748b' }}>
+                    No hay alumnos registrados que coincidan con los filtros
                   </td>
                 </tr>
-              ))}
+              ) : (
+                alumnosMostrados.map(a => (
+                  <tr key={a.id} style={s.tr}>
+                    <td style={s.td}>
+                      <div style={{ position: 'relative', width: '36px', height: '36px', margin: '0 auto' }}>
+                        {tieneFoto(a.foto_url) ? (
+                          <img
+                            src={limpiarUrl(a.foto_url)}
+                            alt="foto"
+                            style={s.fotoTabla}
+                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+                          />
+                        ) : null}
+                        <div style={{ ...s.fotoVacia, display: tieneFoto(a.foto_url) ? 'none' : 'flex' }}>
+                          {obtenerIniciales(a.nombre, a.apellido_paterno)}
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* ALUMNO: ALINEADO A LA IZQUIERDA */}
+                    <td style={{ ...s.td, textAlign: 'left' }}>
+                      <div
+                        style={{
+                          ...s.nombreNom,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '240px'
+                        }}
+                        title={`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno}`}
+                      >
+                        {a.nombre} {a.apellido_paterno} {a.apellido_materno}
+                      </div>
+                      <div
+                        style={{
+                          ...s.emailSub,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '240px'
+                        }}
+                      >
+                        ID: {a.id} {a.email && a.email !== 'NULL' && a.email !== 'null' && (
+                          <span style={{ opacity: 0.5 }}> | {a.email}</span>
+                        )}
+                      </div>
+                    </td>
+
+                    <td style={s.td}>{a.edad} años</td>
+
+                    {/* CINTA: CENTRADA CON BADGE */}
+                    <td style={s.td}>
+                      <span style={{
+                        ...s.cinta,
+                        background: COLOR_CINTA[a.cinta] || '#334155',
+                        color: a.cinta && a.cinta.includes('blanca') ? '#0f172a' : '#fff',
+                        display: 'inline-block',
+                        minWidth: '100px',
+                        textAlign: 'center'
+                      }}>
+                        {capitalizar(a.cinta)}
+                      </span>
+                    </td>
+
+                    <td style={s.td}>{a.telefono_tutor || '-'}</td>
+
+                    <td style={s.td}>
+                      <span
+                        onClick={() => alternarEstatus(a)}
+                        style={{
+                          ...s.badge,
+                          background: a.estatus === 'activo' ? s.statusActivoBg : s.statusInactivoBg,
+                          color: a.estatus === 'activo' ? s.statusActivoText : s.statusInactivoText,
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                      >
+                        {capitalizar(a.estatus)}
+                      </span>
+                    </td>
+
+                    {/* ACCIONES: CENTRADAS */}
+                    <td style={s.td}>
+                      <div style={s.acciones}>
+                        <button
+                          style={{ ...s.btnIcon, background: 'rgba(148, 163, 184, 0.1)', color: '#94a3b8' }}
+                          onClick={() => abrirVer(a)}
+                          title="Ver"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                        </button>
+
+                        <button
+                          style={{ ...s.btnIcon, background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }}
+                          onClick={() => abrirEditar(a)}
+                          title="Editar"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                        </button>
+
+                        <button
+                          style={{ ...s.btnIcon, background: 'rgba(239, 68, 68, 0.1)', color: '#f87171' }}
+                          onClick={() => abrirEliminar(a)}
+                          title="Borrar"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -877,31 +1050,36 @@ const s = {
   statusInactivoBg: '#450a0a',
   statusInactivoText: '#f87171',
 
+  container: { scrollbarGutter: 'stable', paddingBottom: '40px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
   titulo: { fontSize: '24px', fontWeight: '700', color: '#f1f5f9' },
   sub: { fontSize: '15px', color: '#64748b', marginTop: '2px' },
-  barraAcciones: { display: 'flex', gap: '16px', marginBottom: '16px' },
-  search: { flex: 1, padding: '10px 16px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '80px', color: '#e2e8f0', outline: 'none' },
-  tabs: { display: 'flex', background: '#13151f', padding: '4px', borderRadius: '10px', border: '1px solid #1e2130' },
-  tab: { padding: '8px 16px', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px' },
-  tabActiveVerde: { padding: '8px 16px', background: '#14532d', border: 'none', color: '#4ade80', borderRadius: '8px', fontWeight: '600', fontSize: '13px' },
-  tabActiveRojo: { padding: '8px 16px', background: '#450a0a', border: 'none', color: '#f87171', borderRadius: '8px', fontWeight: '600', fontSize: '13px' },
-  filtrosSecundarios: { display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' },
-  selectFiltro: { padding: '8px 12px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#cbd5e1', outline: 'none', fontSize: '13px', cursor: 'pointer' },
-  btnLimpiar: { padding: '8px 16px', background: '#1e2130', border: '1px solid #334155', color: '#cbd5e1', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-  tabla: { background: '#13151f', borderRadius: '12px', border: '1px solid #1e2130', overflow: 'hidden' },
+  barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '16px' },
+  search: { flex: 1, maxWidth: '600px', padding: '10px 16px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '80px', color: '#e2e8f0', outline: 'none' },
+  tabs: { display: 'flex', background: '#13151f', padding: '4px', borderRadius: '10px', border: '1px solid #1e2130', flexShrink: 0 },
+  tab: { padding: '8px 16px', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center' },
+  tabActiveVerde: { padding: '8px 16px', background: '#14532d', border: 'none', color: '#4ade80', borderRadius: '8px', fontWeight: '600', fontSize: '13px', minWidth: '120px', textAlign: 'center' },
+  tabActiveRojo: { padding: '8px 16px', background: '#450a0a', border: 'none', color: '#f87171', borderRadius: '8px', fontWeight: '600', fontSize: '13px', minWidth: '120px', textAlign: 'center' },
+  tabActiveAzul: { padding: '8px 16px', background: '#1e3a8a', border: 'none', color: '#60a5fa', borderRadius: '8px', fontWeight: '600', fontSize: '13px', minWidth: '120px', textAlign: 'center' },
+  filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' },
+  selectFiltro: { padding: '8px 8px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#cbd5e1', outline: 'none', fontSize: '13px', cursor: 'pointer' },
+  btnLimpiarWrapper: { display: 'inline-block', width: '90px' },
+  btnLimpiar: { width: '100%', padding: '8px 10px', background: '#1e2130', border: '1px solid #334155', color: '#cbd5e1', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
+  btnExportExcel: { background: '#065f46', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', whiteSpace: 'nowrap' },
+  btnExportPdf: { background: '#991b1b', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', whiteSpace: 'nowrap' },
+  tabla: { background: '#13151f', borderRadius: '12px', border: '1px solid #1e2130', overflow: 'hidden', minHeight: '400px' },
   tablaScroll: { width: '100%', overflowX: 'auto', overflowY: 'hidden' },
-  table: { width: '100%', minWidth: '900px', borderCollapse: 'collapse', tableLayout: 'fixed' },
-  th: { padding: '10px 16px', textAlign: 'center', fontSize: '12px', color: '#64748b', borderBottom: '1px solid #1e2130', textTransform: 'uppercase', whiteSpace: 'nowrap' },
-  td: { padding: '10px 16px', fontSize: '14px', color: '#cbd5e1', verticalAlign: 'middle', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', height: '70px', },
+  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '1000px' },
+  th: { padding: '10px 16px', textAlign: 'center', fontSize: '12px', color: '#64748b', borderBottom: '1px solid #1e2130', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', },
+  td: { padding: '10px 16px', fontSize: '14px', color: '#cbd5e1', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', },
   tdCenter: { padding: '32px', textAlign: 'center', color: '#475569' },
   fotoTabla: { width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #1e2130' },
   fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: '#1e2d4a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#60a5fa' },
-  nombreNom: { fontWeight: '600', color: '#f1f5f9', overflow: 'hidden', textOverflow: 'hidden', },
-  emailSub: { fontSize: '12px', color: '#64748b', marginTop: '2px' },
-  cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600' },
-  badge: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600' },
-  acciones: { display: 'flex', gap: '5px' },
+  nombreNom: { fontWeight: '600', color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis' },
+  emailSub: { fontSize: '12px', color: '#94a3b8', marginTop: '2px' },
+  cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', minWidth: '100px' },
+  badge: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', },
+  acciones: { display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' },
   btnVer: { background: '#0f172a', border: '1px solid #1e2130', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: '#94a3b8', fontSize: '12px' },
   btnEdit: { background: '#1e2d4a', border: 'none', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: '#60a5fa', fontSize: '12px' },
   btnDel: { background: '#2d1515', border: 'none', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: '#f87171', fontSize: '12px' },
@@ -943,4 +1121,15 @@ const s = {
   inputError: { marginTop: '6px', fontSize: '12px', color: '#f87171', lineHeight: 1.2 },
   select: { width: '100%', padding: '9px 12px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#e2e8f0', outline: 'none' },
   modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #1e2130', paddingTop: '20px' },
+  btnIcon: {
+    padding: '8px',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+    background: 'rgba(255, 255, 255, 0.05)',
+  },
 }
