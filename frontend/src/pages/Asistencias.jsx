@@ -46,12 +46,12 @@ export default function Asistencias() {
     setHaCambiado(false)
     try {
       const [resAlumnos, resAsistencias] = await Promise.all([
-        api.get('/alumnos'), 
+        api.get('/alumnos'),
         api.get('/asistencias', { params: { fecha } })
       ])
       const todos = resAlumnos.data
       const datosAsist = resAsistencias.data
-      
+
       const mapa = {}
       todos.forEach(a => {
         const registro = datosAsist.find(r => r.alumno_id === a.id)
@@ -127,11 +127,11 @@ export default function Asistencias() {
   }
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: '0px' }}>
       <div style={s.header}>
         <div>
           <h2 style={s.titulo}>Asistencias</h2>
-          <p style={s.sub}>Centro de Talentos - Tigres Do</p>
+          <p style={s.sub}>Gestión de Asistencias</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -139,28 +139,34 @@ export default function Asistencias() {
               <div style={s.tabActiveVerde}>P: {stats.presentes}</div>
               <div style={s.tabActiveRojo}>A: {stats.ausentes}</div>
             </div>
-            <button 
+            <button
               style={{
-                ...s.btnPrimary, 
+                ...s.btnPrimary,
                 backgroundColor: haCambiado ? '#3b82f6' : '#1e293b',
                 boxShadow: haCambiado ? '0 0 15px rgba(59, 130, 246, 0.4)' : 'none'
-              }} 
-              onClick={guardar} 
+              }}
+              onClick={guardar}
               disabled={guardando}
             >
               {guardando ? '...' : haCambiado ? '💾 Guardar Cambios' : 'Guardado'}
             </button>
           </div>
           <div style={s.progressContainer}>
-             <div style={{ ...s.progressBar, width: `${stats.porcentaje}%` }}></div>
-             <span style={s.progressText}>{stats.porcentaje}% Asistencia</span>
+            <div style={{ ...s.progressBar, width: `${stats.porcentaje}%` }}></div>
+            <span style={s.progressText}>{stats.porcentaje}% Asistencia</span>
           </div>
         </div>
       </div>
 
       <div style={s.barraAcciones}>
+        <input
+          style={s.search}
+          placeholder="Buscar por nombre..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+        />
         <input type="date" style={s.inputFecha} value={fecha} onChange={e => setFecha(e.target.value)} />
-        
+
         <select style={s.selectCinta} value={filtroPrincipal} onChange={e => setFiltroPrincipal(e.target.value)}>
           <option value="todos">Mostrar: Todos</option>
           <option value="presentes">Mostrar: Presentes</option>
@@ -180,23 +186,18 @@ export default function Asistencias() {
           {alumnosFiltrados.every(a => asistencias[a.id]) ? '⏹ Desmarcar Visibles' : '✅ Marcar Visibles'}
         </button>
 
-        <input
-          style={s.search}
-          placeholder="Buscar por nombre..."
-          value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
-        />
+
       </div>
 
       <div style={s.tablaContenedor}>
         <table style={s.table}>
           <thead>
             <tr>
-              <th style={{...s.th, width: '80px'}}>Foto</th>
-              <th style={{...s.th, textAlign: 'left'}}>Nombre Completo</th>
-              <th style={{...s.th, width: '180px'}}>Cinta</th>
-              <th style={{...s.th, width: '130px'}}>Estatus</th>
-              <th style={{...s.th, width: '150px'}}>Asistencia</th>
+              <th style={{ ...s.th, width: '80px' }}>Foto</th>
+              <th style={{ ...s.th, textAlign: 'left' }}>Nombre Completo</th>
+              <th style={{ ...s.th, width: '180px' }}>Cinta</th>
+              <th style={{ ...s.th, width: '130px' }}>Estatus</th>
+              <th style={{ ...s.th, width: '150px' }}>Asistencia</th>
             </tr>
           </thead>
           <tbody>
@@ -221,7 +222,7 @@ export default function Asistencias() {
                   <td style={{ ...s.td, textAlign: 'left' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       {/* SEMÁFORO DE PAGOS */}
-                      <div 
+                      <div
                         title={`Estatus de pago: ${a.estatus_pago || 'N/A'}`}
                         style={{
                           width: '10px', height: '10px', borderRadius: '50%',
@@ -229,9 +230,9 @@ export default function Asistencias() {
                           boxShadow: `0 0 6px ${obtenerColorPago(a.estatus_pago)}`
                         }}
                       />
-                      
+
                       <div style={s.nombreNom}>{`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`}</div>
-                      
+
                       {/* ALERTA DE DESERCIÓN (3 o más faltas seguidas) */}
                       {a.racha_faltas >= 3 && (
                         <span title="Alerta: 3+ faltas seguidas" style={{ cursor: 'help' }}>⚠️</span>
@@ -280,7 +281,7 @@ const s = {
   statusActivoBg: '#14532d', statusActivoText: '#4ade80',
   statusInactivoBg: '#450a0a', statusInactivoText: '#f87171',
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  titulo: { fontSize: '24px', fontWeight: '700', color: '#f1f5f9', margin: 0 },
+  titulo: { fontSize: '24px', fontWeight: '700', color: '#f1f5f9', },
   sub: { fontSize: '15px', color: '#64748b', marginTop: '2px' },
   barraAcciones: { display: 'flex', gap: '12px', marginBottom: '16px', alignItems: 'center' },
   search: { flex: 1, padding: '10px 20px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '80px', color: '#e2e8f0', outline: 'none' },

@@ -16,12 +16,12 @@ const CINTAS = [
 
 const COLOR_CINTA = {
   blanca: '#e2e8f0', blanca_avanzada: '#cbd5e1',
-  amarilla: '#fbbf24', amarilla_avanzada: '#f59e0b',
-  naranja: '#fb923c', naranja_avanzada: '#f97316',
-  verde: '#4ade80', verde_avanzada: '#22c55e',
-  azul: '#60a5fa', azul_avanzada: '#3b82f6',
-  marrón: '#8B4513', marrón_avanzada: '#78350f',
-  roja: '#f87171', roja_avanzada: '#ef4444',
+  amarilla: '#ff9204ff', amarilla_avanzada: '#ff9204ff',
+  naranja: '#fc770aff', naranja_avanzada: '#fc770aff',
+  verde: '#015520ff', verde_avanzada: '#015520ff',
+  azul: '#003575ff', azul_avanzada: '#003575ff',
+  marrón: '#8b45136c', marrón_avanzada: '#8b45136c',
+  roja: '#ff0000c5', roja_avanzada: '#ff0000c5',
   negra: '#1e293b',
 }
 
@@ -109,7 +109,7 @@ export default function Alumnos() {
     api.get('/alumnos', { params })
       .then(res => {
         setAlumnos(res.data)
-        
+
         // Sincronización inteligente de totales en cada carga
         const act = res.data.filter(a => a.estatus === 'activo').length
         const ina = res.data.filter(a => a.estatus === 'inactivo').length
@@ -282,7 +282,7 @@ export default function Alumnos() {
 
   const abrirEliminar = (alumno) => {
     if (!alumno) return
-    
+
     Swal.fire({
       title: '¿Eliminar alumno?',
       text: `Estás a punto de borrar a ${alumno.nombre}. Esta acción no se puede deshacer.`,
@@ -400,7 +400,7 @@ export default function Alumnos() {
       doc.setFontSize(20)
       doc.setTextColor(20, 30, 40)
       doc.text("Reporte de Alumnos - TKD Tigres", 14, 20)
-      
+
       doc.setFontSize(10)
       doc.setTextColor(100)
       doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 28)
@@ -427,7 +427,7 @@ export default function Alumnos() {
           1: { cellWidth: 60 }
         }
       })
-      
+
       doc.save(`Reporte_Alumnos_${new Date().toISOString().split('T')[0]}.pdf`)
       toastSuccess("Documento PDF generado 📄")
     } catch (err) {
@@ -489,7 +489,7 @@ export default function Alumnos() {
             <option value="">Todas las cintas</option>
             {CINTAS.map(c => <option key={c} value={c}>{capitalizar(c)}</option>)}
           </select>
-  
+
           <select style={{ ...s.selectFiltro, width: '140px' }} value={edadFiltro} onChange={e => setEdadFiltro(e.target.value)}>
             <option value="">Todas las edades</option>
             <option value="infantil">Infantil (3-11)</option>
@@ -497,12 +497,12 @@ export default function Alumnos() {
             <option value="juvenil">Juvenil (15-17)</option>
             <option value="adultos">Adultos (+18)</option>
           </select>
-  
+
           <select style={{ ...s.selectFiltro, width: '160px' }} value={horarioFiltro} onChange={e => setHorarioFiltro(e.target.value)}>
             <option value="">Todos los horarios</option>
             {horariosUnicos.map(h => <option key={h} value={h}>{h}</option>)}
           </select>
-  
+
           <select style={{ ...s.selectFiltro, width: '160px' }} value={orden} onChange={e => setOrden(e.target.value)}>
             <option value="id">Ordenar por ID</option>
             <option value="cinta_desc">Cinta (Mayor a menor)</option>
@@ -511,7 +511,7 @@ export default function Alumnos() {
             <option value="edad_desc">Edad (Mayor a menor)</option>
             <option value="horario_asc">Horario (Temprano a tarde)</option>
           </select>
-  
+
           <div style={{ ...s.btnLimpiarWrapper, visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id') ? 'visible' : 'hidden' }}>
             <button
               style={s.btnLimpiar}
@@ -839,9 +839,11 @@ export default function Alumnos() {
                   onChange={e => setForm({ ...form, horario: e.target.value })}
                 >
                   <option value="">Seleccionar horario...</option>
-                  <option value="Horario 1">Horario 1 (Ej. 4:00 PM - 5:00 PM)</option>
-                  <option value="Horario 2">Horario 2 (Ej. 5:00 PM - 6:00 PM)</option>
-                  <option value="Horario 3">Horario 3 (Ej. 6:00 PM - 7:00 PM)</option>
+                  <option value="Horario 1">Horario 1 (4:00 PM - 5:00 PM)</option>
+                  <option value="Horario 2">Horario 2 (5:00 PM - 6:00 PM)</option>
+                  <option value="Horario 3">Horario 3 (6:00 PM - 7:15 PM)</option>
+                  <option value="Horario Tigres Do">Horario Tigres Do (5:00 PM - 6:00 PM)</option>
+
                 </select>
               </div>
               <div style={s.campoGroup}>
@@ -972,7 +974,7 @@ const s = {
   tablaScroll: { width: '100%', overflowX: 'auto', overflowY: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '1000px' },
   th: { padding: '10px 16px', textAlign: 'center', fontSize: '12px', color: '#64748b', borderBottom: '1px solid #1e2130', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', },
-  td: { padding: '10px 16px', fontSize: '14px', color: '#cbd5e1', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', },
+  td: { padding: '10px 16px', fontSize: '14px', color: '#cbd5e1', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', },
   tdCenter: { padding: '32px', textAlign: 'center', color: '#475569' },
   fotoTabla: { width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #1e2130' },
   fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: '#1e2d4a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#60a5fa' },

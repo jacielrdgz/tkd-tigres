@@ -29,9 +29,6 @@ class UpdateAlumnoRequest extends FormRequest
                 'nullable',
                 'email:rfc,dns',
                 'max:150',
-                Rule::unique('alumnos', 'email')
-                    ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
-                    ->ignore($alumno?->id),
             ],
             'fecha_nacimiento' => ['sometimes', 'date', 'before:today'],
             'foto'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],

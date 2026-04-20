@@ -36,7 +36,7 @@ export default function Login() {
         {/* Logo / Brand */}
         <div style={s.brand}>
           <div style={s.logoCircle}>🥋</div>
-          <h1 style={s.title}>DojoCloud</h1>
+          <h1 style={s.title}>GymCloud</h1>
           <p style={s.subtitle}>Panel de gestión para tu escuela</p>
         </div>
 
@@ -98,7 +98,7 @@ export default function Login() {
       </div>
 
       <p style={s.footer}>
-        DojoCloud © {new Date().getFullYear()} — Gestión inteligente de artes marciales
+        GymCloud © {new Date().getFullYear()} — Gestión inteligente de artes marciales
       </p>
     </div>
   )

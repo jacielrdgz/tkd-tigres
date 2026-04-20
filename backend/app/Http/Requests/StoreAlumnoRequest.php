@@ -26,7 +26,6 @@ class StoreAlumnoRequest extends FormRequest
                 'nullable',
                 'email:rfc,dns',
                 'max:150',
-                Rule::unique('alumnos', 'email')->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId)),
             ],
             'fecha_nacimiento' => ['required', 'date', 'before:today'],
             'foto'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
