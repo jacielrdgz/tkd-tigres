@@ -3,12 +3,20 @@ import api from '../api/axios'
 import Swal from 'sweetalert2'
 import { toast } from 'react-toastify'
 
+const SkeletonCircle = ({ size }) => (
+  <div style={{ width: size, height: size, borderRadius: '50%', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
+)
+const SkeletonBlock = ({ w, h }) => (
+  <div style={{ width: w, height: h, borderRadius: '4px', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
+)
 
 export default function Asistencias() {
   const [alumnos, setAlumnos] = useState([])
   const [cintasConfig, setCintasConfig] = useState([])
   const [asistencias, setAsistencias] = useState({})
   const [busqueda, setBusqueda] = useState('')
+  const [busquedaInput, setBusquedaInput] = useState('')
+  const [rowHover, setRowHover] = useState(null)
   const [filtroPrincipal, setFiltroPrincipal] = useState('todos')
   const [filtroCinta, setFiltroCinta] = useState('blanca')
   const [fecha, setFecha] = useState(new Date().toLocaleDateString('sv-SE'))
@@ -59,6 +67,11 @@ export default function Asistencias() {
   }, [fecha])
 
   useEffect(() => { cargarInformacion() }, [cargarInformacion])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setBusqueda(busquedaInput), 300)
+    return () => clearTimeout(timer)
+  }, [busquedaInput])
 
   const alumnosFiltrados = useMemo(() => {
     return alumnos.filter(a => {
@@ -155,8 +168,8 @@ export default function Asistencias() {
         <input
           style={s.search}
           placeholder="Buscar por nombre..."
-          value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
+          value={busquedaInput}
+          onChange={e => setBusquedaInput(e.target.value)}
         />
         <input type="date" style={s.inputFecha} value={fecha} onChange={e => setFecha(e.target.value)} />
 
@@ -182,26 +195,62 @@ export default function Asistencias() {
 
       </div>
 
+      <style>{`
+        @keyframes skeletonPulse {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 1; }
+        }
+      `}</style>
       <div style={s.tablaContenedor}>
-        <table style={s.table}>
-          <thead>
-            <tr>
-              <th style={{ ...s.th, width: '80px' }}>Foto</th>
-              <th style={{ ...s.th, textAlign: 'left' }}>Nombre Completo</th>
-              <th style={{ ...s.th, width: '180px' }}>Cinta</th>
-              <th style={{ ...s.th, width: '130px' }}>Estatus</th>
-              <th style={{ ...s.th, width: '150px' }}>Asistencia</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cargando ? (
-              <tr><td colSpan="5" style={s.tdCenter}>Cargando lista...</td></tr>
-            ) : alumnosFiltrados.length === 0 ? (
-              <tr><td colSpan="5" style={s.tdCenter}>No hay alumnos que coincidan</td></tr>
-            ) : (
-              alumnosFiltrados.map(a => (
-                <tr key={a.id} style={s.tr}>
-                  <td style={s.td}>
+        <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
+          <table style={s.table}>
+            <colgroup>
+              <col style={{ width: '55px' }} />
+              <col style={{ width: '280px' }} />
+              <col style={{ width: '130px' }} />
+              <col style={{ width: '110px' }} />
+              <col style={{ width: '140px' }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{ ...s.th, textAlign: 'center' }}>Foto</th>
+                <th style={{ ...s.th, textAlign: 'left' }}>Nombre Completo</th>
+                <th style={{ ...s.th, textAlign: 'center' }}>Cinta</th>
+                <th style={{ ...s.th, textAlign: 'center' }}>Estatus</th>
+                <th style={{ ...s.th, textAlign: 'center' }}>Asistencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cargando ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} style={{ ...s.tr, height: '61px' }}>
+                    <td style={s.td}><SkeletonCircle size={40} /></td>
+                    <td style={{ ...s.td, textAlign: 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <SkeletonCircle size={10} />
+                        <div style={{ width: '180px', height: '14px', borderRadius: '4px', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out' }} />
+                      </div>
+                    </td>
+                    <td style={s.td}><SkeletonBlock w="100px" h={24} /></td>
+                    <td style={s.td}><SkeletonBlock w="70px" h={24} /></td>
+                    <td style={s.td}><SkeletonBlock w="100px" h={24} /></td>
+                  </tr>
+                ))
+              ) : alumnosFiltrados.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ ...s.td, padding: '60px', color: '#64748b' }}>
+                    No hay alumnos registrados que coincidan con los filtros
+                  </td>
+                </tr>
+              ) : (
+                alumnosFiltrados.map(a => (
+                  <tr 
+                    key={a.id} 
+                    style={{ ...s.tr, background: rowHover === a.id ? '#1a1d2e' : 'transparent', transition: 'background 0.15s' }}
+                    onMouseEnter={() => setRowHover(a.id)}
+                    onMouseLeave={() => setRowHover(null)}
+                  >
+                    <td style={s.td}>
                     <div style={{ position: 'relative', width: '40px', height: '40px', margin: '0 auto' }}>
                       {a.foto_url ? (
                         <img src={limpiarUrl(a.foto_url)} alt="" style={s.fotoTabla}
@@ -264,7 +313,8 @@ export default function Asistencias() {
               ))
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   )
@@ -277,19 +327,19 @@ const s = {
   titulo: { fontSize: '24px', fontWeight: '700', color: '#f1f5f9', },
   sub: { fontSize: '15px', color: '#64748b', marginTop: '2px' },
   barraAcciones: { display: 'flex', gap: '12px', marginBottom: '16px', alignItems: 'center' },
-  search: { flex: 1, padding: '10px 20px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '80px', color: '#e2e8f0', outline: 'none' },
-  inputFecha: { width: '150px', padding: '10px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '8px', color: '#e2e8f0', outline: 'none' },
-  selectCinta: { width: '190px', padding: '10px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '8px', color: '#e2e8f0', cursor: 'pointer' },
-  btnToggleAll: { background: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '8px', padding: '0 15px', height: '42px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  search: { flex: 1, maxWidth: '395px', padding: '10px 16px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '80px', color: '#e2e8f0', outline: 'none', transition: 'all 0.3s ease' },
+  inputFecha: { padding: '10px 14px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '12px', color: '#cbd5e1', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '150px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' },
+  selectCinta: { padding: '10px 14px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '12px', color: '#cbd5e1', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '160px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' },
+  btnToggleAll: { background: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '12px', padding: '0 15px', height: '42px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
   progressContainer: { width: '300px', height: '14px', background: '#1e2130', borderRadius: '20px', overflow: 'hidden', position: 'relative', border: '1px solid #334155' },
   progressBar: { height: '100%', background: 'linear-gradient(90deg, #3b82f6, #10b981)', transition: 'width 0.4s ease-out' },
   progressText: { position: 'absolute', width: '100%', textAlign: 'center', fontSize: '9px', fontWeight: '800', color: '#fff', top: '50%', transform: 'translateY(-50%)', textShadow: '0 1px 2px rgba(0,0,0,0.8)' },
   tabs: { display: 'flex', background: '#13151f', padding: '4px', borderRadius: '10px', border: '1px solid #1e2130', gap: '4px' },
-  tabActiveVerde: { padding: '8px 12px', background: '#14532d', color: '#4ade80', borderRadius: '7px', fontWeight: '700', fontSize: '12px', minWidth: '60px', textAlign: 'center' },
-  tabActiveRojo: { padding: '8px 12px', background: '#450a0a', color: '#f87171', borderRadius: '7px', fontWeight: '700', fontSize: '12px', minWidth: '60px', textAlign: 'center' },
-  tablaContenedor: { background: '#13151f', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1e2130', minHeight: '550px' },
-  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
-  th: { padding: '14px 16px', fontSize: '11px', color: '#64748b', borderBottom: '1px solid #1e2130', textTransform: 'uppercase' },
+  tabActiveVerde: { padding: '8px 12px', background: 'linear-gradient(135deg, #14532d, #059669)', color: '#fff', borderRadius: '7px', fontWeight: '700', fontSize: '12px', minWidth: '60px', textAlign: 'center', boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)' },
+  tabActiveRojo: { padding: '8px 12px', background: 'linear-gradient(135deg, #450a0a, #ef4444)', color: '#fff', borderRadius: '7px', fontWeight: '700', fontSize: '12px', minWidth: '60px', textAlign: 'center', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' },
+  tablaContenedor: { background: '#13151f', borderRadius: '16px', overflow: 'hidden', border: '1px solid #1e2130', minHeight: '400px', boxShadow: '0 20px 50px rgba(0,0,0,0.4)' },
+  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '800px' },
+  th: { padding: '10px 16px', fontSize: '12px', color: '#64748b', borderBottom: '1px solid #1e2130', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   tr: { borderBottom: '1px solid #1e2130' },
   td: { padding: '12px 16px', fontSize: '14px', color: '#cbd5e1', textAlign: 'center' },
   tdCenter: { padding: '60px', textAlign: 'center', color: '#475569' },
@@ -298,6 +348,6 @@ const s = {
   nombreNom: { fontWeight: '600', color: '#f1f5f9' },
   cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' },
   badge: { padding: '5px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' },
-  btnPrimary: { color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.3s' },
-  btnAsis: { padding: '8px 0', width: '110px', borderRadius: '6px', border: '1px solid', cursor: 'pointer', fontWeight: '800', fontSize: '10px' }
+  btnPrimary: { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' },
+  btnAsis: { padding: '8px 0', width: '110px', borderRadius: '6px', border: '1px solid', cursor: 'pointer', fontWeight: '800', fontSize: '10px', transition: 'all 0.2s' }
 }
