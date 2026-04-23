@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ConfiguracionCinta;
 use App\Models\Traits\BelongsToTenant;
 use Carbon\Carbon;
 
@@ -19,7 +20,7 @@ class Alumno extends Model
         'email',
         'fecha_nacimiento',
         'foto',
-        'cinta',
+        'configuracion_cinta_id',
         'estatus',
         'horario',
     ];
@@ -53,5 +54,10 @@ class Alumno extends Model
     public function asistencias()
     {
         return $this->hasMany(Asistencia::class);
+    }
+
+    public function cintaConfig()
+    {
+        return $this->belongsTo(ConfiguracionCinta::class, 'configuracion_cinta_id');
     }
 }

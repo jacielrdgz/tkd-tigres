@@ -1,9 +1,4 @@
-export const CINTAS = [
-  'blanca', 'blanca_avanzada', 'amarilla', 'amarilla_avanzada',
-  'naranja', 'naranja_avanzada', 'verde', 'verde_avanzada',
-  'azul', 'azul_avanzada', 'marrón', 'marrón_avanzada',
-  'roja', 'roja_avanzada', 'negra'
-]
+
 
 export const VACIO = {
   nombre: '',

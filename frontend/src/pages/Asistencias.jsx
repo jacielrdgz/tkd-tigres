@@ -3,19 +3,10 @@ import api from '../api/axios'
 import Swal from 'sweetalert2'
 import { toast } from 'react-toastify'
 
-const COLOR_CINTA = {
-  blanca: '#e2e8f0', blanca_avanzada: '#cbd5e1',
-  amarilla: '#fbbf24', amarilla_avanzada: '#f59e0b',
-  naranja: '#fb923c', naranja_avanzada: '#f97316',
-  verde: '#4ade80', verde_avanzada: '#22c55e',
-  azul: '#60a5fa', azul_avanzada: '#3b82f6',
-  marrón: '#8B4513', marrón_avanzada: '#78350f',
-  roja: '#f87171', roja_avanzada: '#ef4444',
-  negra: '#1e293b',
-}
 
 export default function Asistencias() {
   const [alumnos, setAlumnos] = useState([])
+  const [cintasConfig, setCintasConfig] = useState([])
   const [asistencias, setAsistencias] = useState({})
   const [busqueda, setBusqueda] = useState('')
   const [filtroPrincipal, setFiltroPrincipal] = useState('todos')
@@ -45,9 +36,10 @@ export default function Asistencias() {
     setCargando(true)
     setHaCambiado(false)
     try {
-      const [resAlumnos, resAsistencias] = await Promise.all([
+      const [resAlumnos, resAsistencias, resCintas] = await Promise.all([
         api.get('/alumnos'),
-        api.get('/asistencias', { params: { fecha } })
+        api.get('/asistencias', { params: { fecha } }),
+        api.get('/configuraciones-cintas')
       ])
       const todos = resAlumnos.data
       const datosAsist = resAsistencias.data
@@ -60,6 +52,7 @@ export default function Asistencias() {
 
       setAlumnos(todos.filter(a => a.estatus === 'activo' || (mapa[a.id])))
       setAsistencias(mapa)
+      setCintasConfig(resCintas.data)
     } catch (err) {
       toast.error('Error al cargar datos')
     } finally { setCargando(false) }
@@ -74,7 +67,7 @@ export default function Asistencias() {
       let cumpleFiltro = true
       if (filtroPrincipal === 'presentes') cumpleFiltro = asistencias[a.id] === true
       if (filtroPrincipal === 'ausentes') cumpleFiltro = asistencias[a.id] === false
-      if (filtroPrincipal === 'cintas') cumpleFiltro = a.cinta === filtroCinta
+      if (filtroPrincipal === 'cintas') cumpleFiltro = String(a.configuracion_cinta_id) === String(filtroCinta)
       return cumpleNombre && cumpleFiltro
     })
   }, [alumnos, busqueda, filtroPrincipal, filtroCinta, asistencias])
@@ -176,8 +169,8 @@ export default function Asistencias() {
 
         {filtroPrincipal === 'cintas' && (
           <select style={{ ...s.selectCinta, borderColor: '#3b82f6', width: '160px' }} value={filtroCinta} onChange={e => setFiltroCinta(e.target.value)}>
-            {Object.keys(COLOR_CINTA).map(c => (
-              <option key={c} value={c}>{c.replace('_', ' ').toUpperCase()}</option>
+            {cintasConfig.map(c => (
+              <option key={c.id} value={c.id}>{c.nombre_nivel.toUpperCase()}</option>
             ))}
           </select>
         )}
@@ -242,10 +235,10 @@ export default function Asistencias() {
                   <td style={s.td}>
                     <span style={{
                       ...s.cinta,
-                      background: COLOR_CINTA[a.cinta] || '#334155',
-                      color: a.cinta?.includes('blanca') ? '#0f172a' : '#fff',
+                      background: a.cinta_config?.color_hex || '#334155',
+                      color: a.cinta_config?.color_texto || '#fff',
                       display: 'inline-block', width: '140px'
-                    }}>{a.cinta?.replace('_', ' ')}</span>
+                    }}>{a.cinta_config?.nombre_nivel || 'Sin cinta'}</span>
                   </td>
                   <td style={s.td}>
                     <span style={{

@@ -4,12 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/tigreslogo.jpg';
 
 const menu = [
-  { path: '/', label: 'Dashboard', icon: '▦' },
-  { path: '/alumnos', label: 'Alumnos', icon: '👥' },
+  { path: '/',            label: 'Dashboard',   icon: '▦' },
+  { path: '/alumnos',     label: 'Alumnos',     icon: '👥' },
   { path: '/asistencias', label: 'Asistencias', icon: '📋' },
-  { path: '/pagos', label: 'Pagos', icon: '💳' },
-  { path: '/eventos', label: 'Eventos', icon: '🏆' },
+  { path: '/pagos',       label: 'Pagos',       icon: '💳' },
+  { path: '/eventos',     label: 'Eventos',     icon: '🏆' },
 ];
+
+const menuAjustes = { path: '/ajustes', label: 'Ajustes', icon: '⚙️' };
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
@@ -103,6 +105,20 @@ export default function Sidebar() {
 
         {/* User info + logout */}
         <div style={styles.footer}>
+          {/* Ajustes link */}
+          <NavLink
+            to="/ajustes"
+            onClick={closeMobile}
+            style={({ isActive }) => ({
+              ...styles.link,
+              ...(isActive ? styles.linkActive : {}),
+              marginBottom: '4px',
+            })}
+          >
+            <span style={styles.icon}>{menuAjustes.icon}</span>
+            <span style={{ flex: 1 }}>{menuAjustes.label}</span>
+          </NavLink>
+
           <div style={styles.userInfo}>
             <div style={styles.userAvatar}>
               {user?.name?.charAt(0)?.toUpperCase() || '?'}
@@ -121,7 +137,7 @@ export default function Sidebar() {
       {/* Mobile bottom navigation */}
       {isMobile && !mobileOpen && (
         <nav style={styles.bottomNav}>
-          {menu.map(item => (
+          {[...menu, menuAjustes].map(item => (
             <NavLink
               key={item.path}
               to={item.path}

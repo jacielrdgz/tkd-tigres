@@ -12,6 +12,8 @@ import Asistencias from './pages/Asistencias'
 import Eventos from './pages/Eventos'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Ajustes from './pages/Ajustes'
+import CintasSettings from './pages/ajustes/Cintas'
 
 /**
  * Layout principal con Sidebar (solo cuando está autenticado).
@@ -54,6 +56,8 @@ function AppRoutes() {
           <Route path="/pagos"       element={<Pagos />} />
           <Route path="/asistencias" element={<Asistencias />} />
           <Route path="/eventos"     element={<Eventos />} />
+          <Route path="/ajustes"     element={<Ajustes />} />
+          <Route path="/ajustes/cintas" element={<CintasSettings />} />
         </Routes>
       </AppLayout>
     </ProtectedRoute>

@@ -29,19 +29,7 @@ class StoreAlumnoRequest extends FormRequest
             ],
             'fecha_nacimiento' => ['required', 'date', 'before:today'],
             'foto'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'cinta'            => [
-                'required',
-                Rule::in([
-                    'blanca', 'blanca_avanzada',
-                    'amarilla', 'amarilla_avanzada',
-                    'naranja', 'naranja_avanzada',
-                    'verde', 'verde_avanzada',
-                    'azul', 'azul_avanzada',
-                    'marrón', 'marrón_avanzada',
-                    'roja', 'roja_avanzada',
-                    'negra',
-                ]),
-            ],
+            'configuracion_cinta_id' => ['nullable', 'integer', 'exists:configuraciones_cintas,id'],
             'estatus'          => ['sometimes', Rule::in(['activo', 'inactivo'])],
             'horario'          => ['nullable', 'string', 'max:50'],
         ];

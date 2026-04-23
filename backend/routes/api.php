@@ -8,6 +8,8 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ConfiguracionCintaController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -55,4 +57,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Eventos
     Route::apiResource('eventos', EventoController::class);
+    Route::apiResource('configuraciones-cintas', ConfiguracionCintaController::class);
 });

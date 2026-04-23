@@ -13,7 +13,7 @@ class AlumnoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Alumno::query()->with('ultimoPago');
+        $query = Alumno::query()->with(['ultimoPago', 'cintaConfig']);
 
         // Filtros de búsqueda existentes
         if ($request->filled('search')) {
@@ -80,7 +80,7 @@ class AlumnoController extends Controller
 
     public function show(Alumno $alumno)
     {
-        return response()->json($alumno->load(['pagos', 'asistencias']));
+        return response()->json($alumno->load(['pagos', 'asistencias', 'cintaConfig']));
     }
 
     public function update(UpdateAlumnoRequest $request, Alumno $alumno)
