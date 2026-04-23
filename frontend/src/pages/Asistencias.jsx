@@ -28,6 +28,12 @@ export default function Asistencias() {
   const [guardando, setGuardando] = useState(false)
   const [haCambiado, setHaCambiado] = useState(false)
   const [rowExpandida, setRowExpandida] = useState({})
+  
+  const [modalHistorial, setModalHistorial] = useState(false)
+  const [alumnoHistorial, setAlumnoHistorial] = useState(null)
+  const [historialCompleto, setHistorialCompleto] = useState([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
+  const [filtroMesHistorial, setFiltroMesHistorial] = useState('')
 
   const limpiarUrl = (url) => url ? url.replace(/\\\//g, '/') : null
   const obtenerIniciales = (nombre, apellido) => {
@@ -153,6 +159,22 @@ export default function Asistencias() {
     } catch (err) {
       toast.error('Error al guardar')
     } finally { setGuardando(false) }
+  }
+
+  const abrirHistorialCompleto = async (alumno) => {
+    setAlumnoHistorial(alumno)
+    setModalHistorial(true)
+    setCargandoHistorial(true)
+    setHistorialCompleto([])
+    setFiltroMesHistorial('')
+    try {
+      const res = await api.get(`/asistencias/alumno/${alumno.id}`)
+      setHistorialCompleto(res.data)
+    } catch (err) {
+      toast.error('Error al cargar el historial del alumno')
+    } finally {
+      setCargandoHistorial(false)
+    }
   }
 
   const abrirWhatsApp = (a, e) => {
@@ -462,6 +484,15 @@ export default function Asistencias() {
                             </div>
                           )}
                         </div>
+                        
+                        <button 
+                          onClick={() => abrirHistorialCompleto(a)}
+                          style={{ marginTop: '12px', padding: '8px 16px', background: 'linear-gradient(135deg, #1e293b, #0f111a)', color: '#60a5fa', border: '1px solid #3b82f6', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', alignSelf: 'flex-start', transition: 'all 0.2s', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.2)' }}
+                          onMouseOver={e => e.currentTarget.style.filter = 'brightness(1.2)'}
+                          onMouseOut={e => e.currentTarget.style.filter = 'brightness(1)'}
+                        >
+                          🗓️ Consultar Hisotrial Específico Completo
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -473,6 +504,76 @@ export default function Asistencias() {
           </table>
         </div>
       </div>
+
+      {/* MODAL HISTORIAL COMPLETO */}
+      {modalHistorial && alumnoHistorial && (
+        <div style={s.overlay}>
+          <div style={s.modalCard}>
+            <div style={s.cardHeader}>
+              <h3 style={s.cardTitle}>Expediente de Asistencias</h3>
+              <button style={s.btnCerrarWhite} onMouseOver={e=>e.currentTarget.style.color='#fff'} onMouseOut={e=>e.currentTarget.style.color='#94a3b8'} onClick={() => setModalHistorial(false)}>✖</button>
+            </div>
+            
+            <div style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ fontSize: '18px', color: '#f1f5f9', fontWeight: '700' }}>
+                  {alumnoHistorial.nombre} {alumnoHistorial.apellido_paterno}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>BUSCAR MES:</span>
+                  <input
+                    type="month"
+                    value={filtroMesHistorial}
+                    onChange={(e) => setFiltroMesHistorial(e.target.value)}
+                    style={{ ...s.inputFecha, width: '140px', padding: '8px 12px' }}
+                  />
+                  {filtroMesHistorial && (
+                    <button onClick={() => setFiltroMesHistorial('')} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>Limpiar</button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ height: '350px', overflowY: 'auto', background: '#0f111a', borderRadius: '12px', border: '1px solid #1e2130', boxShadow: 'inset 0 4px 6px rgba(0,0,0,0.3)' }}>
+                {cargandoHistorial ? (
+                  <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>Consultando archivos del servidor...</div>
+                ) : historialCompleto.length === 0 ? (
+                  <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>No hay registros históricos de asistencia.</div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: '#13151f', zIndex: 10 }}>
+                      <tr>
+                        <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '11px', color: '#64748b', borderBottom: '1px solid #1e2130' }}>FECHA EXACTA</th>
+                        <th style={{ padding: '12px 20px', textAlign: 'right', fontSize: '11px', color: '#64748b', borderBottom: '1px solid #1e2130' }}>REGISTRO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historialCompleto.filter(h => !filtroMesHistorial || h.fecha.startsWith(filtroMesHistorial)).length === 0 ? (
+                         <tr><td colSpan={2} style={{ padding: '40px', textAlign: 'center', color: '#475569', fontSize: '14px' }}>No hay clases registradas en este mes</td></tr>
+                      ) : (
+                        historialCompleto.filter(h => !filtroMesHistorial || h.fecha.startsWith(filtroMesHistorial)).map(h => (
+                          <tr key={h.id} style={{ borderBottom: '1px solid #1e2130', transition: 'background 0.2s' }} onMouseOver={e=>e.currentTarget.style.background='#1a1d2e'} onMouseOut={e=>e.currentTarget.style.background='transparent'}>
+                            <td style={{ padding: '14px 20px', color: '#cbd5e1', fontSize: '14px', fontWeight: '500' }}>
+                              {new Date(h.fecha + 'T12:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}
+                            </td>
+                            <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                              {h.presente ? (
+                                <span style={{ color: '#10b981', fontWeight: '800', fontSize: '11px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '6px 12px', borderRadius: '6px' }}>✓ ASISTIÓ</span>
+                              ) : (
+                                <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '11px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 12px', borderRadius: '6px' }}>✗ FALTÓ</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
@@ -507,5 +608,10 @@ const s = {
   badge: { padding: '5px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' },
   btnPrimary: { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' },
   btnDoc: { padding: '8px 16px', borderRadius: '12px', border: '1px solid', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' },
-  btnAsis: { padding: '8px 0', width: '110px', borderRadius: '6px', border: '1px solid', cursor: 'pointer', fontWeight: '800', fontSize: '10px', transition: 'all 0.2s' }
+  btnAsis: { padding: '8px 0', width: '110px', borderRadius: '6px', border: '1px solid', cursor: 'pointer', fontWeight: '800', fontSize: '10px', transition: 'all 0.2s' },
+  overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.75)', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)' },
+  modalCard: { backgroundColor: '#13151f', borderRadius: '20px', width: '90%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid #1e2130', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(59, 130, 246, 0.1)' },
+  cardHeader: { padding: '24px', borderBottom: '1px solid #1e2130', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f111a' },
+  cardTitle: { margin: 0, fontSize: '20px', fontWeight: '800', color: '#f8fafc' },
+  btnCerrarWhite: { background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '22px', cursor: 'pointer', padding: '4px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', width: '32px', height: '32px' },
 }
