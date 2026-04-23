@@ -1,7 +1,10 @@
-import { useEffect, useCallback, useState, useMemo } from 'react'
+import React, { useEffect, useCallback, useState, useMemo } from 'react'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
 import { toast } from 'react-toastify'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import * as XLSX from 'xlsx'
 
 const SkeletonCircle = ({ size }) => (
   <div style={{ width: size, height: size, borderRadius: '50%', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
@@ -24,6 +27,7 @@ export default function Asistencias() {
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [haCambiado, setHaCambiado] = useState(false)
+  const [rowExpandida, setRowExpandida] = useState({})
 
   const limpiarUrl = (url) => url ? url.replace(/\\\//g, '/') : null
   const obtenerIniciales = (nombre, apellido) => {
@@ -151,6 +155,64 @@ export default function Asistencias() {
     } finally { setGuardando(false) }
   }
 
+  const abrirWhatsApp = (a, e) => {
+    e.stopPropagation()
+    if (!a.telefono_tutor || a.telefono_tutor.trim() === '') {
+      return toast.warning('Este alumno no tiene teléfono registrado')
+    }
+    const tel = a.telefono_tutor.replace(/\D/g, '')
+    const msg = encodeURIComponent(`Hola tutor de ${a.nombre}, notamos que ha faltado a sus últimas clases de Taekwondo. ¿Todo se encuentra bien? ¡Esperamos verlo pronto por el tatami!`)
+    window.open(`https://wa.me/${tel}?text=${msg}`, '_blank')
+  }
+
+  const exportarPDF = () => {
+    if (alumnosFiltrados.length === 0) return toast.warning('No hay datos para exportar')
+    const doc = new jsPDF()
+    doc.setFontSize(18)
+    doc.setTextColor(20, 30, 40)
+    doc.text("Reporte de Asistencias - TKD Tigres", 14, 20)
+    doc.setFontSize(10)
+    doc.setTextColor(100)
+    doc.text(`Fecha del pase de lista: ${fecha}`, 14, 28)
+    
+    const tableColumn = ["Nombre Alumno", "Cinta", "Horario", "Estatus Auditoria", "Asistencia Actual"]
+    const tableRows = alumnosFiltrados.map(a => [
+      `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`,
+      a.cinta_config?.nombre_nivel || 'Sin cinta',
+      a.horario || '-',
+      `${a.racha_faltas || 0} Faltas Seguidas | ${a.racha_asistencias || 0} Asistencias Seguidas`,
+      asistencias[a.id] ? 'PRESENTE' : 'AUSENTE'
+    ])
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 35,
+      theme: 'striped',
+    })
+    doc.save(`Asistencias_${fecha}.pdf`)
+  }
+
+  const exportarExcel = () => {
+    if (alumnosFiltrados.length === 0) return toast.warning('No hay datos para exportar')
+    const data = alumnosFiltrados.map(a => ({
+      "Nombre Completo": `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`,
+      "Cinta": a.cinta_config?.nombre_nivel || 'Sin cinta',
+      "Categoria": a.edad <= 11 ? 'Infantil' : (a.edad <= 14 ? 'Cadete' : (a.edad <= 17 ? 'Juvenil' : 'Adulto')),
+      "Horario": a.horario || '-',
+      "Faltas Seguidas (Racha)": a.racha_faltas || 0,
+      "Asistencias Seguidas (Racha)": a.racha_asistencias || 0,
+      "Asistencia Hoy": asistencias[a.id] ? 'PRESENTE' : 'AUSENTE'
+    }))
+    
+    const worksheet = XLSX.utils.json_to_sheet(data)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Asistencias")
+    XLSX.writeFile(workbook, `Asistencias_${fecha}.xlsx`)
+  }
+
+  const toggleRow = (id) => setRowExpandida(prev => ({ ...prev, [id]: !prev[id] }))
+
   return (
     <div style={{ padding: '0px' }}>
       <div style={s.header}>
@@ -164,6 +226,14 @@ export default function Asistencias() {
               <div style={s.tabActiveVerde}>P: {stats.presentes}</div>
               <div style={s.tabActiveRojo}>A: {stats.ausentes}</div>
             </div>
+            
+            <button style={{ ...s.btnDoc, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderColor: '#10b981' }} onClick={exportarExcel} title="Exportar a Excel">
+              📊 Excel
+            </button>
+            <button style={{ ...s.btnDoc, background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', borderColor: '#ef4444' }} onClick={exportarPDF} title="Generar PDF">
+              📄 PDF
+            </button>
+
             <button
               style={{
                 ...s.btnPrimary,
@@ -268,13 +338,14 @@ export default function Asistencias() {
                 </tr>
               ) : (
                 alumnosFiltrados.map(a => (
+                  <React.Fragment key={a.id}>
                   <tr 
-                    key={a.id} 
-                    style={{ ...s.tr, background: rowHover === a.id ? '#1a1d2e' : 'transparent', transition: 'background 0.15s' }}
+                    style={{ ...s.tr, background: rowHover === a.id ? '#1a1d2e' : 'transparent', transition: 'background 0.15s', cursor: 'pointer' }}
                     onMouseEnter={() => setRowHover(a.id)}
                     onMouseLeave={() => setRowHover(null)}
+                    onClick={() => toggleRow(a.id)}
                   >
-                    <td style={s.td}>
+                    <td style={s.td} onClick={e => e.stopPropagation()}>
                     <div style={{ position: 'relative', width: '40px', height: '40px', margin: '0 auto' }}>
                       {a.foto_url ? (
                         <img src={limpiarUrl(a.foto_url)} alt="" style={s.fotoTabla}
@@ -301,16 +372,28 @@ export default function Asistencias() {
                         {`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`}
                         <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', marginTop: '2px' }}>
                           {a.horario ? `🕒 ${a.horario}` : 'Sin horario'}
+                          <span style={{ marginLeft: '6px', color: '#cbd5e1' }}>| ID: {a.id}</span>
                         </div>
                       </div>
 
-                      {/* ALERTA DE DESERCIÓN (3 o más faltas seguidas) */}
+                      {/* ALERTA DE GAMIFICACIÓN (3 o más asistencias seguidas) */}
+                      {a.racha_asistencias >= 3 && (
+                        <span title={`¡Constancia brillante! Tiene ${a.racha_asistencias} clases seguidas asistiendo`} style={{ cursor: 'help', fontSize: '18px', filter: 'drop-shadow(0 0 5px rgba(251, 191, 36, 0.8))' }}>🔥</span>
+                      )}
+
+                      {/* ALERTA DE DESERCIÓN Y WHATSAPP (3 o más faltas seguidas) */}
                       {a.racha_faltas >= 3 && (
-                        <span title="Alerta: 3+ faltas seguidas" style={{ cursor: 'help' }}>⚠️</span>
+                        <button 
+                          onClick={(e) => abrirWhatsApp(a, e)}
+                          title="Contactar Tutor por WhatsApp" 
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: 0, filter: 'drop-shadow(0 0 5px rgba(239, 68, 68, 0.6))', transform: 'scale(1.1)' }}
+                        >
+                          ⚠️
+                        </button>
                       )}
                     </div>
                   </td>
-                  <td style={s.td}>
+                  <td style={s.td} onClick={e => e.stopPropagation()}>
                     <span style={{
                       ...s.cinta,
                       background: a.cinta_config?.color_hex || '#334155',
@@ -318,16 +401,16 @@ export default function Asistencias() {
                       display: 'inline-block', width: '140px'
                     }}>{a.cinta_config?.nombre_nivel || 'Sin cinta'}</span>
                   </td>
-                  <td style={s.td}>
+                  <td style={s.td} onClick={e => e.stopPropagation()}>
                     <span style={{
                       ...s.badge,
                       background: a.estatus === 'activo' ? s.statusActivoBg : s.statusInactivoBg,
                       color: a.estatus === 'activo' ? s.statusActivoText : s.statusInactivoText,
                     }}>{a.estatus}</span>
                   </td>
-                  <td style={s.td}>
+                  <td style={s.td} onClick={e => e.stopPropagation()}>
                     <button
-                      onClick={() => toggleAsistencia(a.id)}
+                      onClick={(e) => { e.stopPropagation(); toggleAsistencia(a.id); }}
                       style={{
                         ...s.btnAsis,
                         backgroundColor: asistencias[a.id] ? s.statusActivoBg : s.statusInactivoBg,
@@ -339,6 +422,51 @@ export default function Asistencias() {
                     </button>
                   </td>
                 </tr>
+
+                {/* FILA EXPANDIDA DEL HISTORIAL */}
+                {rowExpandida[a.id] && (
+                  <tr style={{ background: '#0f111a', borderBottom: '1px solid #1e2130' }}>
+                    <td colSpan={5} style={{ padding: '20px 24px', color: '#94a3b8' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>📅 Historial de Clases Recientes</span>
+                          {a.racha_faltas > 0 && <span style={{ padding: '2px 8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '4px', fontSize: '10px' }}>Inasistente actual</span>}
+                          {a.racha_asistencias > 0 && <span style={{ padding: '2px 8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '4px', fontSize: '10px' }}>Asistente actual</span>}
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '4px' }}>
+                          {a.ultimas_asistencias && a.ultimas_asistencias.length > 0 ? (
+                            a.ultimas_asistencias.map((ua, idx) => {
+                              const colorHex = ua.presente ? '#10b981' : '#ef4444';
+                              return (
+                                <div key={idx} title={ua.presente ? 'Asistió' : 'Faltó'} style={{ 
+                                  display: 'flex', flexDirection: 'column', alignItems: 'center', 
+                                  background: '#13151f', padding: '8px 16px', borderRadius: '8px', border: '1px solid #1e2130',
+                                  minWidth: '60px'
+                                }}>
+                                  <span style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: '600' }}>
+                                    {new Date(ua.fecha + 'T12:00').toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }).toUpperCase()}
+                                  </span>
+                                  <div style={{ 
+                                    width: '16px', height: '16px', borderRadius: '50%', 
+                                    background: colorHex,
+                                    boxShadow: `0 0 8px ${colorHex}80`,
+                                    border: '2px solid #13151f'
+                                  }}/>
+                                </div>
+                              )
+                            })
+                          ) : (
+                            <div style={{ padding: '10px 16px', background: '#13151f', borderRadius: '8px', border: '1px solid #1e2130', fontSize: '12px' }}>
+                              🗓️ No hay registros anteriores disponibles para este alumno.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))
             )}
           </tbody>
@@ -378,5 +506,6 @@ const s = {
   cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' },
   badge: { padding: '5px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' },
   btnPrimary: { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' },
+  btnDoc: { padding: '8px 16px', borderRadius: '12px', border: '1px solid', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' },
   btnAsis: { padding: '8px 0', width: '110px', borderRadius: '6px', border: '1px solid', cursor: 'pointer', fontWeight: '800', fontSize: '10px', transition: 'all 0.2s' }
 }

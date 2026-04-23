@@ -43,13 +43,16 @@ class AlumnoController extends Controller
             // 1. LÓGICA DEL SEMÁFORO (Último pago)
             $alumno->estatus_pago = $alumno->ultimoPago?->estado ?? 'pendiente';
 
-            // 2. LÓGICA DE RACHA DE FALTAS (Últimas 5 asistencias)
+            // 2. LÓGICA DE AUDITORÍA Y RACHAS (Últimas 15 asistencias)
             $ultimasAsistencias = Asistencia::where('alumno_id', $alumno->id)
                 ->orderBy('fecha', 'desc')
-                ->take(5)
+                ->take(15)
                 ->get();
 
             $contadorFaltas = 0;
+            $contadorAsistencias = 0;
+            
+            // Calculamos faltas seguidas
             foreach ($ultimasAsistencias as $asist) {
                 if ($asist->presente == 0) {
                     $contadorFaltas++;
@@ -58,7 +61,25 @@ class AlumnoController extends Controller
                 }
             }
             
+            // Calculamos asistencias seguidas
+            foreach ($ultimasAsistencias as $asist) {
+                if ($asist->presente == 1) {
+                    $contadorAsistencias++;
+                } else {
+                    break;
+                }
+            }
+            
             $alumno->racha_faltas = $contadorFaltas;
+            $alumno->racha_asistencias = $contadorAsistencias;
+            
+            // Pasamos un mini-historial básico de los últimos 15 registros
+            $alumno->ultimas_asistencias = $ultimasAsistencias->map(function($a) {
+                return [
+                    'fecha' => $a->fecha,
+                    'presente' => $a->presente
+                ];
+            });
 
             return $alumno;
         });
