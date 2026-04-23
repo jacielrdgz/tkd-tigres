@@ -19,6 +19,7 @@ export default function Asistencias() {
   const [rowHover, setRowHover] = useState(null)
   const [filtroPrincipal, setFiltroPrincipal] = useState('todos')
   const [filtroCinta, setFiltroCinta] = useState('blanca')
+  const [filtroHorario, setFiltroHorario] = useState('')
   const [fecha, setFecha] = useState(new Date().toLocaleDateString('sv-SE'))
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
@@ -73,17 +74,35 @@ export default function Asistencias() {
     return () => clearTimeout(timer)
   }, [busquedaInput])
 
+  const horariosUnicos = useMemo(() => {
+    return [...new Set(alumnos.map(a => a.horario).filter(Boolean))].sort()
+  }, [alumnos])
+
   const alumnosFiltrados = useMemo(() => {
-    return alumnos.filter(a => {
+    const filtrados = alumnos.filter(a => {
       const nombreCompleto = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.toLowerCase()
       const cumpleNombre = nombreCompleto.includes(busqueda.toLowerCase())
       let cumpleFiltro = true
+      
       if (filtroPrincipal === 'presentes') cumpleFiltro = asistencias[a.id] === true
       if (filtroPrincipal === 'ausentes') cumpleFiltro = asistencias[a.id] === false
       if (filtroPrincipal === 'cintas') cumpleFiltro = String(a.configuracion_cinta_id) === String(filtroCinta)
+      
+      if (filtroHorario) {
+        cumpleFiltro = cumpleFiltro && a.horario === filtroHorario
+      }
+      
       return cumpleNombre && cumpleFiltro
+    });
+    
+    // Agrupa automáticamente los alumnos por horario si hay diferentes en la vista
+    return filtrados.sort((a, b) => {
+      const hA = a.horario || 'Z'
+      const hB = b.horario || 'Z'
+      if (hA !== hB) return hA.localeCompare(hB)
+      return a.nombre.localeCompare(b.nombre)
     })
-  }, [alumnos, busqueda, filtroPrincipal, filtroCinta, asistencias])
+  }, [alumnos, busqueda, filtroPrincipal, filtroCinta, filtroHorario, asistencias])
 
   const stats = useMemo(() => {
     const total = alumnos.length
@@ -188,6 +207,11 @@ export default function Asistencias() {
           </select>
         )}
 
+        <select style={{ ...s.selectCinta, width: '150px' }} value={filtroHorario} onChange={e => setFiltroHorario(e.target.value)}>
+          <option value="">Por Horarios</option>
+          {horariosUnicos.map(h => <option key={h} value={h}>{h}</option>)}
+        </select>
+
         <button onClick={toggleTodos} style={s.btnToggleAll}>
           {alumnosFiltrados.every(a => asistencias[a.id]) ? '⏹ Desmarcar Visibles' : '✅ Marcar Visibles'}
         </button>
@@ -273,7 +297,12 @@ export default function Asistencias() {
                         }}
                       />
 
-                      <div style={s.nombreNom}>{`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`}</div>
+                      <div style={s.nombreNom}>
+                        {`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`}
+                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', marginTop: '2px' }}>
+                          {a.horario ? `🕒 ${a.horario}` : 'Sin horario'}
+                        </div>
+                      </div>
 
                       {/* ALERTA DE DESERCIÓN (3 o más faltas seguidas) */}
                       {a.racha_faltas >= 3 && (
