@@ -31,7 +31,7 @@ class StoreAlumnoRequest extends FormRequest
             'foto'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'configuracion_cinta_id' => ['nullable', 'integer', 'exists:configuraciones_cintas,id'],
             'estatus'          => ['sometimes', Rule::in(['activo', 'inactivo'])],
-            'horario'          => ['nullable', 'string', 'max:50'],
+            'horario_id'       => ['nullable', 'integer', 'exists:horarios,id'],
         ];
     }
 

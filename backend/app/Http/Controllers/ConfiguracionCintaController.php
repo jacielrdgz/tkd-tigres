@@ -4,16 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\ConfiguracionCinta;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ConfiguracionCintaController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = auth()->user()?->tenant_id ?? 1;
-
-        $cintas = ConfiguracionCinta::delTenant($tenantId)->get();
-
-        return response()->json($cintas);
+        return ConfiguracionCinta::delTenant()->get();
     }
 
     public function store(Request $request)
@@ -27,7 +24,8 @@ class ConfiguracionCintaController extends Controller
                 'categoria_label' => 'nullable|string|max:50',
             ]);
 
-            $validated['tenant_id'] = auth()->user()->tenant_id;
+            $tenantId = auth()->user()->tenant_id;
+            $validated['tenant_id'] = $tenantId;
             
             if (empty($validated['categoria_label'])) {
                 $validated['categoria_label'] = $validated['nombre_nivel'];
@@ -37,6 +35,7 @@ class ConfiguracionCintaController extends Controller
             }
 
             $cinta = ConfiguracionCinta::create($validated);
+            Cache::forget("cintas_tenant_{$tenantId}");
             return response()->json($cinta, 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
@@ -56,10 +55,10 @@ class ConfiguracionCintaController extends Controller
                 'color_texto'     => 'sometimes|string|max:7',
                 'orden'           => 'sometimes|integer',
                 'categoria_label' => 'sometimes|string|max:50',
-                'activo'          => 'sometimes|boolean',
             ]);
 
             $cinta->update($validated);
+            Cache::forget("cintas_tenant_" . auth()->user()->tenant_id);
             return response()->json($cinta);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
@@ -72,7 +71,9 @@ class ConfiguracionCintaController extends Controller
     {
         try {
             $cinta = ConfiguracionCinta::findOrFail($id);
+            $tenantId = $cinta->tenant_id;
             $cinta->delete();
+            Cache::forget("cintas_tenant_{$tenantId}");
             return response()->json(['message' => 'Cinta eliminada']);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al eliminar: ' . $e->getMessage()], 500);

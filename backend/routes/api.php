@@ -9,6 +9,7 @@ use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ConfiguracionCintaController;
+use App\Http\Controllers\HorarioController;
 
 
 /*
@@ -58,4 +59,5 @@ Route::middleware('auth:sanctum')->group(function () {
     // Eventos
     Route::apiResource('eventos', EventoController::class);
     Route::apiResource('configuraciones-cintas', ConfiguracionCintaController::class);
+    Route::apiResource('horarios', HorarioController::class);
 });

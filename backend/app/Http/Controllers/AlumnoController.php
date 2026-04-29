@@ -13,9 +13,8 @@ class AlumnoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Alumno::query()->with(['ultimoPago', 'cintaConfig']);
+        $query = Alumno::with(['cintaConfig', 'ultimoPago', 'horarioConfig']);
 
-        // Filtros de búsqueda existentes
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -29,60 +28,36 @@ class AlumnoController extends Controller
             $query->where('estatus', $request->estatus);
         }
 
-        // --- NUEVO: Filtro por Horario ---
         if ($request->filled('horario')) {
             $query->where('horario', $request->horario);
         }
 
-        // Obtenemos los alumnos
         $alumnos = $query->orderBy('nombre')->get();
 
-        // Mapeamos los datos extra para el semáforo y la racha
-        $alumnos->map(function ($alumno) {
-            
-            // 1. LÓGICA DEL SEMÁFORO (Último pago)
+        foreach ($alumnos as $alumno) {
             $alumno->estatus_pago = $alumno->ultimoPago?->estado ?? 'pendiente';
-
-            // 2. LÓGICA DE AUDITORÍA Y RACHAS (Últimas 15 asistencias)
-            $ultimasAsistencias = Asistencia::where('alumno_id', $alumno->id)
-                ->orderBy('fecha', 'desc')
-                ->take(15)
-                ->get();
-
+            
+            // Rachas (Cálculo original, posiblemente costoso pero es lo que estaba antes)
+            $asistencias = $alumno->asistencias()->orderBy('fecha', 'desc')->take(15)->get();
+            
             $contadorFaltas = 0;
-            $contadorAsistencias = 0;
-            
-            // Calculamos faltas seguidas
-            foreach ($ultimasAsistencias as $asist) {
-                if ($asist->presente == 0) {
-                    $contadorFaltas++;
-                } else {
-                    break;
-                }
+            foreach ($asistencias as $asist) {
+                if ($asist->presente == 0) $contadorFaltas++;
+                else break;
             }
-            
-            // Calculamos asistencias seguidas
-            foreach ($ultimasAsistencias as $asist) {
-                if ($asist->presente == 1) {
-                    $contadorAsistencias++;
-                } else {
-                    break;
-                }
-            }
-            
             $alumno->racha_faltas = $contadorFaltas;
-            $alumno->racha_asistencias = $contadorAsistencias;
-            
-            // Pasamos un mini-historial básico de los últimos 15 registros
-            $alumno->ultimas_asistencias = $ultimasAsistencias->map(function($a) {
-                return [
-                    'fecha' => $a->fecha,
-                    'presente' => $a->presente
-                ];
-            });
 
-            return $alumno;
-        });
+            $contadorAsistencias = 0;
+            foreach ($asistencias as $asist) {
+                if ($asist->presente == 1) $contadorAsistencias++;
+                else break;
+            }
+            $alumno->racha_asistencias = $contadorAsistencias;
+
+            $alumno->ultimas_asistencias = $asistencias->map(function($a) {
+                return ['fecha' => $a->fecha, 'presente' => $a->presente];
+            });
+        }
 
         return response()->json($alumnos);
     }

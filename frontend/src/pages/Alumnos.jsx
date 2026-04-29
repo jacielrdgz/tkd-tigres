@@ -15,6 +15,11 @@ const limpiarDato = (val) => {
   return typeof val === 'string' ? val.trim() : val
 }
 
+const tieneFoto = (foto) => {
+  if (!foto || foto === 'null' || foto === 'NULL' || foto === '') return false
+  return true
+}
+
 const capitalizar = (str) =>
   str ? str.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ') : ''
 
@@ -23,6 +28,15 @@ const obtenerIniciales = (nombre, apellido) => {
   const n = limpiarDato(nombre).charAt(0)
   const a = apellido ? limpiarDato(apellido).charAt(0) : ''
   return (n + a).toUpperCase()
+}
+
+const formatHora = (hora) => {
+  if (!hora) return ''
+  const [h, m] = hora.split(':')
+  const hrs = parseInt(h)
+  const ampm = hrs >= 12 ? 'PM' : 'AM'
+  const h12 = hrs % 12 || 12
+  return `${h12}:${m} ${ampm}`
 }
 
 const toastSuccess = (msg) => {
@@ -54,7 +68,7 @@ const VACIO = {
   email: '',
   fecha_nacimiento: '',
   configuracion_cinta_id: '',
-  horario: '',
+  horario_id: '',
   estatus: 'activo',
 }
 
@@ -83,6 +97,7 @@ export default function Alumnos() {
   const [todosLosAlumnos, setTodosLosAlumnos] = useState([])
   const [rowHover, setRowHover] = useState(null)
   const [tabHover, setTabHover] = useState(null)
+  const [horarios, setHorarios] = useState([]);
 
   // Filtros — se inicializan desde la URL
   const [estatusFiltro, setEstatusFiltro] = useState(searchParams.get('estatus') || 'activo')
@@ -138,17 +153,25 @@ export default function Alumnos() {
     }, 300)
     return () => clearTimeout(timer)
   }, [busquedaInput])
-
   const cargarCintas = () => {
     api.get('/configuraciones-cintas')
       .then(res => setCintasConfig(res.data))
       .catch(err => console.error("Error cargando cintas", err))
   }
 
+  const cargarHorarios = () => {
+    api.get('/horarios')
+      .then(res => setHorarios(res.data))
+      .catch(err => console.error("Error cargando horarios", err))
+  }
+
   // Recarga cuando cambia búsqueda
   useEffect(() => { cargar() }, [busqueda])
-  // Carga inicial de cintas
-  useEffect(() => { cargarCintas() }, [])
+  // Carga inicial de cintas y horarios
+  useEffect(() => {
+    cargarCintas()
+    cargarHorarios()
+  }, [])
   // Sincroniza filtros en la URL automáticamente
   useEffect(() => {
     const params = {}
@@ -202,8 +225,7 @@ export default function Alumnos() {
 
       // La cinta se almacena como FK
       configuracion_cinta_id: alumno.configuracion_cinta_id || '',
-
-      horario: alumno.horario || '',
+      horario_id: alumno.horario_id || '',
       estatus: alumno.estatus || 'activo',
     });
 
@@ -356,7 +378,7 @@ export default function Alumnos() {
   const tieneFoto = (url) => url && typeof url === 'string' && url.length > 5
 
   // -- PROCESAMIENTO DE DATOS (Filtros y Orden) --
-  const horariosUnicos = [...new Set(todosLosAlumnos.map(a => a.horario).filter(Boolean))].sort()
+
 
   // Filtro por estatus primero
   const alumnosPorEstatus = estatusFiltro === 'todos'
@@ -366,7 +388,7 @@ export default function Alumnos() {
   let alumnosMostrados = [...alumnosPorEstatus]
 
   if (cintaFiltro) alumnosMostrados = alumnosMostrados.filter(a => String(a.configuracion_cinta_id) === String(cintaFiltro))
-  if (horarioFiltro) alumnosMostrados = alumnosMostrados.filter(a => a.horario === horarioFiltro)
+  if (horarioFiltro) alumnosMostrados = alumnosMostrados.filter(a => String(a.horario_id) === String(horarioFiltro))
   if (edadFiltro) {
     alumnosMostrados = alumnosMostrados.filter(a => {
       const e = a.edad
@@ -392,7 +414,7 @@ export default function Alumnos() {
       }
       case 'edad_asc': return a.edad - b.edad
       case 'edad_desc': return b.edad - a.edad
-      case 'horario_asc': return (a.horario || '').localeCompare(b.horario || '')
+      case 'horario_asc': return (a.horarioConfig?.nombre || '').localeCompare(b.horarioConfig?.nombre || '')
       default: return a.id - b.id
     }
   })
@@ -419,7 +441,7 @@ export default function Alumnos() {
         Cinta: a.cinta_config?.nombre_nivel || 'Sin cinta',
         Teléfono: limpiarDato(a.telefono_tutor),
         Estatus: capitalizar(a.estatus || 'activo'),
-        Horario: limpiarDato(a.horario)
+        Horario: a.horarioConfig?.nombre || '-'
       }))
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
@@ -589,7 +611,9 @@ export default function Alumnos() {
 
           <select style={{ ...s.selectFiltro, width: '160px' }} value={horarioFiltro} onChange={e => setHorarioFiltro(e.target.value)}>
             <option value="">Todos los horarios</option>
-            {horariosUnicos.map(h => <option key={h} value={h}>{h}</option>)}
+            {horarios.map(h => (
+              <option key={h.id} value={h.id}>{h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})</option>
+            ))}
           </select>
 
           <select style={{ ...s.selectFiltro, width: '160px' }} value={orden} onChange={e => setOrden(e.target.value)}>
@@ -969,20 +993,23 @@ export default function Alumnos() {
               <Campo label="Correo electrónico" value={form.email} error={errors.email?.[0]} onChange={v => { setForm({ ...form, email: v }); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })) }} type="email" full />
 
               <div style={s.campoGroup}>
-                <label style={s.label}>Horario Asignado</label>
-                <select
-                  style={s.select}
-                  value={form.horario}
-                  onChange={e => setForm({ ...form, horario: e.target.value })}
-                >
-                  <option value="">Seleccionar horario...</option>
-                  <option value="Horario 1">Horario 1 (4:00 PM - 5:00 PM)</option>
-                  <option value="Horario 2">Horario 2 (5:00 PM - 6:00 PM)</option>
-                  <option value="Horario 3">Horario 3 (6:00 PM - 7:15 PM)</option>
-                  <option value="Horario Tigres Do">Horario Tigres Do (5:00 PM - 6:00 PM)</option>
-
-                </select>
-              </div>
+  <label style={s.label}>Horario Asignado</label>
+  <select
+    style={s.select}
+    value={form.horario_id}
+    onChange={e => setForm({ ...form, horario_id: e.target.value })}
+  >
+    <option value="">Seleccionar horario...</option>
+    
+    {/* Conexión por ID */}
+    {horarios.map((h) => (
+      <option key={h.id} value={h.id}>
+        {h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})
+      </option>
+    ))}
+    
+  </select>
+</div>
               <div style={s.campoGroup}>
                 <label style={s.label}>Cinta</label>
                 <select style={s.select} value={form.configuracion_cinta_id} onChange={e => setForm({ ...form, configuracion_cinta_id: e.target.value })}>

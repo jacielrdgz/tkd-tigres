@@ -4,11 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/tigreslogo.jpg';
 
 const menu = [
-  { path: '/',            label: 'Dashboard',   icon: '▦' },
-  { path: '/alumnos',     label: 'Alumnos',     icon: '👥' },
+  { path: '/', label: 'Dashboard', icon: '▦' },
+  { path: '/alumnos', label: 'Alumnos', icon: '👥' },
   { path: '/asistencias', label: 'Asistencias', icon: '📋' },
-  { path: '/pagos',       label: 'Pagos',       icon: '💳' },
-  { path: '/eventos',     label: 'Eventos',     icon: '🏆' },
+  { path: '/pagos', label: 'Pagos', icon: '💳' },
+  { path: '/eventos', label: 'Eventos', icon: '🏆' },
 ];
 
 const menuAjustes = { path: '/ajustes', label: 'Ajustes', icon: '⚙️' };

@@ -15,7 +15,6 @@ class ConfiguracionCinta extends Model
         'color_texto',
         'orden',
         'categoria_label',
-        'activo',
     ];
 
 

@@ -34,7 +34,7 @@ class UpdateAlumnoRequest extends FormRequest
             'foto'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'configuracion_cinta_id' => ['sometimes', 'nullable', 'integer', 'exists:configuraciones_cintas,id'],
             'estatus'          => ['sometimes', Rule::in(['activo', 'inactivo'])],
-            'horario'          => ['sometimes', 'nullable', 'string', 'max:50'],
+            'horario_id'       => ['sometimes', 'nullable', 'integer', 'exists:horarios,id'],
             'eliminar_foto'    => ['sometimes', Rule::in(['0', '1', 0, 1, true, false])],
         ];
     }

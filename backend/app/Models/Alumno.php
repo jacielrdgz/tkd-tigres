@@ -21,8 +21,8 @@ class Alumno extends Model
         'fecha_nacimiento',
         'foto',
         'configuracion_cinta_id',
+        'horario_id',
         'estatus',
-        'horario',
     ];
 
     protected $appends = ['edad', 'foto_url'];
@@ -59,5 +59,10 @@ class Alumno extends Model
     public function cintaConfig()
     {
         return $this->belongsTo(ConfiguracionCinta::class, 'configuracion_cinta_id');
+    }
+
+    public function horarioConfig()
+    {
+        return $this->belongsTo(Horario::class, 'horario_id');
     }
 }
