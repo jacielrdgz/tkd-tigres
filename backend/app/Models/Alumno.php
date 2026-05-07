@@ -23,6 +23,7 @@ class Alumno extends Model
         'configuracion_cinta_id',
         'horario_id',
         'estatus',
+        'dia_pago',
     ];
 
     protected $appends = ['edad', 'foto_url'];

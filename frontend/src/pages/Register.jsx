@@ -91,8 +91,8 @@ export default function Register() {
           <div style={{ ...s.progressBar, width: step === 1 ? '50%' : '100%' }} />
         </div>
         <div style={s.stepLabels}>
-          <span style={{ color: '#60a5fa', fontWeight: 700 }}>1. Tu cuenta</span>
-          <span style={{ color: step === 2 ? '#60a5fa' : '#475569', fontWeight: step === 2 ? 700 : 400 }}>2. Tu escuela</span>
+          <span style={{ color: 'var(--accent-blue)', fontWeight: 700 }}>1. Tu cuenta</span>
+          <span style={{ color: step === 2 ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: step === 2 ? 700 : 400 }}>2. Tu escuela</span>
         </div>
 
         <form onSubmit={step === 1 ? (e) => { e.preventDefault(); nextStep() } : handleSubmit} style={s.form}>
@@ -221,7 +221,7 @@ const s = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#0a0b10',
+    background: 'var(--bg-primary)',
     padding: '20px',
     position: 'relative',
     overflow: 'hidden',
@@ -239,11 +239,11 @@ const s = {
   card: {
     width: '100%',
     maxWidth: '480px',
-    background: '#13151f',
-    border: '1px solid #1e2130',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
     borderRadius: '20px',
     padding: '36px 32px',
-    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+    boxShadow: 'var(--shadow-lg)',
     position: 'relative',
     zIndex: 1,
   },
@@ -255,7 +255,7 @@ const s = {
     width: '56px',
     height: '56px',
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)',
+    background: 'linear-gradient(135deg, var(--accent-purple), var(--accent-blue))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -266,25 +266,25 @@ const s = {
   title: {
     fontSize: '22px',
     fontWeight: '800',
-    color: '#f8fafc',
+    color: 'var(--text-primary)',
     margin: '0 0 4px',
   },
   subtitle: {
     fontSize: '14px',
-    color: '#64748b',
+    color: 'var(--text-secondary)',
     margin: 0,
   },
   progressContainer: {
     width: '100%',
     height: '4px',
-    background: '#1e2130',
+    background: 'var(--border)',
     borderRadius: '10px',
     overflow: 'hidden',
     marginBottom: '8px',
   },
   progressBar: {
     height: '100%',
-    background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+    background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-purple))',
     borderRadius: '10px',
     transition: 'width 0.4s ease',
   },
@@ -303,16 +303,16 @@ const s = {
     display: 'block',
     fontSize: '13px',
     fontWeight: '600',
-    color: '#94a3b8',
+    color: 'var(--text-muted)',
     marginBottom: '6px',
   },
   input: {
     width: '100%',
     padding: '12px 14px',
-    background: '#0f1117',
-    border: '1px solid #1e2130',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
     borderRadius: '10px',
-    color: '#e2e8f0',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     fontFamily: 'Inter, sans-serif',
     outline: 'none',
@@ -330,10 +330,10 @@ const s = {
   },
   disciplinaBtn: {
     padding: '10px 8px',
-    background: '#0f1117',
-    border: '1px solid #1e2130',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
     borderRadius: '10px',
-    color: '#94a3b8',
+    color: 'var(--text-muted)',
     fontSize: '12px',
     fontFamily: 'Inter, sans-serif',
     cursor: 'pointer',
@@ -341,16 +341,16 @@ const s = {
     textAlign: 'center',
   },
   disciplinaBtnActive: {
-    background: '#1e2d4a',
-    borderColor: '#3b82f6',
-    color: '#60a5fa',
+    background: 'var(--accent-blue-bg)',
+    borderColor: 'var(--accent-blue)',
+    color: 'var(--accent-blue)',
     fontWeight: '700',
-    boxShadow: '0 0 15px rgba(59, 130, 246, 0.15)',
+    boxShadow: 'var(--shadow-glow-blue)',
   },
   btnPrimary: {
     width: '100%',
     padding: '14px',
-    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
     color: '#fff',
     border: 'none',
     borderRadius: '10px',
@@ -363,9 +363,9 @@ const s = {
   },
   btnSecondary: {
     padding: '14px 20px',
-    background: '#1e2130',
-    color: '#94a3b8',
-    border: '1px solid #334155',
+    background: 'var(--bg-tertiary)',
+    color: 'var(--text-secondary)',
+    border: '1px solid var(--border)',
     borderRadius: '10px',
     fontSize: '14px',
     fontWeight: '600',
@@ -386,11 +386,11 @@ const s = {
   dividerLine: {
     flex: 1,
     height: '1px',
-    background: '#1e2130',
+    background: 'var(--border)',
   },
   dividerText: {
     fontSize: '12px',
-    color: '#475569',
+    color: 'var(--text-muted)',
     whiteSpace: 'nowrap',
   },
   linkLogin: {
@@ -398,8 +398,8 @@ const s = {
     width: '100%',
     padding: '12px',
     textAlign: 'center',
-    color: '#a78bfa',
-    background: '#1a1040',
+    color: 'var(--accent-purple)',
+    background: 'var(--accent-purple-bg)',
     borderRadius: '10px',
     fontSize: '14px',
     fontWeight: '600',

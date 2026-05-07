@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('alumnos/{alumno}/quitar-foto', [AlumnoController::class, 'quitarFoto']);
 
     // Pagos
+    Route::get('pagos/alumno/{alumno}', [PagoController::class, 'porAlumno']);
     Route::apiResource('pagos', PagoController::class);
 
     // Asistencias

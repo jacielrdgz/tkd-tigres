@@ -1,289 +1,362 @@
 import { useEffect, useState, useMemo } from 'react'
 import api from '../api/axios'
-import Swal from 'sweetalert2' 
+import Swal from 'sweetalert2'
 import { toast } from 'react-toastify'
 
-const MESES = [
-  'Enero','Febrero','Marzo','Abril','Mayo','Junio',
-  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
-]
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-const mesLabel = (mes) => {
-  if (!mes) return ''
-  const [anio, num] = mes.split('-')
-  return `${MESES[parseInt(num) - 1]} ${anio}`
+// Calcula el período activo de un alumno basándose en su día de corte
+function calcularPeriodo(diaPago = 1) {
+  const hoy = new Date()
+  const dia = diaPago
+
+  // Día de corte en el mes actual
+  const inicioEste = new Date(hoy.getFullYear(), hoy.getMonth(), dia)
+  
+  let fechaInicio, fechaFin
+  if (hoy >= inicioEste) {
+    // Estamos en o después del día de corte → período: este mes → siguiente
+    fechaInicio = inicioEste
+    fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, dia)
+  } else {
+    // Antes del día de corte → período: mes anterior → este mes
+    fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, dia)
+    fechaFin = inicioEste
+  }
+
+  const fmt = (d) => d.toLocaleDateString('sv-SE') // YYYY-MM-DD
+  const label = (d) => `${d.getDate()} ${MESES[d.getMonth()].slice(0,3)} ${d.getFullYear()}`
+
+  return {
+    fechaInicio: fmt(fechaInicio),
+    fechaFin: fmt(fechaFin),
+    label: `${label(fechaInicio)} → ${label(fechaFin)}`
+  }
 }
 
-const getMesActual = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-const VACIO = {
-  alumno_id:   '',
-  alumno_nombre: '', 
-  mes:         getMesActual(), 
-  monto:       '',
-  metodo_pago: 'efectivo',
-  estado:      'pagado', 
-  fecha_pago:  new Date().toLocaleDateString('sv-SE'), 
-}
+const hoy = new Date().toLocaleDateString('sv-SE')
 
 export default function Pagos() {
-  const [pagos, setPagos] = useState([])
   const [alumnos, setAlumnos] = useState([])
-  const [modal, setModal] = useState(false)
-  const [form, setForm] = useState(VACIO)
-  const [editando, setEditando] = useState(null)
+  const [pagosActivos, setPagosActivos] = useState([]) // pagos del período actual de cada alumno
   const [cargando, setCargando] = useState(true)
-  const [filtroEstado, setFiltroEstado] = useState('')
-  const [busquedaTabla, setBusquedaTabla] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+  const [filtro, setFiltro] = useState('todos') // todos | pagado | pendiente
 
-  const cargar = () => {
+  // Modal de pago rápido
+  const [modalPago, setModalPago] = useState(null) // alumno al que se va a registrar pago
+  const [formPago, setFormPago] = useState({ monto: '', metodo_pago: 'efectivo', fecha_pago: hoy })
+
+  // Panel de historial
+  const [historialAlumno, setHistorialAlumno] = useState(null) // alumno seleccionado
+  const [historial, setHistorial] = useState([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
+
+  const cargar = async () => {
     setCargando(true)
-    const params = {}
-    if (filtroEstado) params.estado = filtroEstado
-    api.get('/pagos', { params })
-      .then(res => setPagos(res.data))
-      .finally(() => setCargando(false))
-  }
-
-  useEffect(() => {
-    api.get('/alumnos', { params: { estatus: 'activo' } })
-      .then(res => setAlumnos(res.data))
-    cargar()
-  }, [filtroEstado])
-
-  // LÓGICA DE BÚSQUEDA EN TABLA
-  const pagosFiltrados = useMemo(() => {
-    return pagos.filter(p => {
-      const nombre = `${p.alumno?.nombre} ${p.alumno?.apellido_paterno}`.toLowerCase()
-      return nombre.includes(busquedaTabla.toLowerCase())
-    })
-  }, [pagos, busquedaTabla])
-
-  const abrirCrear = () => {
-    setForm(VACIO)
-    setEditando(null)
-    setModal(true)
-  }
-
-  const abrirEditar = (p) => {
-    setForm({
-      alumno_id:   p.alumno_id,
-      alumno_nombre: `${p.alumno?.nombre} ${p.alumno?.apellido_paterno}`, 
-      mes:         p.mes,
-      monto:       p.monto,
-      metodo_pago: p.metodo_pago,
-      estado:      p.estado,
-      fecha_pago:  p.fecha_pago || '',
-    })
-    setEditando(p.id)
-    setModal(true)
-  }
-
-  const guardar = async () => {
-    if (!form.alumno_id || !form.monto) {
-       return toast.error("Selecciona un alumno válido de la lista y asigna un monto");
-    }
-    
     try {
-      const datos = {
-        alumno_id:   parseInt(form.alumno_id),
-        mes:         form.mes,
-        monto:       parseFloat(form.monto),
-        metodo_pago: form.metodo_pago,
-        estado:      form.estado,
-        fecha_pago:  form.fecha_pago
-      }
-
-      if (editando) {
-        await api.put(`/pagos/${editando}`, datos)
-      } else {
-        await api.post('/pagos', datos)
-      }
-      
-      setModal(false)
-      cargar()
-      toast.success(editando ? 'Pago actualizado' : 'Pago registrado con éxito')
-    } catch (err) {
-      toast.error('Error al guardar el pago')
-    }
+      const [resAlumnos, resPagos] = await Promise.all([
+        api.get('/alumnos', { params: { estatus: 'activo' } }),
+        api.get('/pagos')
+      ])
+      setAlumnos(resAlumnos.data)
+      setPagosActivos(resPagos.data)
+    } catch { toast.error('Error al cargar datos') }
+    setCargando(false)
   }
 
-  const eliminar = async (id) => {
+  useEffect(() => { cargar() }, [])
+
+  // Para cada alumno, encontrar si ya pagó su período activo
+  const alumnosConEstado = useMemo(() => {
+    return alumnos.map(a => {
+      const periodo = calcularPeriodo(a.dia_pago || 1)
+      const pago = pagosActivos.find(p =>
+        p.alumno_id === a.id && p.fecha_inicio === periodo.fechaInicio
+      )
+      return { ...a, periodo, pagoActivo: pago || null }
+    })
+  }, [alumnos, pagosActivos])
+
+  const alumnosFiltrados = useMemo(() => {
+    return alumnosConEstado.filter(a => {
+      const nombre = `${a.nombre} ${a.apellido_paterno}`.toLowerCase()
+      const matchBusqueda = nombre.includes(busqueda.toLowerCase())
+      const matchFiltro = filtro === 'todos'
+        ? true
+        : filtro === 'pagado' ? !!a.pagoActivo : !a.pagoActivo
+      return matchBusqueda && matchFiltro
+    })
+  }, [alumnosConEstado, busqueda, filtro])
+
+  const abrirModalPago = (alumno, e) => {
+    e.stopPropagation()
+    setModalPago(alumno)
+    setFormPago({ monto: '', metodo_pago: 'efectivo', fecha_pago: hoy })
+  }
+
+  const confirmarPago = async () => {
+    if (!formPago.monto || isNaN(parseFloat(formPago.monto))) {
+      return toast.error('Ingresa un monto válido')
+    }
+    const periodo = calcularPeriodo(modalPago.dia_pago || 1)
+    try {
+      await api.post('/pagos', {
+        alumno_id:    modalPago.id,
+        fecha_inicio: periodo.fechaInicio,
+        fecha_fin:    periodo.fechaFin,
+        monto:        parseFloat(formPago.monto),
+        metodo_pago:  formPago.metodo_pago,
+        estado:       'pagado',
+        fecha_pago:   formPago.fecha_pago,
+      })
+      toast.success(`Pago de ${modalPago.nombre} registrado ✓`)
+      setModalPago(null)
+      cargar()
+    } catch { toast.error('Error al registrar pago') }
+  }
+
+  const eliminarPago = async (pagoId, e) => {
+    e.stopPropagation()
     const result = await Swal.fire({
       title: '¿Eliminar pago?',
-      text: "Esta acción no se puede deshacer",
+      text: 'Esta acción no se puede deshacer',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'var(--accent-red)',
-      cancelButtonColor: 'var(--bg-tertiary)',
+      cancelButtonColor: 'var(--border)',
       confirmButtonText: 'Sí, eliminar',
       background: 'var(--bg-secondary)',
       color: 'var(--text-primary)'
     })
-
     if (result.isConfirmed) {
-      await api.delete(`/pagos/${id}`)
-      cargar()
+      await api.delete(`/pagos/${pagoId}`)
       toast.success('Pago eliminado')
+      cargar()
     }
   }
 
-  const colorEstado = (e) => ({
-    pagado:    { bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
-    pendiente: { bg: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' },
-    vencido:   { bg: 'var(--accent-red-bg)', color: 'var(--accent-red)' },
-  }[e])
+  const abrirHistorial = async (alumno) => {
+    setHistorialAlumno(alumno)
+    setCargandoHistorial(true)
+    try {
+      const res = await api.get(`/pagos/alumno/${alumno.id}`)
+      setHistorial(res.data)
+    } catch { toast.error('Error al cargar historial') }
+    setCargandoHistorial(false)
+  }
+
+  const cerrarHistorial = () => { setHistorialAlumno(null); setHistorial([]) }
+
+  const totalPagados = alumnosConEstado.filter(a => !!a.pagoActivo).length
+  const totalPendientes = alumnosConEstado.filter(a => !a.pagoActivo).length
+
+  const fmtFecha = (f) => {
+    if (!f) return '—'
+    const d = new Date(f + 'T12:00:00')
+    return `${d.getDate()} ${MESES[d.getMonth()].slice(0,3)} ${d.getFullYear()}`
+  }
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={s.page}>
+      {/* HEADER */}
       <div style={s.header}>
         <div>
           <h2 style={s.titulo}>Pagos</h2>
-          <p style={s.sub}>Tigres Do</p>
+          <p style={s.sub}>Control de mensualidades</p>
         </div>
-        <button style={s.btnPrimary} onClick={abrirCrear}>+ Nuevo Pago</button>
+        <div style={s.resumen}>
+          <div style={s.resumenCard}>
+            <span style={{ ...s.resumenNum, color: 'var(--accent-green)' }}>{totalPagados}</span>
+            <span style={s.resumenLabel}>Al corriente</span>
+          </div>
+          <div style={s.resumenCard}>
+            <span style={{ ...s.resumenNum, color: 'var(--accent-red)' }}>{totalPendientes}</span>
+            <span style={s.resumenLabel}>Pendientes</span>
+          </div>
+          <div style={s.resumenCard}>
+            <span style={{ ...s.resumenNum, color: 'var(--accent-blue)' }}>{alumnos.length}</span>
+            <span style={s.resumenLabel}>Total alumnos</span>
+          </div>
+        </div>
       </div>
 
-      <div style={s.barraAcciones}>
+      {/* BARRA DE FILTROS */}
+      <div style={s.barra}>
         <div style={s.filtros}>
-          {['', 'pagado', 'pendiente', 'vencido'].map(e => (
-            <button
-              key={e}
-              style={{ ...s.filtroBtn, ...(filtroEstado === e ? s.filtroBtnActive : {}) }}
-              onClick={() => setFiltroEstado(e)}
-            >
-              {e === '' ? 'Todos' : e.charAt(0).toUpperCase() + e.slice(1)}
-            </button>
+          {[['todos','Todos'],['pagado','✅ Pagados'],['pendiente','🔴 Pendientes']].map(([val, lbl]) => (
+            <button key={val} style={{ ...s.filtroBtn, ...(filtro === val ? s.filtroBtnActive : {}) }}
+              onClick={() => setFiltro(val)}>{lbl}</button>
           ))}
         </div>
-        
-        <input 
-          style={s.search}
-          placeholder="Filtrar tabla..."
-          value={busquedaTabla}
-          onChange={(e) => setBusquedaTabla(e.target.value)}
-        />
+        <input style={s.search} placeholder="🔍 Buscar alumno..." value={busqueda}
+          onChange={e => setBusqueda(e.target.value)} />
       </div>
 
-      <div style={s.tabla}>
-        <table style={s.table}>
-          <thead>
-            <tr>
-              <th style={s.th}>Alumno</th>
-              <th style={s.th}>Mes Correspondiente</th>
-              <th style={s.th}>Monto</th>
-              <th style={s.th}>Método</th>
-              <th style={s.th}>Fecha de Pago</th>
-              <th style={s.th}>Estado</th>
-              <th style={{...s.th, textAlign: 'center'}}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cargando ? (
-              <tr><td colSpan={7} style={s.tdCenter}>Cargando...</td></tr>
-            ) : pagosFiltrados.length === 0 ? (
-              <tr><td colSpan={7} style={s.tdCenter}>No se encontraron registros</td></tr>
-            ) : pagosFiltrados.map(p => {
-              const c = colorEstado(p.estado)
-              return (
-                <tr key={p.id} style={s.tr}>
-                  <td style={s.td}>
-                    <div style={s.nombre}>{p.alumno?.nombre} {p.alumno?.apellido_paterno}</div>
-                  </td>
-                  <td style={s.td}>{mesLabel(p.mes)}</td>
-                  <td style={s.td}><span style={s.monto}>${parseFloat(p.monto).toFixed(2)}</span></td>
-                  <td style={s.td}>{p.metodo_pago}</td>
-                  <td style={s.td}>{p.fecha_pago || '—'}</td>
-                  <td style={s.td}>
-                    <span style={{ ...s.badge, background: c?.bg, color: c?.color }}>
-                      {p.estado.toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={s.td}>
-                    <div style={{...s.acciones, justifyContent: 'center'}}>
-                      <button style={s.btnEdit} onClick={() => abrirEditar(p)}>✏️</button>
-                      <button style={s.btnDel}  onClick={() => eliminar(p.id)}>🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* LISTA DE ALUMNOS */}
+      {cargando ? (
+        <div style={s.empty}>Cargando alumnos...</div>
+      ) : alumnosFiltrados.length === 0 ? (
+        <div style={s.empty}>No hay alumnos que mostrar</div>
+      ) : (
+        <div style={s.lista}>
+          {alumnosFiltrados.map(a => {
+            const pagado = !!a.pagoActivo
+            return (
+              <div key={a.id} style={{ ...s.card, borderLeft: `4px solid ${pagado ? 'var(--accent-green)' : 'var(--accent-red)'}` }}
+                onClick={() => abrirHistorial(a)}>
+                {/* Avatar */}
+                <div style={s.avatar}>
+                  {a.foto_url
+                    ? <img src={a.foto_url} alt="" style={s.avatarImg} />
+                    : <div style={s.avatarInicial}>{a.nombre[0]}{a.apellido_paterno[0]}</div>
+                  }
+                </div>
 
-      {modal && (
-        <div style={s.overlay}>
-          <div style={s.modal}>
+                {/* Info */}
+                <div style={s.info}>
+                  <div style={s.nombre}>{a.nombre} {a.apellido_paterno}</div>
+                  <div style={s.periodo}>📅 {a.periodo.label}</div>
+                </div>
+
+                {/* Estado y acción */}
+                <div style={s.derecha}>
+                  {pagado ? (
+                    <>
+                      <span style={s.badgePagado}>✓ PAGADO</span>
+                      <div style={s.montoInfo}>
+                        ${parseFloat(a.pagoActivo.monto).toFixed(2)} · {a.pagoActivo.metodo_pago}
+                      </div>
+                      <button style={s.btnEliminar}
+                        onClick={(e) => eliminarPago(a.pagoActivo.id, e)}>🗑️ Quitar</button>
+                    </>
+                  ) : (
+                    <button style={s.btnPagar} onClick={(e) => abrirModalPago(a, e)}>
+                      💳 Marcar pagado
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── MODAL RÁPIDO DE PAGO ── */}
+      {modalPago && (
+        <div style={s.overlay} onClick={() => setModalPago(null)}>
+          <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
-              <h3 style={s.modalTitulo}>{editando ? 'Editar Registro' : 'Nuevo Pago'}</h3>
-              <button style={s.btnCerrar} onClick={() => setModal(false)}>✕</button>
+              <div>
+                <h3 style={s.modalTitulo}>Registrar Pago</h3>
+                <p style={s.modalSub}>{modalPago.nombre} {modalPago.apellido_paterno}</p>
+              </div>
+              <button style={s.btnCerrar} onClick={() => setModalPago(null)}>✕</button>
             </div>
 
-            <div style={s.campoGroup}>
-              <label style={s.label}>Alumno (Escribe para buscar)</label>
-              <input
-                list="lista-alumnos"
-                style={s.input}
-                placeholder="Escribe el nombre del alumno..."
-                value={form.alumno_nombre}
-                onChange={e => {
-                  const val = e.target.value
-                  const encontrado = alumnos.find(a => `${a.nombre} ${a.apellido_paterno}` === val)
-                  setForm({...form, alumno_nombre: val, alumno_id: encontrado ? encontrado.id : '' })
-                }}
-              />
-              <datalist id="lista-alumnos">
-                {alumnos.map(a => (
-                  <option key={a.id} value={`${a.nombre} ${a.apellido_paterno}`} />
-                ))}
-              </datalist>
-              {form.alumno_id ? (
-                <small style={{color: 'var(--accent-green)', display: 'block', marginTop: '4px'}}>✓ Alumno identificado</small>
-              ) : (
-                <small style={{color: 'var(--text-muted)', display: 'block', marginTop: '4px'}}>Selecciona de la lista predictiva</small>
-              )}
+            <div style={s.periodoBadge}>
+              📅 {modalPago.periodo?.label || calcularPeriodo(modalPago.dia_pago || 1).label}
             </div>
 
             <div style={s.grid2}>
               <div>
-                <label style={s.label}>Mes a Pagar</label>
-                <input style={s.input} type="month" value={form.mes} onChange={e => setForm({...form, mes: e.target.value})} />
-              </div>
-              <div>
                 <label style={s.label}>Monto ($)</label>
-                <input style={s.input} type="number" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} placeholder="0.00" />
+                <input style={s.input} type="number" placeholder="0.00" autoFocus
+                  value={formPago.monto} onChange={e => setFormPago({ ...formPago, monto: e.target.value })} />
               </div>
               <div>
-                <label style={s.label}>Método</label>
-                <select style={s.select} value={form.metodo_pago} onChange={e => setForm({...form, metodo_pago: e.target.value})}>
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="tarjeta">Tarjeta</option>
+                <label style={s.label}>Método de pago</label>
+                <select style={s.select} value={formPago.metodo_pago}
+                  onChange={e => setFormPago({ ...formPago, metodo_pago: e.target.value })}>
+                  <option value="efectivo">💵 Efectivo</option>
+                  <option value="transferencia">🏦 Transferencia</option>
+                  <option value="tarjeta">💳 Tarjeta</option>
                 </select>
               </div>
-              <div>
-                <label style={s.label}>Estatus</label>
-                <select style={s.select} value={form.estado} onChange={e => setForm({...form, estado: e.target.value})}>
-                  <option value="pagado">Pagado</option>
-                  <option value="pendiente">Pendiente</option>
-                  <option value="vencido">Vencido</option>
-                </select>
-              </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={s.label}>Fecha de Pago</label>
-                <input style={s.input} type="date" value={form.fecha_pago} onChange={e => setForm({...form, fecha_pago: e.target.value})} />
+              <div style={{ gridColumn: '1/-1' }}>
+                <label style={s.label}>Fecha de pago</label>
+                <input style={s.input} type="date" value={formPago.fecha_pago}
+                  onChange={e => setFormPago({ ...formPago, fecha_pago: e.target.value })} />
               </div>
             </div>
 
             <div style={s.modalFooter}>
-              <button style={s.btnSecondary} onClick={() => setModal(false)}>Cancelar</button>
-              <button style={s.btnPrimary} onClick={guardar}>
-                {editando ? 'Actualizar' : 'Registrar Pago'}
-              </button>
+              <button style={s.btnSecondary} onClick={() => setModalPago(null)}>Cancelar</button>
+              <button style={s.btnConfirmar} onClick={confirmarPago}>✓ Confirmar Pago</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PANEL DE HISTORIAL ── */}
+      {historialAlumno && (
+        <div style={s.overlay} onClick={cerrarHistorial}>
+          <div style={s.drawer} onClick={e => e.stopPropagation()}>
+            <div style={s.drawerHeader}>
+              <div style={s.drawerTituloRow}>
+                <div style={s.avatarSm}>
+                  {historialAlumno.foto_url
+                    ? <img src={historialAlumno.foto_url} alt="" style={s.avatarImg} />
+                    : <div style={s.avatarInicialSm}>{historialAlumno.nombre[0]}{historialAlumno.apellido_paterno[0]}</div>
+                  }
+                </div>
+                <div>
+                  <div style={s.drawerNombre}>{historialAlumno.nombre} {historialAlumno.apellido_paterno}</div>
+                  <div style={s.drawerSub}>Día de corte: <strong>{historialAlumno.dia_pago || 1}</strong> de cada mes</div>
+                </div>
+              </div>
+              <button style={s.btnCerrar} onClick={cerrarHistorial}>✕</button>
+            </div>
+
+            <div style={s.drawerContent}>
+              {cargandoHistorial ? (
+                <div style={s.empty}>Cargando historial...</div>
+              ) : historial.length === 0 ? (
+                <div style={s.empty}>Sin pagos registrados</div>
+              ) : (
+                <>
+                  {/* Resumen */}
+                  <div style={s.resumenHistorial}>
+                    <div style={s.resumenHistItem}>
+                      <span style={{ ...s.resumenNum, fontSize: '20px', color: 'var(--accent-green)' }}>
+                        {historial.filter(p => p.estado === 'pagado').length}
+                      </span>
+                      <span style={s.resumenLabel}>Meses pagados</span>
+                    </div>
+                    <div style={s.resumenHistItem}>
+                      <span style={{ ...s.resumenNum, fontSize: '20px', color: 'var(--accent-green)' }}>
+                        ${historial.filter(p => p.estado === 'pagado')
+                          .reduce((sum, p) => sum + parseFloat(p.monto), 0).toFixed(2)}
+                      </span>
+                      <span style={s.resumenLabel}>Total pagado</span>
+                    </div>
+                  </div>
+
+                  {/* Lista de pagos */}
+                  <div style={s.historialLista}>
+                    {historial.map(p => (
+                      <div key={p.id} style={s.historialItem}>
+                        <div style={s.historialPeriodo}>
+                          <div style={s.historialFechas}>
+                            {p.fecha_inicio ? `${fmtFecha(p.fecha_inicio)} → ${fmtFecha(p.fecha_fin)}` : p.mes}
+                          </div>
+                          <div style={s.historialDetalle}>{p.metodo_pago} · {fmtFecha(p.fecha_pago)}</div>
+                        </div>
+                        <div style={s.historialDerecha}>
+                          <div style={{ ...s.historialMonto, color: 'var(--accent-green)' }}>
+                            ${parseFloat(p.monto).toFixed(2)}
+                          </div>
+                          <span style={{
+                            ...s.badge,
+                            background: p.estado === 'pagado' ? 'var(--accent-green-bg)' : 'var(--accent-red-bg)',
+                            color: p.estado === 'pagado' ? 'var(--accent-green)' : 'var(--accent-red)'
+                          }}>{p.estado.toUpperCase()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -293,37 +366,63 @@ export default function Pagos() {
 }
 
 const s = {
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  titulo: { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
-  sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '2px' },
-  barraAcciones: { display: 'flex', justifyContent: 'space-between', marginBottom: '16px', gap: '15px' },
+  page: { padding: '24px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' },
+  titulo: { fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
+  sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
+  resumen: { display: 'flex', gap: '12px' },
+  resumenCard: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '2px' },
+  resumenNum: { fontSize: '28px', fontWeight: '900', lineHeight: 1 },
+  resumenLabel: { fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' },
+  barra: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' },
   filtros: { display: 'flex', gap: '8px' },
-  filtroBtn: { padding: '8px 16px', borderRadius: '20px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', transition: '0.2s' },
+  filtroBtn: { padding: '8px 16px', borderRadius: '20px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: '0.2s' },
   filtroBtnActive: { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)' },
-  search: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '20px', padding: '8px 20px', color: 'var(--text-primary)', width: '250px', outline: 'none' },
-  tabla: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '14px 16px', textAlign: 'left', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' },
-  tr: { borderBottom: '1px solid var(--border)', transition: '0.2s' },
-  td: { padding: '14px 16px', fontSize: '14px', color: 'var(--text-secondary)' },
-  tdCenter: { padding: '40px', textAlign: 'center', color: 'var(--text-muted)' },
-  nombre: { fontWeight: '600', color: 'var(--text-primary)' },
-  monto: { color: 'var(--accent-green)', fontWeight: '700' },
-  badge: { padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '700' },
-  acciones: { display: 'flex', gap: '8px' },
-  btnPrimary: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: '600' },
-  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer' },
-  btnEdit: { background: 'var(--accent-blue-bg)', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' },
-  btnDel: { background: 'var(--accent-red-bg)', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '30px', width: '500px', boxShadow: 'var(--shadow-lg)' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
-  modalTitulo: { margin: 0, color: 'var(--text-primary)' },
-  btnCerrar: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px' },
-  campoGroup: { marginBottom: '15px' },
-  label: { display: 'block', color: 'var(--text-muted)', fontSize: '12px', marginBottom: '5px' },
-  input: { width: '100%', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
-  select: { width: '100%', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
-  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '25px' }
+  search: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '20px', padding: '8px 20px', color: 'var(--text-primary)', width: '240px', outline: 'none', fontSize: '14px' },
+  empty: { textAlign: 'center', padding: '60px', color: 'var(--text-muted)', fontSize: '14px' },
+  lista: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  card: { display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px 18px', cursor: 'pointer', transition: 'all 0.2s' },
+  avatar: { flexShrink: 0 },
+  avatarImg: { width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover' },
+  avatarInicial: { width: '44px', height: '44px', borderRadius: '50%', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px' },
+  info: { flex: 1, minWidth: 0 },
+  nombre: { fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px' },
+  periodo: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' },
+  derecha: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 },
+  badgePagado: { background: 'var(--accent-green-bg)', color: 'var(--accent-green)', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' },
+  montoInfo: { fontSize: '12px', color: 'var(--text-muted)' },
+  btnPagar: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' },
+  btnEliminar: { background: 'var(--accent-red-bg)', color: 'var(--accent-red)', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px', width: '460px', maxWidth: '95vw', boxShadow: 'var(--shadow-lg)' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' },
+  modalTitulo: { margin: 0, fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' },
+  modalSub: { margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '13px' },
+  periodoBadge: { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', marginBottom: '20px' },
+  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' },
+  label: { display: 'block', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '6px' },
+  input: { width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
+  select: { width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' },
+  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '22px', borderTop: '1px solid var(--border)', paddingTop: '18px' },
+  btnCerrar: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer', lineHeight: 1 },
+  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 18px', cursor: 'pointer', fontWeight: '600' },
+  btnConfirmar: { background: 'var(--accent-green)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' },
+  drawer: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', width: '520px', maxWidth: '95vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' },
+  drawerHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '24px 24px 16px', borderBottom: '1px solid var(--border)' },
+  drawerTituloRow: { display: 'flex', alignItems: 'center', gap: '14px' },
+  avatarSm: { flexShrink: 0 },
+  avatarInicialSm: { width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px' },
+  drawerNombre: { fontWeight: '800', color: 'var(--text-primary)', fontSize: '17px' },
+  drawerSub: { fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' },
+  drawerContent: { flex: 1, overflowY: 'auto', padding: '16px 24px 24px' },
+  resumenHistorial: { display: 'flex', gap: '12px', marginBottom: '20px' },
+  resumenHistItem: { flex: 1, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px' },
+  historialLista: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  historialItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px' },
+  historialPeriodo: { flex: 1 },
+  historialFechas: { fontWeight: '600', color: 'var(--text-primary)', fontSize: '13px' },
+  historialDetalle: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'capitalize' },
+  historialDerecha: { textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' },
+  historialMonto: { fontWeight: '800', fontSize: '15px' },
+  badge: { padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '800' },
 }

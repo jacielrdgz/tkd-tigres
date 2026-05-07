@@ -32,6 +32,7 @@ class StoreAlumnoRequest extends FormRequest
             'configuracion_cinta_id' => ['nullable', 'integer', 'exists:configuraciones_cintas,id'],
             'estatus'          => ['sometimes', Rule::in(['activo', 'inactivo'])],
             'horario_id'       => ['nullable', 'integer', 'exists:horarios,id'],
+            'dia_pago'         => ['nullable', 'integer', 'min:1', 'max:31'],
         ];
     }
 

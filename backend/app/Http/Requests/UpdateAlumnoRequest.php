@@ -36,6 +36,7 @@ class UpdateAlumnoRequest extends FormRequest
             'estatus'          => ['sometimes', Rule::in(['activo', 'inactivo'])],
             'horario_id'       => ['sometimes', 'nullable', 'integer', 'exists:horarios,id'],
             'eliminar_foto'    => ['sometimes', Rule::in(['0', '1', 0, 1, true, false])],
+            'dia_pago'         => ['sometimes', 'nullable', 'integer', 'min:1', 'max:31'],
         ];
     }
 

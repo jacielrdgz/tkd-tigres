@@ -60,8 +60,8 @@ export default function Cintas() {
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, borrar',
-      confirmButtonColor: '#ef4444',
-      background: '#0b0c14', color: '#fff'
+      confirmButtonColor: 'var(--accent-red)',
+      background: 'var(--bg-secondary)', color: 'var(--text-primary)'
     }).then(async r => {
       if (r.isConfirmed) {
         try {
@@ -125,7 +125,7 @@ export default function Cintas() {
           <div style={s.toolList}>
             {loading ? <div style={s.toolEmpty}>Buscando...</div> :
               cintas.map((c, i) => (
-                <div key={c.id} style={{ ...s.toolRow, borderColor: editId === c.id ? '#3b82f6' : '#1e2130' }}>
+                <div key={c.id} style={{ ...s.toolRow, borderColor: editId === c.id ? 'var(--accent-blue)' : 'var(--border)' }}>
                   <div style={s.toolRowLeft}>
                     <span style={s.toolOrder}>#{i + 1}</span>
                     <div style={{ ...s.toolBadge, background: c.color_hex, color: c.color_texto }}>{c.nombre_nivel}</div>
@@ -150,33 +150,33 @@ export default function Cintas() {
 }
 
 const s = {
-  subtitleMain: { color: '#475569', fontSize: '15px', marginTop: '4px' },
+  subtitleMain: { color: 'var(--text-secondary)', fontSize: '15px', marginTop: '4px' },
   pageTool: { padding: '40px 24px', maxWidth: '1100px', margin: '0 auto' },
-  btnBack: { background: '#13151f', border: '1px solid #1e2130', borderRadius: '10px', color: '#64748b', padding: '8px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginBottom: '24px' },
+  btnBack: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginBottom: '24px' },
   toolHeaderRow: { marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  titleTool: { fontSize: '28px', fontWeight: '900', color: '#fff', margin: 0 },
+  titleTool: { fontSize: '28px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 },
   toolLayout: { display: 'flex', gap: '32px', alignItems: 'flex-start' },
-  toolFormCard: { width: '340px', background: '#0b0c14', borderRadius: '20px', border: '1px solid #1e2130', padding: '24px', position: 'sticky', top: '24px' },
-  toolLabel: { fontSize: '11px', color: '#475569', fontWeight: '800', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '1px' },
-  toolInput: { width: '100%', background: '#000', border: '1px solid #1e2130', borderRadius: '12px', padding: '14px', color: '#fff', marginBottom: '20px', fontSize: '14px' },
+  toolFormCard: { width: '340px', background: 'var(--bg-secondary)', borderRadius: '20px', border: '1px solid var(--border)', padding: '24px', position: 'sticky', top: '24px' },
+  toolLabel: { fontSize: '11px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '1px' },
+  toolInput: { width: '100%', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', color: 'var(--text-primary)', marginBottom: '20px', fontSize: '14px' },
   toolPickerRow: { display: 'flex', gap: '20px', marginBottom: '24px' },
   pickerCell: { display: 'flex', flexDirection: 'column', gap: '6px' },
-  pickerLabel: { fontSize: '10px', fontWeight: '800', color: '#334155' },
+  pickerLabel: { fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)' },
   colorPick: { width: '40px', height: '40px', border: 'none', background: 'transparent', cursor: 'pointer' },
-  toolPreview: { padding: '14px', borderRadius: '12px', fontSize: '13px', fontWeight: '900', textAlign: 'center', marginBottom: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.4)' },
+  toolPreview: { padding: '14px', borderRadius: '12px', fontSize: '13px', fontWeight: '900', textAlign: 'center', marginBottom: '24px', boxShadow: 'var(--shadow-md)' },
   btnGroup: { display: 'flex', gap: '10px' },
-  btnSave: { flex: 1, background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontWeight: '800', cursor: 'pointer' },
-  btnCancel: { background: '#13151f', color: '#64748b', border: '1px solid #1e2130', borderRadius: '12px', padding: '12px', cursor: 'pointer' },
-  listHeader: { display: 'flex', justifyContent: 'space-between', padding: '10px 20px', fontSize: '12px', color: '#334155', fontWeight: '800', textTransform: 'uppercase' },
+  btnSave: { flex: 1, background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontWeight: '800', cursor: 'pointer' },
+  btnCancel: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', cursor: 'pointer' },
+  listHeader: { display: 'flex', justifyContent: 'space-between', padding: '10px 20px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' },
   toolList: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  toolRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: '#0b0c14', border: '1px solid #1e2130', borderRadius: '16px' },
+  toolRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px' },
   toolRowLeft: { display: 'flex', alignItems: 'center', gap: '20px' },
-  toolOrder: { fontSize: '12px', color: '#334155', fontWeight: '900', width: '24px' },
-  toolBadge: { padding: '8px 18px', borderRadius: '10px', fontSize: '12px', fontWeight: '900', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' },
-  toolHex: { fontSize: '11px', color: '#334155', fontFamily: 'monospace' },
+  toolOrder: { fontSize: '12px', color: 'var(--text-muted)', fontWeight: '900', width: '24px' },
+  toolBadge: { padding: '8px 18px', borderRadius: '10px', fontSize: '12px', fontWeight: '900', boxShadow: 'var(--shadow-sm)' },
+  toolHex: { fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' },
   toolActions: { display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' },
-  btnIcon: { padding: '5px', borderRadius: '6px', border: '1px solid #1e2130', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', },
-  btnEdit: { background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.4)' },
-  btnDel: { background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.4)' },
-  toolEmpty: { textAlign: 'center', padding: '40px', color: '#334155' }
+  btnIcon: { padding: '5px', borderRadius: '6px', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', },
+  btnEdit: { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', boxShadow: 'var(--shadow-sm)' },
+  btnDel: { background: 'var(--accent-red-bg)', color: 'var(--accent-red)', boxShadow: 'var(--shadow-sm)' },
+  toolEmpty: { textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }
 }

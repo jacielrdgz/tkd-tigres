@@ -227,6 +227,7 @@ export default function Alumnos() {
       configuracion_cinta_id: alumno.configuracion_cinta_id || '',
       horario_id: alumno.horario_id || '',
       estatus: alumno.estatus || 'activo',
+      dia_pago: alumno.dia_pago || 1,
     });
 
     // 3. CORRECCIÓN DE FOTO:
@@ -719,7 +720,7 @@ export default function Alumnos() {
                     key={a.id}
                     style={{
                       ...s.tr,
-                      background: rowHover === a.id ? '#1a1d2e' : 'transparent',
+                      background: rowHover === a.id ? 'var(--bg-tertiary)' : 'transparent',
                       transition: 'background 0.15s',
                     }}
                     onMouseEnter={() => setRowHover(a.id)}
@@ -776,8 +777,8 @@ export default function Alumnos() {
                     <td style={s.td}>
                       <span style={{
                         ...s.cinta,
-                        background: a.cinta_config?.color_hex || '#334155',
-                        color: a.cinta_config?.color_texto || '#fff',
+                        background: a.cinta_config?.color_hex || 'var(--bg-tertiary)',
+                        color: a.cinta_config?.color_texto || 'var(--text-primary)',
                         display: 'inline-block',
                         minWidth: '100px',
                         textAlign: 'center'
@@ -1027,6 +1028,15 @@ export default function Alumnos() {
                   <option value="inactivo">Inactivo</option>
                 </select>
               </div>
+
+              <div style={s.campoGroup}>
+                <label style={s.label}>Día de pago mensual</label>
+                <select style={s.select} value={form.dia_pago || 1} onChange={e => setForm({ ...form, dia_pago: parseInt(e.target.value) })}>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                    <option key={d} value={d}>Día {d} de cada mes</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div style={s.modalFooter}>
@@ -1082,7 +1092,7 @@ function SkeletonBlock({ w = '100%', h = 12 }) {
       height: h,
       width: w,
       borderRadius: 6,
-      background: 'linear-gradient(90deg, #1e2130 25%, #2a2f45 50%, #1e2130 75%)',
+      background: 'linear-gradient(90deg, var(--bg-tertiary) 25%, var(--border) 50%, var(--bg-tertiary) 75%)',
       backgroundSize: '200% 100%',
       animation: 'skeletonPulse 1.5s ease-in-out infinite'
     }} />
@@ -1104,10 +1114,10 @@ function SkeletonCircle({ size = 40 }) {
       width: size,
       height: size,
       borderRadius: '50%',
-      background: 'linear-gradient(90deg, #13151f 25%, #1e2130 50%, #13151f 75%)',
+      background: 'linear-gradient(90deg, var(--bg-tertiary) 25%, var(--border) 50%, var(--bg-tertiary) 75%)',
       backgroundSize: '200% 100%',
       animation: 'skeletonPulse 1.5s ease-in-out infinite',
-      border: '2px solid #1e2130',
+      border: '2px solid var(--border)',
       flexShrink: 0,
       margin: '0 auto'
     }} />
@@ -1115,84 +1125,84 @@ function SkeletonCircle({ size = 40 }) {
 }
 
 const s = {
-  statusActivoBg: '#14532d',
-  statusActivoText: '#4ade80',
-  statusInactivoBg: '#450a0a',
-  statusInactivoText: '#f87171',
+  statusActivoBg: 'var(--accent-green-bg)',
+  statusActivoText: 'var(--accent-green)',
+  statusInactivoBg: 'var(--accent-red-bg)',
+  statusInactivoText: 'var(--accent-red)',
 
   container: { scrollbarGutter: 'stable', paddingBottom: '40px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  titulo: { fontSize: '24px', fontWeight: '700', color: '#f1f5f9' },
-  sub: { fontSize: '15px', color: '#64748b', marginTop: '2px' },
+  titulo: { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' },
+  sub: { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px' },
   barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '16px' },
-  search: { flex: 1, maxWidth: '395px', padding: '10px 16px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '80px', color: '#e2e8f0', outline: 'none', transition: 'all 0.3s ease' },
-  tabs: { display: 'flex', background: '#13151f', padding: '4px', borderRadius: '10px', border: '1px solid #1e2130', flexShrink: 0 },
-  tab: { padding: '8px 16px', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
-  tabHover: { padding: '8px 16px', background: 'rgba(255,255,255,0.03)', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
-  tabActiveVerde: { padding: '8px 20px', background: 'linear-gradient(135deg, #14532d, #059669)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)', transition: 'all 0.2s' },
-  tabActiveRojo: { padding: '8px 20px', background: 'linear-gradient(135deg, #450a0a, #ef4444)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)', transition: 'all 0.2s' },
-  tabActiveAzul: { padding: '8px 20px', background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' },
+  search: { flex: 1, maxWidth: '395px', padding: '10px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '80px', color: 'var(--text-primary)', outline: 'none', transition: 'all 0.3s ease' },
+  tabs: { display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', flexShrink: 0 },
+  tab: { padding: '8px 16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
+  tabHover: { padding: '8px 16px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
+  tabActiveVerde: { padding: '8px 20px', background: 'var(--accent-green)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-green)', transition: 'all 0.2s' },
+  tabActiveRojo: { padding: '8px 20px', background: 'var(--accent-red)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-red)', transition: 'all 0.2s' },
+  tabActiveAzul: { padding: '8px 20px', background: 'var(--accent-blue)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-blue)', transition: 'all 0.2s' },
   filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
-  selectFiltro: { padding: '10px 14px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '12px', color: '#cbd5e1', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '150px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' },
+  selectFiltro: { padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '150px', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' },
   btnLimpiarWrapper: { display: 'inline-block', width: '90px' },
-  btnLimpiar: { width: '100%', padding: '8px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid #334155', color: '#cbd5e1', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', transition: 'all 0.2s', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', },
-  btnLimpiarHover: { background: 'rgba(255,255,255,0.1)', borderColor: '#475569' },
+  btnLimpiar: { width: '100%', padding: '8px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' },
+  btnLimpiarHover: { background: 'var(--border)', borderColor: 'var(--border-hover)' },
   btnExportExcel: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)', },
   btnExportPdf: { background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)', },
-  tabla: { background: '#13151f', borderRadius: '16px', border: '1px solid #1e2130', overflow: 'hidden', minHeight: '400px', boxShadow: '0 20px 50px rgba(0,0,0,0.4)' },
+  tabla: { background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', minHeight: '400px', boxShadow: 'var(--shadow-md)' },
   tablaScroll: { width: '100%', overflowX: 'auto', overflowY: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '1000px' },
-  th: { padding: '10px 16px', textAlign: 'center', fontSize: '12px', color: '#64748b', borderBottom: '1px solid #1e2130', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', },
-  td: { padding: '10px 16px', fontSize: '14px', color: '#cbd5e1', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', },
-  tdCenter: { padding: '32px', textAlign: 'center', color: '#475569' },
-  fotoTabla: { width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #1e2130' },
-  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: '#1e2d4a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#60a5fa' },
-  nombreNom: { fontWeight: '600', color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis' },
-  emailSub: { fontSize: '12px', color: '#94a3b8', marginTop: '2px' },
+  th: { padding: '10px 16px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', },
+  td: { padding: '10px 16px', fontSize: '14px', color: 'var(--text-secondary)', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', },
+  tdCenter: { padding: '32px', textAlign: 'center', color: 'var(--text-muted)' },
+  fotoTabla: { width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' },
+  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: 'var(--accent-blue)' },
+  nombreNom: { fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' },
+  emailSub: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' },
   cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', minWidth: '100px' },
   badge: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', },
   acciones: { display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' },
-  btnVer: { background: 'rgba(148, 163, 184, 0.1)', border: '1px solid #1e2130', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: '#94a3b8', fontSize: '12px', boxShadow: '0 4px 4px rgba(248, 250, 252, 0.4)', },
-  btnEdit: { background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #1e2130', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: '#60a5fa', fontSize: '12px', boxShadow: '0 4px 4px rgba(59, 130, 246, 0.4)', },
-  btnDel: { background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #1e2130', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: '#f87171', fontSize: '12px', boxShadow: '0 4px 4px rgba(239, 68, 68, 0.4)', },
-  btnNuevoAlumno: { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 10px 20px rgba(59, 130, 246, 0.4)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' },
-  btnPrimary: { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' },
-  btnSecondary: { background: '#0f1117', color: '#94a3b8', border: '1px solid #1e2130', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(5, 5, 10, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)' },
+  btnVer: { background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '12px' },
+  btnEdit: { background: 'var(--accent-blue-bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: 'var(--accent-blue)', fontSize: '12px' },
+  btnDel: { background: 'var(--accent-red-bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: 'var(--accent-red)', fontSize: '12px' },
+  btnNuevoAlumno: { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' },
+  btnPrimary: { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s' },
+  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
 
   // Dark ModalVer original structure
-  modalCard: { background: '#13151f', borderRadius: '11px', width: '650px', maxWidth: '95vw', overflow: 'hidden', border: '1px solid #1e2130' },
-  cardHeader: { background: '#0d3b5c', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTopLeftRadius: '10px', borderTopRightRadius: '10px' },
-  cardTitle: { fontSize: '18px', fontWeight: '600', textTransform: 'uppercase', color: '#fff' },
-  btnCerrarWhite: { background: 'none', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' },
+  modalCard: { background: 'var(--bg-secondary)', borderRadius: '11px', width: '650px', maxWidth: '95vw', overflow: 'hidden', border: '1px solid var(--border)' },
+  cardHeader: { background: 'var(--bg-tertiary)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
+  cardTitle: { fontSize: '18px', fontWeight: '600', textTransform: 'uppercase', color: 'var(--text-primary)' },
+  btnCerrarWhite: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
   cardBody: { padding: '30px', display: 'flex', gap: '18px', alignItems: 'flex-start' },
-  avatarBox: { width: '180px', height: '220px', flexShrink: 0, border: '1px solid #1e2130', overflow: 'hidden', background: '#0f1117', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: '8px' },
+  avatarBox: { width: '180px', height: '220px', flexShrink: 0, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: '8px' },
   avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  avatarInicialesBox: { width: '100%', height: '100%', background: '#1e2d4a', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  avatarIniciales: { fontSize: '56px', fontWeight: '700', color: '#60a5fa' },
+  avatarInicialesBox: { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  avatarIniciales: { fontSize: '56px', fontWeight: '700', color: 'var(--accent-blue)' },
   cardInfo: { flex: 1, display: 'flex', flexDirection: 'column', gap: '15px' },
-  infoItem: { display: 'flex', borderBottom: '1px solid #1e2130', paddingBottom: '6px' },
-  infoLabel: { width: '100px', fontWeight: '700', color: '#64748b', fontSize: '15px', textAlign: 'right', marginRight: '20px' },
-  infoValue: { color: '#cbd5e1', fontSize: '14.5px', fontWeight: '500' },
-  cardFooter: { padding: '20px', borderTop: '1px solid #1e2130', display: 'flex', justifyContent: 'center', gap: '15px', background: '#0f1117' },
-  btnAceptar: { background: '#1e2130', border: '1px solid #334155', color: '#cbd5e1', padding: '8px 30px', borderRadius: '5px', fontWeight: '600', cursor: 'pointer' },
-  btnWhatsapp: { border: '1px solid #166534', color: '#4ade80', background: '#14532d', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center' },
-  modal: { background: '#13151f', border: '5px solid #1e2130', borderRadius: '16px', padding: '28px', width: '580px', maxHeight: '90vh', overflowY: 'auto' },
+  infoItem: { display: 'flex', borderBottom: '1px solid var(--border)', paddingBottom: '6px' },
+  infoLabel: { width: '100px', fontWeight: '700', color: 'var(--text-muted)', fontSize: '15px', textAlign: 'right', marginRight: '20px' },
+  infoValue: { color: 'var(--text-primary)', fontSize: '14.5px', fontWeight: '500' },
+  cardFooter: { padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '15px', background: 'var(--bg-tertiary)' },
+  btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '8px 30px', borderRadius: '5px', fontWeight: '600', cursor: 'pointer' },
+  btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center' },
+  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px', width: '580px', maxHeight: '90vh', overflowY: 'auto' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
-  modalTitulo: { color: '#f1f5f9', fontSize: '18px', fontWeight: '700' },
-  btnCerrar: { background: 'none', border: 'none', color: '#94a3b8', fontSize: '18px', cursor: 'pointer' },
+  modalTitulo: { color: 'var(--text-primary)', fontSize: '18px', fontWeight: '700' },
+  btnCerrar: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
   fotoUploadArea: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px', gap: '8px' },
-  fotoPreviewBox: { width: '100px', height: '100px', borderRadius: '50%', border: '2px dashed #334155', cursor: 'pointer', overflow: 'hidden', background: '#1e2d4a', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  fotoPreviewBox: { width: '100px', height: '100px', borderRadius: '50%', border: '2px dashed var(--border)', cursor: 'pointer', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   fotoPreviewImg: { width: '100%', height: '100%', objectFit: 'cover' },
   fotoPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  btnQuitarFoto: { background: 'none', border: 'none', color: '#f87171', fontSize: '12px', cursor: 'pointer' },
+  btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '12px', cursor: 'pointer' },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
   campoGroup: { marginTop: '1px' },
-  label: { display: 'block', fontSize: '13px', color: '#94a3b8', marginBottom: '6px', fontWeight: '600' },
-  input: { width: '100%', fontSize: '14px', padding: '9px 12px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#e2e8f0', outline: 'none' },
-  inputError: { marginTop: '6px', fontSize: '12px', color: '#f87171', lineHeight: 1.2 },
-  select: { width: '100%', padding: '9px 12px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#e2e8f0', outline: 'none' },
-  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #1e2130', paddingTop: '20px' },
+  label: { display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600' },
+  input: { width: '100%', fontSize: '14px', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
+  inputError: { marginTop: '6px', fontSize: '12px', color: 'var(--accent-red)', lineHeight: 1.2 },
+  select: { width: '100%', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
+  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' },
   btnIcon: {
     padding: '8px',
     borderRadius: '10px',
@@ -1202,8 +1212,6 @@ const s = {
     alignItems: 'center',
     justifyContent: 'center',
     transition: 'all 0.2s',
-    background: 'rgba(255, 255, 255, 0.05)',
-    transition: 'all 0.3s ease',
-    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', // Azul degradado
+    background: 'var(--bg-tertiary)',
   },
 }

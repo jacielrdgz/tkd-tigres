@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Alumno;
 use App\Models\Pago;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class PagoController extends Controller
@@ -19,19 +21,40 @@ class PagoController extends Controller
             $query->where('estado', $request->estado);
         }
 
-        return response()->json($query->orderBy('created_at', 'desc')->get());
+        // Filtrar por período activo (fecha_inicio)
+        if ($request->filled('fecha_inicio')) {
+            $query->where('fecha_inicio', $request->fecha_inicio);
+        }
+
+        return response()->json($query->orderBy('fecha_inicio', 'desc')->get());
+    }
+
+    /**
+     * Devuelve todos los pagos de un alumno específico, para el historial.
+     */
+    public function porAlumno(Alumno $alumno)
+    {
+        $pagos = Pago::where('alumno_id', $alumno->id)
+            ->orderBy('fecha_inicio', 'desc')
+            ->get();
+
+        return response()->json($pagos);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'alumno_id'   => 'required|exists:alumnos,id',
-            'mes'         => 'required|string|max:7',
+            'fecha_inicio' => 'required|date',
+            'fecha_fin'   => 'required|date|after:fecha_inicio',
             'monto'       => 'required|numeric|min:0',
             'metodo_pago' => 'required|in:efectivo,transferencia,tarjeta',
             'estado'      => 'required|in:pagado,pendiente,vencido',
             'fecha_pago'  => 'nullable|date',
         ]);
+
+        // Calcular el campo `mes` desde fecha_inicio para compatibilidad
+        $validated['mes'] = Carbon::parse($validated['fecha_inicio'])->format('Y-m');
 
         $pago = Pago::create($validated);
 
@@ -46,12 +69,17 @@ class PagoController extends Controller
     public function update(Request $request, Pago $pago)
     {
         $validated = $request->validate([
-            'mes'         => 'sometimes|string|max:7',
+            'fecha_inicio' => 'sometimes|date',
+            'fecha_fin'   => 'sometimes|date',
             'monto'       => 'sometimes|numeric|min:0',
             'metodo_pago' => 'sometimes|in:efectivo,transferencia,tarjeta',
             'estado'      => 'sometimes|in:pagado,pendiente,vencido',
             'fecha_pago'  => 'nullable|date',
         ]);
+
+        if (isset($validated['fecha_inicio'])) {
+            $validated['mes'] = Carbon::parse($validated['fecha_inicio'])->format('Y-m');
+        }
 
         $pago->update($validated);
 

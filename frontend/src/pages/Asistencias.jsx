@@ -423,7 +423,8 @@ export default function Asistencias() {
           <button
             style={{
               ...s.btnPrimary,
-              backgroundColor: hayCambios ? '#3b82f6' : '#1e293b',
+              backgroundColor: hayCambios ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+              color: hayCambios ? '#fff' : 'var(--text-secondary)',
               boxShadow: hayCambios ? '0 0 20px rgba(59, 130, 246, 0.5)' : 'none',
               padding: '10px 24px',
               animation: hayCambios ? 'pulseBlue 2s infinite' : 'none',
@@ -513,9 +514,9 @@ export default function Asistencias() {
             onClick={() => setSoloHoy(!soloHoy)}
             style={{
               ...s.btnDoc,
-              borderColor: soloHoy ? '#3b82f6' : '#334155',
-              background: soloHoy ? 'rgba(59,130,246,0.1)' : 'transparent',
-              color: soloHoy ? '#3b82f6' : '#cbd5e1',
+              borderColor: soloHoy ? 'var(--accent-blue)' : 'var(--border)',
+              background: soloHoy ? 'var(--accent-blue-bg)' : 'transparent',
+              color: soloHoy ? 'var(--accent-blue)' : 'var(--text-secondary)',
               minWidth: '140px',
               padding: '8px 12px'
             }}
@@ -538,8 +539,8 @@ export default function Asistencias() {
                 setSoloHoy(false);
                 setFecha(new Date().toLocaleDateString('sv-SE'));
               }}
-              onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = '#475569' }}
-              onMouseOut={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = '#334155' }}
+              onMouseOver={e => { e.currentTarget.style.background = 'var(--border-hover)'; e.currentTarget.style.borderColor = 'var(--text-muted)' }}
+              onMouseOut={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.borderColor = 'var(--border)' }}
             >
               ↻ Limpiar
             </button>
@@ -692,8 +693,8 @@ export default function Asistencias() {
                       <td style={s.td} onClick={e => e.stopPropagation()}>
                         <span style={{
                           ...s.cinta,
-                          background: a.cinta_config?.color_hex || '#334155',
-                          color: a.cinta_config?.color_texto || '#fff',
+                          background: a.cinta_config?.color_hex || 'var(--bg-tertiary)',
+                          color: a.cinta_config?.color_texto || 'var(--text-primary)',
                           display: 'inline-block', width: '140px'
                         }}>{a.cinta_config?.nombre_nivel || 'Sin cinta'}</span>
                       </td>
@@ -792,7 +793,7 @@ export default function Asistencias() {
           <div style={s.modalCard}>
             <div style={s.cardHeader}>
               <h3 style={s.cardTitle}>Expediente de Asistencias</h3>
-              <button style={s.btnCerrarWhite} onMouseOver={e => e.currentTarget.style.color = '#fff'} onMouseOut={e => e.currentTarget.style.color = '#94a3b8'} onClick={() => setModalHistorial(false)}>✖</button>
+              <button style={s.btnCerrarWhite} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-muted)'} onClick={() => setModalHistorial(false)}>✖</button>
             </div>
 
             <div style={{ padding: '24px' }}>

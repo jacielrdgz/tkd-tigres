@@ -9,9 +9,9 @@ const VACIO = {
 }
 
 const COLOR_TIPO = {
-  examen:    { bg: '#1e2d4a', color: '#60a5fa' },
-  torneo:    { bg: '#2d1f00', color: '#fbbf24' },
-  seminario: { bg: '#1a1040', color: '#a78bfa' },
+  examen:    { bg: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' },
+  torneo:    { bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
+  seminario: { bg: 'var(--accent-purple-bg)', color: 'var(--accent-purple)' },
 }
 
 export default function Eventos() {
@@ -83,7 +83,7 @@ export default function Eventos() {
         ) : eventos.length === 0 ? (
           <p style={s.vacio}>No hay eventos registrados</p>
         ) : eventos.map(e => {
-          const c = COLOR_TIPO[e.tipo] || { bg: '#1e2130', color: '#94a3b8' }
+          const c = COLOR_TIPO[e.tipo] || { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)' }
           const pasado = esPasado(e.fecha)
           return (
             <div key={e.id} style={{ ...s.card, opacity: pasado ? 0.6 : 1 }}>
@@ -159,31 +159,31 @@ export default function Eventos() {
 
 const s = {
   header:       { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  titulo:       { fontSize: '24px', fontWeight: '700', color: '#f1f5f9', marginBottom: '4px' },
-  sub:          { fontSize: '14px', color: '#64748b' },
+  titulo:       { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' },
+  sub:          { fontSize: '14px', color: 'var(--text-secondary)' },
   grid:         { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' },
-  card:         { background: '#13151f', border: '1px solid #1e2130', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' },
+  card:         { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' },
   cardTop:      { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   tipoBadge:    { padding: '3px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
-  pasadoBadge:  { fontSize: '11px', color: '#475569' },
-  cardNombre:   { fontSize: '16px', fontWeight: '700', color: '#f1f5f9' },
-  cardFecha:    { fontSize: '13px', color: '#64748b' },
-  cardDesc:     { fontSize: '13px', color: '#94a3b8', lineHeight: '1.5' },
+  pasadoBadge:  { fontSize: '11px', color: 'var(--text-muted)' },
+  cardNombre:   { fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' },
+  cardFecha:    { fontSize: '13px', color: 'var(--text-secondary)' },
+  cardDesc:     { fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5' },
   cardAcciones: { display: 'flex', gap: '8px', marginTop: '4px' },
-  btnEdit:      { flex: 1, padding: '7px', background: '#1e2d4a', border: 'none', borderRadius: '6px', color: '#60a5fa', fontSize: '13px', cursor: 'pointer' },
-  btnDel:       { flex: 1, padding: '7px', background: '#2d1515', border: 'none', borderRadius: '6px', color: '#f87171', fontSize: '13px', cursor: 'pointer' },
-  vacio:        { color: '#475569', fontSize: '14px' },
-  btnPrimary:   { background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', fontSize: '14px', cursor: 'pointer', fontWeight: '600' },
-  btnSecondary: { background: '#1e2130', color: '#94a3b8', border: '1px solid #334155', borderRadius: '8px', padding: '10px 18px', fontSize: '14px', cursor: 'pointer' },
+  btnEdit:      { flex: 1, padding: '7px', background: 'var(--accent-blue-bg)', border: 'none', borderRadius: '6px', color: 'var(--accent-blue)', fontSize: '13px', cursor: 'pointer' },
+  btnDel:       { flex: 1, padding: '7px', background: 'var(--accent-red-bg)', border: 'none', borderRadius: '6px', color: 'var(--accent-red)', fontSize: '13px', cursor: 'pointer' },
+  vacio:        { color: 'var(--text-muted)', fontSize: '14px' },
+  btnPrimary:   { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', fontSize: '14px', cursor: 'pointer', fontWeight: '600' },
+  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 18px', fontSize: '14px', cursor: 'pointer' },
   overlay:      { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal:        { background: '#13151f', border: '1px solid #1e2130', borderRadius: '16px', padding: '28px', width: '480px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' },
+  modal:        { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px', width: '480px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' },
   modalHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  modalTitulo:  { fontSize: '18px', fontWeight: '700', color: '#f1f5f9' },
-  btnCerrar:    { background: 'none', border: 'none', color: '#64748b', fontSize: '18px', cursor: 'pointer' },
+  modalTitulo:  { fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' },
+  btnCerrar:    { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
   grid2:        { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' },
   campoGroup:   { marginBottom: '16px' },
-  label:        { display: 'block', fontSize: '13px', color: '#94a3b8', marginBottom: '6px' },
-  input:        { width: '100%', padding: '9px 12px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#e2e8f0', fontSize: '14px', outline: 'none' },
-  select:       { width: '100%', padding: '9px 12px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#e2e8f0', fontSize: '14px', outline: 'none' },
-  modalFooter:  { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #1e2130', paddingTop: '20px' },
+  label:        { display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px' },
+  input:        { width: '100%', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' },
+  select:       { width: '100%', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' },
+  modalFooter:  { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' },
 }
