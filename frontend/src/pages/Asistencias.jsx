@@ -8,10 +8,10 @@ import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 
 const SkeletonCircle = ({ size }) => (
-  <div style={{ width: size, height: size, borderRadius: '50%', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
+  <div style={{ width: size, height: size, borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
 )
 const SkeletonBlock = ({ w, h }) => (
-  <div style={{ width: w, height: h, borderRadius: '4px', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
+  <div style={{ width: w, height: h, borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
 )
 
 const formatHora = (hora) => {
@@ -86,10 +86,10 @@ export default function Asistencias() {
   // Lógica para colores del semáforo de pagos
   const obtenerColorPago = (estatus) => {
     switch (estatus) {
-      case 'pagado': return '#4ade80';   // Verde
-      case 'vencido': return '#ef4444';   // Rojo
-      case 'pendiente': return '#fbbf24'; // Amarillo
-      default: return '#64748b';          // Gris
+      case 'pagado': return 'var(--accent-green)';
+      case 'vencido': return 'var(--accent-red)';
+      case 'pendiente': return 'var(--accent-yellow)';
+      default: return 'var(--text-muted)';
     }
   }
 
@@ -129,8 +129,8 @@ export default function Asistencias() {
           showCancelButton: true,
           confirmButtonText: 'Sí, restaurar',
           cancelButtonText: 'No, descartar',
-          background: '#13151f',
-          color: '#fff'
+          background: 'var(--bg-secondary)',
+          color: 'var(--text-primary)'
         }).then((result) => {
           if (result.isConfirmed) {
             setAsistencias(prev => ({ ...prev, ...backupData }))
@@ -196,11 +196,11 @@ export default function Asistencias() {
           confirmButtonText: '💾 Guardar y Salir',
           denyButtonText: '🚪 Salir de todos modos',
           cancelButtonText: '↩ Cancelar',
-          background: '#13151f',
-          color: '#fff',
-          confirmButtonColor: '#3b82f6',
-          denyButtonColor: '#ef4444',
-          cancelButtonColor: '#334155',
+          background: 'var(--bg-secondary)',
+          color: 'var(--text-primary)',
+          confirmButtonColor: 'var(--accent-blue)',
+          denyButtonColor: 'var(--accent-red)',
+          cancelButtonColor: 'var(--bg-tertiary)',
           allowOutsideClick: false
         });
 
@@ -311,9 +311,9 @@ export default function Asistencias() {
         text: `Registrado con éxito (${stats.presentes} presentes)`,
         timer: 1800,
         showConfirmButton: false,
-        background: '#13151f',
-        color: '#f1f5f9',
-        iconColor: '#4ade80'
+        background: 'var(--bg-secondary)',
+        color: 'var(--text-primary)',
+        iconColor: 'var(--accent-green)'
       })
     } catch (err) {
       toast.error('Error al guardar')
@@ -553,16 +553,16 @@ export default function Asistencias() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
             Marcar Todos
           </button>
-          <button style={{ ...s.btnExportExcel, padding: '10px 12px' }} onClick={exportarExcel}
+          <button style={s.btnExportExcel} onClick={exportarExcel}
             onMouseOver={e => handleHover(e, 'rgba(16, 185, 129, 0.5)')}
             onMouseOut={e => handleOut(e, 'rgba(16, 185, 129, 0.3)')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             Excel
           </button>
-          <button style={{ ...s.btnExportPdf, padding: '10px 12px' }} onClick={exportarPDF}
+          <button style={s.btnExportPdf} onClick={exportarPDF}
             onMouseOver={e => handleHover(e, 'rgba(239, 68, 68, 0.5)')}
             onMouseOut={e => handleOut(e, 'rgba(239, 68, 68, 0.3)')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
             PDF
           </button>
         </div>
@@ -601,27 +601,26 @@ export default function Asistencias() {
                     <td style={{ ...s.td, width: '80px' }}><SkeletonCircle size={40} /></td>
                     <td style={{ ...s.td, width: '300px', textAlign: 'left' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <SkeletonCircle size={10} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ width: '180px', height: '14px', borderRadius: '4px', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out' }} />
-                          <div style={{ width: '100px', height: '10px', borderRadius: '4px', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out', opacity: 0.5 }} />
+                          <div style={{ width: '180px', height: '14px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', animation: 'skeletonPulse 1.5s infinite ease-in-out' }} />
+                          <div style={{ width: '100px', height: '10px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', animation: 'skeletonPulse 1.5s infinite ease-in-out', opacity: 0.5 }} />
                         </div>
                       </div>
                     </td>
                     <td style={{ ...s.td, width: '150px' }}>
-                      <div style={{ width: '120px', height: '26px', borderRadius: '20px', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
+                      <div style={{ width: '120px', height: '26px', borderRadius: '20px', backgroundColor: 'var(--bg-tertiary)', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
                     </td>
                     <td style={{ ...s.td, width: '110px' }}>
-                      <div style={{ width: '70px', height: '24px', borderRadius: '20px', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
+                      <div style={{ width: '70px', height: '24px', borderRadius: '20px', backgroundColor: 'var(--bg-tertiary)', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
                     </td>
                     <td style={{ ...s.td, width: '160px' }}>
-                      <div style={{ width: '110px', height: '36px', borderRadius: '8px', backgroundColor: '#1e2130', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
+                      <div style={{ width: '110px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--bg-tertiary)', animation: 'skeletonPulse 1.5s infinite ease-in-out', margin: '0 auto' }} />
                     </td>
                   </tr>
                 ))
               ) : alumnosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ ...s.td, padding: '60px', color: '#64748b' }}>
+                  <td colSpan={5} style={{ ...s.td, padding: '60px', color: 'var(--text-muted)' }}>
                     No hay alumnos registrados que coincidan con los filtros
                   </td>
                 </tr>
@@ -629,7 +628,7 @@ export default function Asistencias() {
                 alumnosFiltrados.map(a => (
                   <React.Fragment key={a.id}>
                     <tr
-                      style={{ ...s.tr, background: rowHover === a.id ? '#1a1d2e' : 'transparent', transition: 'background 0.15s', cursor: 'pointer' }}
+                      style={{ ...s.tr, background: rowHover === a.id ? 'var(--bg-tertiary)' : 'transparent', transition: 'background 0.15s', cursor: 'pointer' }}
                       onMouseEnter={() => setRowHover(a.id)}
                       onMouseLeave={() => setRowHover(null)}
                       onClick={() => toggleRow(a.id)}
@@ -659,10 +658,10 @@ export default function Asistencias() {
 
                           <div style={s.nombreNom}>
                             {`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`}
-                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', marginTop: '2px' }}>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal', marginTop: '2px' }}>
 
                               {/* El ID ahora aparece primero a la izquierda */}
-                              <span style={{ marginRight: '8px', color: '#94a3b8', fontWeight: 'bold' }}>ID:{a.id}</span>
+                              <span style={{ marginRight: '8px', color: 'var(--text-dim)', fontWeight: 'bold' }}>ID:{a.id}</span>
 
                               {a.horario_config ? (
                                 `🕒 ${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
@@ -729,13 +728,13 @@ export default function Asistencias() {
 
                     {/* FILA EXPANDIDA DEL HISTORIAL */}
                     {rowExpandida[a.id] && (
-                      <tr style={{ background: '#0f111a', borderBottom: '1px solid #1e2130' }}>
-                        <td colSpan={5} style={{ padding: '20px 24px', color: '#94a3b8' }}>
+                      <tr style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)' }}>
+                        <td colSpan={5} style={{ padding: '20px 24px', color: 'var(--text-secondary)' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span>📅 Historial de Clases Recientes</span>
-                              {a.racha_faltas > 0 && <span style={{ padding: '2px 8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '4px', fontSize: '10px' }}>Inasistente actual</span>}
-                              {a.racha_asistencias > 0 && <span style={{ padding: '2px 8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '4px', fontSize: '10px' }}>Asistente actual</span>}
+                              {a.racha_faltas > 0 && <span style={{ padding: '2px 8px', background: 'var(--accent-red-bg)', color: 'var(--accent-red)', borderRadius: '4px', fontSize: '10px' }}>Inasistente actual</span>}
+                              {a.racha_asistencias > 0 && <span style={{ padding: '2px 8px', background: 'var(--accent-green-bg)', color: 'var(--accent-green)', borderRadius: '4px', fontSize: '10px' }}>Asistente actual</span>}
                             </div>
 
                             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '4px' }}>
@@ -745,23 +744,23 @@ export default function Asistencias() {
                                   return (
                                     <div key={idx} title={ua.presente ? 'Asistió' : 'Faltó'} style={{
                                       display: 'flex', flexDirection: 'column', alignItems: 'center',
-                                      background: '#13151f', padding: '8px 16px', borderRadius: '8px', border: '1px solid #1e2130',
+                                      background: 'var(--bg-secondary)', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
                                       minWidth: '60px'
                                     }}>
-                                      <span style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: '600' }}>
+                                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600' }}>
                                         {new Date(ua.fecha + 'T12:00').toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }).toUpperCase()}
                                       </span>
                                       <div style={{
                                         width: '16px', height: '16px', borderRadius: '50%',
                                         background: colorHex,
                                         boxShadow: `0 0 8px ${colorHex}80`,
-                                        border: '2px solid #13151f'
+                                        border: '2px solid var(--bg-secondary)'
                                       }} />
                                     </div>
                                   )
                                 })
                               ) : (
-                                <div style={{ padding: '10px 16px', background: '#13151f', borderRadius: '8px', border: '1px solid #1e2130', fontSize: '12px' }}>
+                                <div style={{ padding: '10px 16px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '12px' }}>
                                   🗓️ No hay registros anteriores disponibles para este alumno.
                                 </div>
                               )}
@@ -769,11 +768,11 @@ export default function Asistencias() {
 
                             <button
                               onClick={() => abrirHistorialCompleto(a)}
-                              style={{ marginTop: '12px', padding: '8px 16px', background: 'linear-gradient(135deg, #1e293b, #0f111a)', color: '#60a5fa', border: '1px solid #3b82f6', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', alignSelf: 'flex-start', transition: 'all 0.2s', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.2)' }}
+                              style={{ marginTop: '12px', padding: '8px 16px', background: 'var(--bg-tertiary)', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', alignSelf: 'flex-start', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
                               onMouseOver={e => e.currentTarget.style.filter = 'brightness(1.2)'}
                               onMouseOut={e => e.currentTarget.style.filter = 'brightness(1)'}
                             >
-                              🗓️ Consultar Hisotrial Específico Completo
+                              🗓️ Consultar Historial Específico Completo
                             </button>
                           </div>
                         </td>
@@ -798,11 +797,11 @@ export default function Asistencias() {
 
             <div style={{ padding: '24px' }}>
               <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ fontSize: '18px', color: '#f1f5f9', fontWeight: '700' }}>
+                <div style={{ fontSize: '18px', color: 'var(--text-primary)', fontWeight: '700' }}>
                   {alumnoHistorial.nombre} {alumnoHistorial.apellido_paterno}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>BUSCAR MES:</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>BUSCAR MES:</span>
                   <input
                     type="month"
                     value={filtroMesHistorial}
@@ -811,42 +810,42 @@ export default function Asistencias() {
                       ...s.inputFecha,
                       width: '180px',
                       padding: '8px 14px',
-                      background: '#1a1d2e',
-                      border: '1px solid #3b82f6',
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--accent-blue)',
                       borderRadius: '10px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontSize: '13px',
                       fontWeight: '600',
                       outline: 'none',
-                      boxShadow: '0 0 10px rgba(59, 130, 246, 0.2)'
+                      boxShadow: 'var(--shadow-sm)'
                     }}
                   />
                   {filtroMesHistorial && (
-                    <button onClick={() => setFiltroMesHistorial('')} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>Limpiar</button>
+                    <button onClick={() => setFiltroMesHistorial('')} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>Limpiar</button>
                   )}
                 </div>
               </div>
 
-              <div style={{ height: '350px', overflowY: 'auto', background: '#0f111a', borderRadius: '12px', border: '1px solid #1e2130', boxShadow: 'inset 0 4px 6px rgba(0,0,0,0.3)' }}>
+              <div style={{ height: '350px', overflowY: 'auto', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'inset 0 4px 6px rgba(0,0,0,0.1)' }}>
                 {cargandoHistorial ? (
-                  <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>Consultando archivos del servidor...</div>
+                  <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>Consultando archivos del servidor...</div>
                 ) : historialCompleto.length === 0 ? (
-                  <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>No hay registros históricos de asistencia.</div>
+                  <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>No hay registros históricos de asistencia.</div>
                 ) : (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={{ position: 'sticky', top: 0, background: '#13151f', zIndex: 10 }}>
+                    <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10 }}>
                       <tr>
-                        <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '11px', color: '#64748b', borderBottom: '1px solid #1e2130' }}>FECHA EXACTA</th>
-                        <th style={{ padding: '12px 20px', textAlign: 'right', fontSize: '11px', color: '#64748b', borderBottom: '1px solid #1e2130' }}>REGISTRO</th>
+                        <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '11px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>FECHA EXACTA</th>
+                        <th style={{ padding: '12px 20px', textAlign: 'right', fontSize: '11px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>REGISTRO</th>
                       </tr>
                     </thead>
                     <tbody>
                       {historialCompleto.filter(h => !filtroMesHistorial || h.fecha.startsWith(filtroMesHistorial)).length === 0 ? (
-                        <tr><td colSpan={2} style={{ padding: '40px', textAlign: 'center', color: '#475569', fontSize: '14px' }}>No hay clases registradas en este mes</td></tr>
+                        <tr><td colSpan={2} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>No hay clases registradas en este mes</td></tr>
                       ) : (
                         historialCompleto.filter(h => !filtroMesHistorial || h.fecha.startsWith(filtroMesHistorial)).map(h => (
-                          <tr key={h.id} style={{ borderBottom: '1px solid #1e2130', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#1a1d2e'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                            <td style={{ padding: '14px 20px', color: '#cbd5e1', fontSize: '14px', fontWeight: '500' }}>
+                          <tr key={h.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                            <td style={{ padding: '14px 20px', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>
                               {new Date(h.fecha + 'T12:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}
                             </td>
                             <td style={{ padding: '14px 20px', textAlign: 'right' }}>
@@ -873,53 +872,55 @@ export default function Asistencias() {
 }
 
 const s = {
-  statusActivoBg: '#14532d', statusActivoText: '#4ade80',
-  statusInactivoBg: '#450a0a', statusInactivoText: '#f87171',
+  statusActivoBg: 'var(--accent-green-bg)', statusActivoText: 'var(--accent-green)',
+  statusInactivoBg: 'var(--accent-red-bg)', statusInactivoText: 'var(--accent-red)',
   container: { scrollbarGutter: 'stable', paddingBottom: '40px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  titulo: { fontSize: '24px', fontWeight: '700', color: '#f1f5f9' },
-  sub: { fontSize: '15px', color: '#64748b', marginTop: '2px' },
+  titulo: { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' },
+  sub: { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px' },
   barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '16px' },
-  search: { flex: 1, maxWidth: '395px', padding: '10px 16px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '80px', color: '#e2e8f0', outline: 'none', transition: 'all 0.3s ease' },
-  tabs: { display: 'flex', background: '#13151f', padding: '4px', borderRadius: '10px', border: '1px solid #1e2130', flexShrink: 0 },
-  tab: { padding: '8px 16px', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
-  tabHover: { padding: '8px 16px', background: 'rgba(255,255,255,0.03)', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
-  tabActiveVerde: { padding: '8px 20px', background: 'linear-gradient(135deg, #14532d, #059669)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)', transition: 'all 0.2s' },
-  tabActiveRojo: { padding: '8px 20px', background: 'linear-gradient(135deg, #450a0a, #ef4444)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)', transition: 'all 0.2s' },
-  tabActiveAzul: { padding: '8px 20px', background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' },
+  search: { flex: 1, maxWidth: '395px', padding: '10px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '80px', color: 'var(--text-primary)', outline: 'none', transition: 'all 0.3s ease' },
+  tabs: { display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', flexShrink: 0 },
+  tab: { padding: '8px 16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
+  tabHover: { padding: '8px 16px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
+  tabActiveVerde: { padding: '8px 20px', background: 'var(--accent-green)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-green)', transition: 'all 0.2s' },
+  tabActiveRojo: { padding: '8px 20px', background: 'var(--accent-red)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-red)', transition: 'all 0.2s' },
+  tabActiveAzul: { padding: '8px 20px', background: 'var(--accent-blue)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-blue)', transition: 'all 0.2s' },
   filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
-  selectFiltro: { padding: '10px 14px', background: '#13151f', border: '1px solid #1e2130', borderRadius: '12px', color: '#cbd5e1', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '150px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' },
+  selectFiltro: { padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '150px', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' },
   btnLimpiarWrapper: { display: 'inline-block', width: '90px' },
-  btnLimpiar: { width: '100%', padding: '8px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid #334155', color: '#cbd5e1', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', transition: 'all 0.2s', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', },
-  btnLimpiarHover: { background: 'rgba(255,255,255,0.1)', borderColor: '#475569' },
+  btnLimpiar: { width: '100%', padding: '8px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)', },
+  btnLimpiarHover: { background: 'var(--border)', borderColor: 'var(--border-hover)' },
   btnExportExcel: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)', },
+
   btnExportPdf: { background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)', },
-  btnExportBlue: { background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)', },
-  tablaContenedor: { background: '#13151f', borderRadius: '16px', border: '1px solid #1e2130', minHeight: '600px', boxShadow: '0 20px 50px rgba(0,0,0,0.4)', overflow: 'hidden' },
+
+  btnExportBlue: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: 'var(--shadow-glow-blue)', },
+  tablaContenedor: { background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', minHeight: '600px', boxShadow: 'var(--shadow-md)', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '800px' },
-  th: { padding: '10px 16px', fontSize: '12px', color: '#64748b', borderBottom: '1px solid #1e2130', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  tr: { borderBottom: '1px solid #1e2130' },
-  td: { padding: '12px 16px', fontSize: '14px', color: '#cbd5e1', textAlign: 'center' },
-  tdCenter: { padding: '60px', textAlign: 'center', color: '#475569' },
-  fotoTabla: { width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #1e2130' },
-  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: '#1e2d4a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#60a5fa' },
-  nombreNom: { fontWeight: '600', color: '#f1f5f9' },
+  th: { padding: '10px 16px', fontSize: '12px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  tr: { borderBottom: '1px solid var(--border)' },
+  td: { padding: '12px 16px', fontSize: '14px', color: 'var(--text-secondary)', textAlign: 'center' },
+  tdCenter: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
+  fotoTabla: { width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' },
+  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: 'var(--accent-blue)' },
+  nombreNom: { fontWeight: '600', color: 'var(--text-primary)' },
   cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', minWidth: '100px' },
   badge: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', },
   btnAsis: { padding: '8px 0', width: '110px', borderRadius: '6px', border: '1px solid', cursor: 'pointer', fontWeight: '800', fontSize: '10px', transition: 'all 0.2s' },
-  overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.75)', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)' },
-  modalCard: { backgroundColor: '#13151f', borderRadius: '20px', width: '90%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid #1e2130', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(59, 130, 246, 0.1)' },
-  cardHeader: { padding: '24px', borderBottom: '1px solid #1e2130', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f111a' },
-  cardTitle: { margin: 0, fontSize: '20px', fontWeight: '800', color: '#f8fafc' },
-  btnCerrarWhite: { background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '22px', cursor: 'pointer', padding: '4px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', width: '32px', height: '32px' },
+  overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)' },
+  modalCard: { backgroundColor: 'var(--bg-secondary)', borderRadius: '20px', width: '90%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' },
+  cardHeader: { padding: '24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' },
+  cardTitle: { margin: 0, fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)' },
+  btnCerrarWhite: { background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '22px', cursor: 'pointer', padding: '4px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', width: '32px', height: '32px' },
   btnDoc: { padding: '8px 16px', borderRadius: '12px', border: '1px solid', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' },
-  btnPrimary: { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' },
+  btnPrimary: { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s' },
 }
 
 const keyframes = `
-  @keyframes pulseBlue {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-    70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+      @keyframes pulseBlue {
+        0 % { transform: scale(1); box- shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+      70% {transform: scale(1.02); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+      100% {transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
   }
-`
+      `

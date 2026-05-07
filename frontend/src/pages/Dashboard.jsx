@@ -162,31 +162,31 @@ function formatearFecha(f) {
 
 function colorTipo(tipo) {
   const t = tipo?.toLowerCase()
-  if (t === 'examen') return { background: '#1e2d4a', color: '#60a5fa' }
-  if (t === 'torneo') return { background: '#2d1f00', color: '#fbbf24' }
-  return { background: '#1e2130', color: '#94a3b8' }
+  if (t === 'examen') return { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }
+  if (t === 'torneo') return { background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }
+  return { background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }
 }
 
 const s = {
-  loading: { color: '#94a3b8', padding: '50px', textAlign: 'center', fontSize: '18px' },
-  error: { color: '#f87171', padding: '50px', textAlign: 'center' },
+  loading: { color: 'var(--text-muted)', padding: '50px', textAlign: 'center', fontSize: '18px' },
+  error: { color: 'var(--accent-red)', padding: '50px', textAlign: 'center' },
   headerRow: { marginBottom: '30px' },
-  titulo: { fontSize: '26px', fontWeight: '800', color: '#f8fafc', margin: 0 },
-  sub: { fontSize: '14px', color: '#64748b', marginTop: '4px' },
+  titulo: { fontSize: '26px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
+  sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
   cards: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' },
-  card: { background: '#13151f', border: '1px solid #1e2130', borderRadius: '12px', padding: '24px' },
+  card: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', boxShadow: 'var(--shadow-sm)' },
   cardIcon: { fontSize: '20px', marginBottom: '10px' },
   cardValor: { fontSize: '42px', fontWeight: '900', lineHeight: '1' },
-  cardLabel: { fontSize: '14px', color: '#f1f5f9', fontWeight: '600', marginTop: '8px' },
-  cardSubtext: { fontSize: '11px', color: '#475569', marginTop: '4px', textTransform: 'uppercase' },
-  subtitulo: { fontSize: '18px', fontWeight: '700', color: '#f1f5f9', marginBottom: '15px' },
-  vacio: { background: '#13151f', padding: '40px', borderRadius: '12px', textAlign: 'center', color: '#475569', border: '1px dashed #334155' },
-  tabla: { background: '#13151f', border: '1px solid #1e2130', borderRadius: '12px', overflow: 'hidden' },
+  cardLabel: { fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600', marginTop: '8px' },
+  cardSubtext: { fontSize: '11px', color: 'var(--text-dim)', marginTop: '4px', textTransform: 'uppercase' },
+  subtitulo: { fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '15px' },
+  vacio: { background: 'var(--bg-secondary)', padding: '40px', borderRadius: '12px', textAlign: 'center', color: 'var(--text-dim)', border: '1px dashed var(--border-hover)' },
+  tabla: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '14px 16px', textAlign: 'left', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #1e2130', letterSpacing: '1px' },
-  tr: { borderBottom: '1px solid #1e2130' },
-  td: { padding: '16px', fontSize: '14px', color: '#cbd5e1' },
-  eventoNombre: { fontWeight: '700', color: '#f8fafc' },
+  th: { padding: '14px 16px', textAlign: 'left', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', letterSpacing: '1px' },
+  tr: { borderBottom: '1px solid var(--border)' },
+  td: { padding: '16px', fontSize: '14px', color: 'var(--text-secondary)' },
+  eventoNombre: { fontWeight: '700', color: 'var(--text-primary)' },
   badge: { padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' },
   dias: { fontSize: '13px', fontWeight: '600' }
 }

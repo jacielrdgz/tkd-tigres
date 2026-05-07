@@ -1,17 +1,5 @@
-:root {
-  --bg-dark: #0f1117;
-  --card-bg: #13151f;
-  --border-color: #1e2130;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --accent-blue: #3b82f6;
-  --accent-purple: #8b5cf6;
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --glass: rgba(19, 21, 31, 0.8);
-  --glass-border: rgba(255, 255, 255, 0.05);
-}
+/* Alumnos module specific styles */
+
 
 .alumnos-container {
   padding: 1rem;
@@ -42,7 +30,7 @@
 .alumnos-title-section h2 {
   font-size: 1.8rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #fff, #94a3b8);
+  background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
@@ -81,8 +69,8 @@
 
 /* Filters Area */
 .filters-container {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 1.25rem;
   margin-bottom: 1.5rem;
@@ -105,8 +93,8 @@
 
 .search-input {
   width: 100%;
-  background: var(--bg-dark);
-  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
   padding: 0.75rem 1rem 0.75rem 2.5rem;
   border-radius: 12px;
   color: var(--text-primary);
@@ -129,10 +117,10 @@
 
 .status-tabs {
   display: flex;
-  background: var(--bg-dark);
+  background: var(--bg-primary);
   padding: 4px;
   border-radius: 12px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border);
 }
 
 .tab-btn {
@@ -148,13 +136,13 @@
 }
 
 .tab-btn.active.activo {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success);
+  background: var(--accent-green-bg);
+  color: var(--accent-green);
 }
 
 .tab-btn.active.inactivo {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
+  background: var(--accent-red-bg);
+  color: var(--accent-red);
 }
 
 .secondary-filters {
@@ -165,8 +153,8 @@
 }
 
 .filter-select {
-  background: var(--bg-dark);
-  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
   color: var(--text-primary);
   padding: 0.5rem 1rem;
   border-radius: 10px;
@@ -195,8 +183,8 @@
   width: 100%;
   overflow-x: auto;
   border-radius: 16px;
-  border: 1px solid var(--border-color);
-  background: var(--card-bg);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
 }
 
 .alumnos-table {
@@ -211,13 +199,13 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.02);
 }
 
 .alumnos-table td {
   padding: 1rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
   color: var(--text-primary);
   vertical-align: middle;
 }
@@ -246,7 +234,7 @@
   height: 40px;
   border-radius: 12px;
   object-fit: cover;
-  border: 2px solid var(--border-color);
+  border: 2px solid var(--border);
 }
 
 .student-initials {
@@ -305,8 +293,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border-color);
-  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
@@ -332,8 +320,8 @@
 }
 
 .student-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 1.25rem;
   position: relative;
@@ -370,7 +358,7 @@
 .card-actions {
   display: flex;
   gap: 0.75rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border);
   padding-top: 1rem;
 }
 
@@ -378,8 +366,8 @@
   flex: 1;
   padding: 0.6rem;
   border-radius: 10px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 0.8rem;
   font-weight: 600;
@@ -441,8 +429,8 @@
 }
 
 .modal-content {
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 24px;
   width: 100%;
   max-width: 600px;
@@ -466,7 +454,7 @@
 
 .modal-header {
   padding: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -478,7 +466,7 @@
 
 .modal-footer {
   padding: 1.5rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
@@ -487,9 +475,9 @@
 /* Skeleton Loaders */
 .skeleton {
   background: linear-gradient(90deg,
-      var(--border-color) 25%,
+      var(--border) 25%,
       rgba(255, 255, 255, 0.05) 50%,
-      var(--border-color) 75%);
+      var(--border) 75%);
   background-size: 200% 100%;
   animation: loading 1.5s infinite;
   border-radius: 8px;

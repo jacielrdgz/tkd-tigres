@@ -592,9 +592,9 @@ export default function Alumnos() {
 
       <div style={s.filtrosSecundarios}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <select 
-            style={{ ...s.selectFiltro, width: '150px' }} 
-            value={cintaFiltro} 
+          <select
+            style={{ ...s.selectFiltro, width: '150px' }}
+            value={cintaFiltro}
             onChange={e => setCintaFiltro(e.target.value)}
           >
             <option value="">Todas las cintas</option>
@@ -993,23 +993,23 @@ export default function Alumnos() {
               <Campo label="Correo electrónico" value={form.email} error={errors.email?.[0]} onChange={v => { setForm({ ...form, email: v }); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })) }} type="email" full />
 
               <div style={s.campoGroup}>
-  <label style={s.label}>Horario Asignado</label>
-  <select
-    style={s.select}
-    value={form.horario_id}
-    onChange={e => setForm({ ...form, horario_id: e.target.value })}
-  >
-    <option value="">Seleccionar horario...</option>
-    
-    {/* Conexión por ID */}
-    {horarios.map((h) => (
-      <option key={h.id} value={h.id}>
-        {h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})
-      </option>
-    ))}
-    
-  </select>
-</div>
+                <label style={s.label}>Horario Asignado</label>
+                <select
+                  style={s.select}
+                  value={form.horario_id}
+                  onChange={e => setForm({ ...form, horario_id: e.target.value })}
+                >
+                  <option value="">Seleccionar horario...</option>
+
+                  {/* Conexión por ID */}
+                  {horarios.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})
+                    </option>
+                  ))}
+
+                </select>
+              </div>
               <div style={s.campoGroup}>
                 <label style={s.label}>Cinta</label>
                 <select style={s.select} value={form.configuracion_cinta_id} onChange={e => setForm({ ...form, configuracion_cinta_id: e.target.value })}>

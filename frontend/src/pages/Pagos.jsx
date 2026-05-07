@@ -117,11 +117,11 @@ export default function Pagos() {
       text: "Esta acción no se puede deshacer",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#1e293b',
+      confirmButtonColor: 'var(--accent-red)',
+      cancelButtonColor: 'var(--bg-tertiary)',
       confirmButtonText: 'Sí, eliminar',
-      background: '#13151f',
-      color: '#f1f5f9'
+      background: 'var(--bg-secondary)',
+      color: 'var(--text-primary)'
     })
 
     if (result.isConfirmed) {
@@ -132,9 +132,9 @@ export default function Pagos() {
   }
 
   const colorEstado = (e) => ({
-    pagado:    { bg: '#14532d', color: '#4ade80' },
-    pendiente: { bg: '#1c1917', color: '#fbbf24' },
-    vencido:   { bg: '#450a0a', color: '#f87171' },
+    pagado:    { bg: 'var(--accent-green-bg)', color: 'var(--accent-green)' },
+    pendiente: { bg: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' },
+    vencido:   { bg: 'var(--accent-red-bg)', color: 'var(--accent-red)' },
   }[e])
 
   return (
@@ -242,9 +242,9 @@ export default function Pagos() {
                 ))}
               </datalist>
               {form.alumno_id ? (
-                <small style={{color: '#4ade80', display: 'block', marginTop: '4px'}}>✓ Alumno identificado</small>
+                <small style={{color: 'var(--accent-green)', display: 'block', marginTop: '4px'}}>✓ Alumno identificado</small>
               ) : (
-                <small style={{color: '#64748b', display: 'block', marginTop: '4px'}}>Selecciona de la lista predictiva</small>
+                <small style={{color: 'var(--text-muted)', display: 'block', marginTop: '4px'}}>Selecciona de la lista predictiva</small>
               )}
             </div>
 
@@ -294,36 +294,36 @@ export default function Pagos() {
 
 const s = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  titulo: { fontSize: '24px', fontWeight: '700', color: '#f1f5f9', margin: 0 },
-  sub: { fontSize: '14px', color: '#64748b', marginTop: '2px' },
+  titulo: { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
+  sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '2px' },
   barraAcciones: { display: 'flex', justifyContent: 'space-between', marginBottom: '16px', gap: '15px' },
   filtros: { display: 'flex', gap: '8px' },
-  filtroBtn: { padding: '8px 16px', borderRadius: '20px', border: '1px solid #1e2130', background: '#13151f', color: '#64748b', fontSize: '12px', cursor: 'pointer', transition: '0.2s' },
-  filtroBtnActive: { background: '#1e2d4a', color: '#60a5fa', borderColor: '#3b82f6' },
-  search: { background: '#13151f', border: '1px solid #1e2130', borderRadius: '20px', padding: '8px 20px', color: '#fff', width: '250px', outline: 'none' },
-  tabla: { background: '#13151f', border: '1px solid #1e2130', borderRadius: '12px', overflow: 'hidden' },
+  filtroBtn: { padding: '8px 16px', borderRadius: '20px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', transition: '0.2s' },
+  filtroBtnActive: { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)' },
+  search: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '20px', padding: '8px 20px', color: 'var(--text-primary)', width: '250px', outline: 'none' },
+  tabla: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '14px 16px', textAlign: 'left', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #1e2130' },
-  tr: { borderBottom: '1px solid #1e2130', transition: '0.2s' },
-  td: { padding: '14px 16px', fontSize: '14px', color: '#cbd5e1' },
-  tdCenter: { padding: '40px', textAlign: 'center', color: '#475569' },
-  nombre: { fontWeight: '600', color: '#f1f5f9' },
-  monto: { color: '#4ade80', fontWeight: '700' },
+  th: { padding: '14px 16px', textAlign: 'left', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' },
+  tr: { borderBottom: '1px solid var(--border)', transition: '0.2s' },
+  td: { padding: '14px 16px', fontSize: '14px', color: 'var(--text-secondary)' },
+  tdCenter: { padding: '40px', textAlign: 'center', color: 'var(--text-muted)' },
+  nombre: { fontWeight: '600', color: 'var(--text-primary)' },
+  monto: { color: 'var(--accent-green)', fontWeight: '700' },
   badge: { padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '700' },
   acciones: { display: 'flex', gap: '8px' },
-  btnPrimary: { background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: '600' },
-  btnSecondary: { background: '#1e2130', color: '#94a3b8', border: '1px solid #334155', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer' },
-  btnEdit: { background: '#1e2d4a', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' },
-  btnDel: { background: '#2d1515', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#13151f', border: '1px solid #1e2130', borderRadius: '16px', padding: '30px', width: '500px' },
+  btnPrimary: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: '600' },
+  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer' },
+  btnEdit: { background: 'var(--accent-blue-bg)', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' },
+  btnDel: { background: 'var(--accent-red-bg)', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '30px', width: '500px', boxShadow: 'var(--shadow-lg)' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
-  modalTitulo: { margin: 0, color: '#fff' },
-  btnCerrar: { background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '20px' },
+  modalTitulo: { margin: 0, color: 'var(--text-primary)' },
+  btnCerrar: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px' },
   campoGroup: { marginBottom: '15px' },
-  label: { display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '5px' },
-  input: { width: '100%', padding: '10px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#fff', outline: 'none' },
-  select: { width: '100%', padding: '10px', background: '#0f1117', border: '1px solid #1e2130', borderRadius: '8px', color: '#fff', outline: 'none' },
+  label: { display: 'block', color: 'var(--text-muted)', fontSize: '12px', marginBottom: '5px' },
+  input: { width: '100%', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
+  select: { width: '100%', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
   modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '25px' }
 }

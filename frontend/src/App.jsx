@@ -3,6 +3,7 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider, useTheme } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
@@ -31,7 +32,6 @@ function AppLayout() {
 
 /**
  * Definición de rutas usando createBrowserRouter (Data Router)
- * Esto permite usar hooks como useBlocker y usePrompt.
  */
 const router = createBrowserRouter([
   // Rutas públicas
@@ -60,12 +60,13 @@ const router = createBrowserRouter([
   { path: "*", element: <Navigate to="/" replace /> }
 ])
 
-export default function App() {
+function AppContent() {
+  const { theme } = useTheme();
+
   return (
-    <AuthProvider>
+    <>
       <RouterProvider router={router} />
       
-      {/* 🔥 TOAST GLOBAL */}
       <ToastContainer
         position="top-right"
         autoClose={2500}
@@ -73,17 +74,27 @@ export default function App() {
         newestOnTop
         closeOnClick
         pauseOnHover
-        theme="dark"
+        theme={theme === 'dark' ? 'dark' : 'light'}
         toastStyle={{
-          background: '#13151f',
-          color: '#e2e8f0',
-          border: '1px solid #1e2130',
+          background: 'var(--bg-secondary)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--border)',
           borderRadius: '10px',
           fontSize: '14px',
           padding: '12px 16px',
           fontFamily: 'Inter, sans-serif',
         }}
       />
-    </AuthProvider>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
