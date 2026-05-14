@@ -83,6 +83,9 @@ export default function Alumnos() {
   const [modal, setModal] = useState(false)
   const [modalVer, setModalVer] = useState(false)
   const [alumnoVer, setAlumnoVer] = useState(null)
+  const [historialAlumno, setHistorialAlumno] = useState(null)
+  const [historialData, setHistorialData] = useState([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
   const [form, setForm] = useState(VACIO)
   const [errors, setErrors] = useState({})
   const [fotoFile, setFotoFile] = useState(null)
@@ -185,21 +188,16 @@ export default function Alumnos() {
   }, [busqueda, estatusFiltro, cintaFiltro, edadFiltro, horarioFiltro, orden])
 
   useEffect(() => {
-    const handleEsc = (event) => {
-      if (event.key === 'Escape') cerrar()
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        setModal(false)
+        setModalVer(false)
+        setHistorialAlumno(null)
+      }
     }
-    if (modal || modalVer) window.addEventListener('keydown', handleEsc)
-    return () => window.removeEventListener('keydown', handleEsc)
-  }, [modal, modalVer])
-  useEffect(() => {
-    const handleEsc = (event) => {
-      if (event.key === 'Escape') cerrar()
-    }
-    if (modal || modalVer) {
-      window.addEventListener('keydown', handleEsc)
-    }
+    window.addEventListener('keydown', handleEsc)
     return () => { window.removeEventListener('keydown', handleEsc) }
-  }, [modal, modalVer])
+  }, [])
 
   const abrirCrear = () => {
     setForm(VACIO)
@@ -247,7 +245,21 @@ export default function Alumnos() {
     setModal(true);
   };
 
-  const abrirVer = (a) => { setAlumnoVer(a); setModalVer(true) }
+  const abrirVer = (a) => { 
+    setAlumnoVer(a)
+    setModalVer(true)
+  }
+
+  const abrirHistorial = async (a) => {
+    setHistorialAlumno(a)
+    setHistorialData([])
+    setCargandoHistorial(true)
+    try {
+      const res = await api.get(`/alumnos/${a.id}`)
+      setHistorialData(res.data.historial_grados || [])
+    } catch (e) { console.error(e) }
+    finally { setCargandoHistorial(false) }
+  }
 
   const cerrar = () => {
     setModal(false)
@@ -375,8 +387,6 @@ export default function Alumnos() {
       setEliminandoId(null)
     }
   }
-
-  const tieneFoto = (url) => url && typeof url === 'string' && url.length > 5
 
   // -- PROCESAMIENTO DE DATOS (Filtros y Orden) --
 
@@ -742,7 +752,7 @@ export default function Alumnos() {
                       </div>
                     </td>
 
-                    {/* ALUMNO: ALINEADO A LA IZQUIERDA */}
+                    {/* ALUMNO: CLICKABLE PARA HISTORIAL */}
                     <td style={{ ...s.td, textAlign: 'left' }}>
                       <div
                         style={{
@@ -750,9 +760,11 @@ export default function Alumnos() {
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          maxWidth: '240px'
+                          maxWidth: '240px',
+                          cursor: 'pointer'
                         }}
-                        title={`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno}`}
+                        onClick={() => abrirHistorial(a)}
+                        title={`${a.nombre} ${a.apellido_paterno} (Clic para ver historial)`}
                       >
                         {a.nombre} {a.apellido_paterno} {a.apellido_materno}
                       </div>
@@ -928,6 +940,75 @@ export default function Alumnos() {
         </div>
       )}
 
+      {/* ── MODAL DE HISTORIAL DE GRADOS ── */}
+      {historialAlumno && (
+        <div style={s.overlay} onClick={() => setHistorialAlumno(null)}>
+          <div style={s.modalHistorial} onClick={e => e.stopPropagation()}>
+            <div style={s.modalHistorialHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={s.avatarSm}>
+                  {tieneFoto(historialAlumno.foto_url)
+                    ? <img src={limpiarUrl(historialAlumno.foto_url)} alt="" style={s.avatarImg} />
+                    : <div style={s.avatarInicialSm}>{obtenerIniciales(historialAlumno.nombre, historialAlumno.apellido_paterno)}</div>
+                  }
+                </div>
+                <div>
+                  <div style={s.drawerNombre}>{historialAlumno.nombre} {historialAlumno.apellido_paterno}</div>
+                  <div style={s.drawerSub}>{historialAlumno.cinta_config?.nombre_nivel || 'Sin cinta'} · ID: {historialAlumno.id}</div>
+                </div>
+              </div>
+              <button style={s.btnCerrarWhite} onClick={() => setHistorialAlumno(null)}>✕</button>
+            </div>
+
+            <div style={s.modalHistorialContent}>
+              {cargandoHistorial ? (
+                <div style={s.emptyHistorial}>Cargando historial...</div>
+              ) : historialData.length === 0 ? (
+                <div style={s.emptyHistorial}>Sin ascensos registrados aún</div>
+              ) : (
+                <>
+                  {/* Resumen */}
+                  <div style={s.resumenHistorial}>
+                    <div style={s.resumenHistItem}>
+                      <span style={{ fontSize: '22px', fontWeight: '800', color: 'var(--accent-green)' }}>
+                        {historialData.length}
+                      </span>
+                      <span style={s.resumenLabel}>Ascensos</span>
+                    </div>
+                    <div style={s.resumenHistItem}>
+                      <span style={{ fontSize: '22px', fontWeight: '800', color: 'var(--accent-green)' }}>
+                        {new Date(historialData[0].fecha_ascenso).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}
+                      </span>
+                      <span style={s.resumenLabel}>Último Grado</span>
+                    </div>
+                  </div>
+
+                  {/* Lista */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {historialData.map(h => (
+                      <div key={h.id} style={s.historialItem}>
+                        <div style={{ ...s.accentBar, background: h.grado_nuevo?.color_hex || 'var(--accent-blue)' }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <div style={s.historialGrado}>{h.grado_nuevo?.nombre_nivel || 'Grado desconocido'}</div>
+                            <div style={s.historialFecha}>
+                              {h.fecha_ascenso ? new Date(h.fecha_ascenso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                            </div>
+                          </div>
+                          <div style={s.historialDetalle}>
+                            {h.evento?.nombre || 'Examen manual'} · Anterior: {h.grado_anterior?.nombre_nivel || '-'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Deletion modal replaced by Swal.fire */}
 
       {modal && (
@@ -955,7 +1036,7 @@ export default function Alumnos() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     ></svg>
-                    <span style={{ fontSize: '22px', color: '#3b82f6', fontWeight: '700' }}>
+                    <span style={{ fontSize: '25px', color: '#3b82f6', fontWeight: '700' }}>
                       {form.nombre || form.apellido_paterno
                         ? obtenerIniciales(form.nombre, form.apellido_paterno)
                         : '+'
@@ -1030,12 +1111,21 @@ export default function Alumnos() {
               </div>
 
               <div style={s.campoGroup}>
-                <label style={s.label}>Día de pago mensual</label>
-                <select style={s.select} value={form.dia_pago || 1} onChange={e => setForm({ ...form, dia_pago: parseInt(e.target.value) })}>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                    <option key={d} value={d}>Día {d} de cada mes</option>
-                  ))}
-                </select>
+                <label style={s.label}>Día de pago mensual (1-31)</label>
+                <input
+                  style={s.input}
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={form.dia_pago || ''}
+                  placeholder="Ej. 1"
+                  onChange={e => {
+                    let val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    if (val !== '' && val > 31) val = 31;
+                    if (val !== '' && val < 1) val = 1;
+                    setForm({ ...form, dia_pago: val });
+                  }}
+                />
               </div>
             </div>
 
@@ -1156,7 +1246,7 @@ const s = {
   td: { padding: '10px 16px', fontSize: '14px', color: 'var(--text-secondary)', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', },
   tdCenter: { padding: '32px', textAlign: 'center', color: 'var(--text-muted)' },
   fotoTabla: { width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' },
-  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: 'var(--accent-blue)' },
+  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: '700', color: 'var(--accent-blue)' },
   nombreNom: { fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' },
   emailSub: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' },
   cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', minWidth: '100px' },
@@ -1170,8 +1260,29 @@ const s = {
   btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
 
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
+
+  // MODAL HISTORIAL (Estilo Pagos.jsx)
+  modalHistorial: { background: 'var(--bg-secondary)', borderRadius: '16px', width: '580px', maxWidth: '95vw', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' },
+  modalHistorialHeader: { padding: '24px 28px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' },
+  avatarSm: { width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border)', background: 'var(--bg-primary)', flexShrink: 0 },
+  avatarInicialSm: { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '800' },
+  drawerNombre: { fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' },
+  drawerSub: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' },
+  modalHistorialContent: { padding: '28px', maxHeight: '70vh', overflowY: 'auto', background: 'var(--bg-secondary)' },
+  emptyHistorial: { textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px' },
+  resumenHistorial: { display: 'flex', gap: '15px', marginBottom: '28px' },
+  resumenHistItem: { flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' },
+  resumenLabel: { fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  historialItem: { background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden', transition: '0.2s' },
+  accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px' },
+  historialGrado: { fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' },
+  historialDetalle: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' },
+  historialFecha: { fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' },
+  historialLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '600', marginTop: '2px' },
+
   // Dark ModalVer original structure
-  modalCard: { background: 'var(--bg-secondary)', borderRadius: '11px', width: '650px', maxWidth: '95vw', overflow: 'hidden', border: '1px solid var(--border)' },
+  modalCard: { background: 'var(--bg-secondary)', borderRadius: '11px', width: '650px', maxWidth: '95vw', border: '1px solid var(--border)' },
   cardHeader: { background: 'var(--bg-tertiary)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
   cardTitle: { fontSize: '18px', fontWeight: '600', textTransform: 'uppercase', color: 'var(--text-primary)' },
   btnCerrarWhite: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },

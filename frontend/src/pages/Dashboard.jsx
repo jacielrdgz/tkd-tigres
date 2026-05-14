@@ -6,8 +6,9 @@ export default function Dashboard() {
   const { user } = useAuth()
   const [datos, setDatos] = useState({
     alumnos_activos: 0,
+    pagos_al_corriente: 0,
     pagos_pendientes: 0,
-    pagos_vencidos: 0,
+    ingresos_mes: 0,
     asistencias_hoy: 0,
     eventos_proximos: []
   })
@@ -19,11 +20,11 @@ export default function Dashboard() {
     const obtenerDashboard = async () => {
       try {
         const res = await api.get('/dashboard')
-        // Sincronizamos los datos asegurando que sean números válidos
         setDatos({
           alumnos_activos: Number(res.data.alumnos_activos) || 0,
+          pagos_al_corriente: Number(res.data.pagos_al_corriente) || 0,
           pagos_pendientes: Number(res.data.pagos_pendientes) || 0,
-          pagos_vencidos: Number(res.data.pagos_vencidos) || 0,
+          ingresos_mes: Number(res.data.ingresos_mes) || 0,
           asistencias_hoy: Number(res.data.asistencias_hoy) || 0,
           eventos_proximos: res.data.eventos_proximos || []
         })
@@ -57,32 +58,32 @@ export default function Dashboard() {
       {/* CARDS PRINCIPALES */}
       <div style={s.cards}>
         <Card 
-          color="#3b82f6" 
+          color="var(--accent-blue)" 
           icon="👥" 
           label="Alumnos Activos" 
           valor={datos.alumnos_activos} 
-          subtext="En lista de asistencia"
+          subtext="En lista actual"
         />
         <Card 
-          color="#f59e0b" 
+          color="var(--accent-red)" 
           icon="⏳" 
           label="Pagos Pendientes" 
           valor={datos.pagos_pendientes} 
-          subtext="Mes en curso"
+          subtext="Periodo actual"
         />
         <Card 
-          color="#ef4444" 
-          icon="⚠️" 
-          label="Pagos Vencidos" 
-          valor={datos.pagos_vencidos} 
-          subtext="Requieren atención"
+          color="var(--accent-green)" 
+          icon="💰" 
+          label="Ingresos del Mes" 
+          valor={`$${datos.ingresos_mes.toLocaleString()}`} 
+          subtext="Recaudado hoy"
         />
         <Card 
-          color="#10b981" 
+          color="var(--accent-purple)" 
           icon="✅" 
           label="Asistencias Hoy" 
           valor={datos.asistencias_hoy} 
-          subtext="Registradas hoy"
+          subtext="Presentes hoy"
         />
       </div>
 

@@ -76,7 +76,14 @@ class AlumnoController extends Controller
 
     public function show(Alumno $alumno)
     {
-        return response()->json($alumno->load(['pagos', 'asistencias', 'cintaConfig']));
+        return response()->json($alumno->load([
+            'pagos', 
+            'asistencias', 
+            'cintaConfig', 
+            'historialGrados.gradoAnterior', 
+            'historialGrados.gradoNuevo', 
+            'historialGrados.evento'
+        ]));
     }
 
     public function update(UpdateAlumnoRequest $request, Alumno $alumno)

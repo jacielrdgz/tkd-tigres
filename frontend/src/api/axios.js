@@ -1,11 +1,12 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api',
   headers: {
     'Accept': 'application/json',
+    'Content-Type': 'application/json',
   },
-  withCredentials: true,
+  withCredentials: true, // Mantenlo si usas cookies de sesión o Sanctum
 })
 
 // Interceptor: agregar token de auth automáticamente
@@ -25,7 +26,7 @@ api.interceptors.response.use(
       // Token inválido o expirado — limpiar y redirigir
       localStorage.removeItem('token')
       delete api.defaults.headers.common['Authorization']
-      
+
       // Solo redirigir si no estamos ya en login
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login'

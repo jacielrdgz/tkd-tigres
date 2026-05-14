@@ -103,7 +103,6 @@ export default function Register() {
                 <input
                   id="register-name"
                   style={s.input}
-                  placeholder="Ej. Juan Pérez"
                   value={form.name}
                   onChange={e => update('name', e.target.value)}
                   autoFocus
@@ -155,7 +154,7 @@ export default function Register() {
                 <input
                   id="register-escuela"
                   style={s.input}
-                  placeholder="Ej. Tigres Do, Dragon Gym, etc."
+                  placeholder="Ej. Leones TKD, Dragon Gym, etc."
                   value={form.escuela}
                   onChange={e => update('escuela', e.target.value)}
                   autoFocus

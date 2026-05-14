@@ -13,6 +13,35 @@ class Evento extends Model
         'nombre',
         'tipo',
         'fecha',
+        'lugar',
         'descripcion',
+        'costo',
     ];
+
+    public function alumnos()
+    {
+        return $this->belongsToMany(Alumno::class, 'evento_alumno')
+            ->withPivot('id', 'resultado', 'pagado', 'fecha_pago', 'asistio')
+            ->withTimestamps();
+    }
+
+    public function examenAlumnos()
+    {
+        return $this->hasMany(ExamenAlumno::class);
+    }
+
+    public function torneoAlumnos()
+    {
+        return $this->hasMany(TorneoAlumno::class);
+    }
+
+    public function modalidades()
+    {
+        return $this->hasMany(TorneoModalidad::class);
+    }
+
+    public function historialGrados()
+    {
+        return $this->hasMany(HistorialGrado::class);
+    }
 }

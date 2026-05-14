@@ -21,6 +21,11 @@ class PagoController extends Controller
             $query->where('estado', $request->estado);
         }
 
+        // Filtrar por tipo (mensualidad, inscripcion)
+        if ($request->filled('tipo')) {
+            $query->where('tipo', $request->tipo);
+        }
+
         // Filtrar por período activo (fecha_inicio)
         if ($request->filled('fecha_inicio')) {
             $query->where('fecha_inicio', $request->fecha_inicio);
@@ -45,16 +50,21 @@ class PagoController extends Controller
     {
         $validated = $request->validate([
             'alumno_id'   => 'required|exists:alumnos,id',
-            'fecha_inicio' => 'required|date',
-            'fecha_fin'   => 'required|date|after:fecha_inicio',
+            'tipo'        => 'nullable|in:mensualidad,inscripcion',
+            'fecha_inicio' => 'nullable|required_if:tipo,mensualidad|date',
+            'fecha_fin'   => 'nullable|required_if:tipo,mensualidad|date|after:fecha_inicio',
             'monto'       => 'required|numeric|min:0',
             'metodo_pago' => 'required|in:efectivo,transferencia,tarjeta',
             'estado'      => 'required|in:pagado,pendiente,vencido',
             'fecha_pago'  => 'nullable|date',
         ]);
 
-        // Calcular el campo `mes` desde fecha_inicio para compatibilidad
-        $validated['mes'] = Carbon::parse($validated['fecha_inicio'])->format('Y-m');
+        $validated['tipo'] = $validated['tipo'] ?? 'mensualidad';
+
+        // Calcular el campo `mes` desde fecha_inicio para compatibilidad si es mensualidad
+        if ($validated['tipo'] === 'mensualidad' && isset($validated['fecha_inicio'])) {
+            $validated['mes'] = Carbon::parse($validated['fecha_inicio'])->format('Y-m');
+        }
 
         $pago = Pago::create($validated);
 
@@ -69,8 +79,9 @@ class PagoController extends Controller
     public function update(Request $request, Pago $pago)
     {
         $validated = $request->validate([
-            'fecha_inicio' => 'sometimes|date',
-            'fecha_fin'   => 'sometimes|date',
+            'tipo'         => 'sometimes|in:mensualidad,inscripcion',
+            'fecha_inicio' => 'sometimes|nullable|date',
+            'fecha_fin'   => 'sometimes|nullable|date',
             'monto'       => 'sometimes|numeric|min:0',
             'metodo_pago' => 'sometimes|in:efectivo,transferencia,tarjeta',
             'estado'      => 'sometimes|in:pagado,pendiente,vencido',

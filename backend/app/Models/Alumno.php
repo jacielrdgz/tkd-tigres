@@ -66,4 +66,26 @@ class Alumno extends Model
     {
         return $this->belongsTo(Horario::class, 'horario_id');
     }
+
+    public function eventos()
+    {
+        return $this->belongsToMany(Evento::class, 'evento_alumno')
+            ->withPivot('id', 'resultado', 'pagado', 'fecha_pago', 'asistio')
+            ->withTimestamps();
+    }
+
+    public function examenesDetalle()
+    {
+        return $this->hasMany(ExamenAlumno::class);
+    }
+
+    public function historialGrados()
+    {
+        return $this->hasMany(HistorialGrado::class)->orderByDesc('fecha_ascenso');
+    }
+
+    public function torneosDetalle()
+    {
+        return $this->hasMany(TorneoAlumno::class);
+    }
 }

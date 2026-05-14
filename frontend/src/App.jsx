@@ -11,10 +11,13 @@ import Alumnos from './pages/Alumnos'
 import Pagos from './pages/Pagos'
 import Asistencias from './pages/Asistencias'
 import Eventos from './pages/Eventos'
+import EventoDetalle from './pages/EventoDetalle'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Ajustes from './pages/Ajustes'
 import CintasSettings from './pages/ajustes/Cintas'
+import AjustesEscuela from './pages/ajustes/AjustesEscuela'
+import UsuariosSettings from './pages/ajustes/Usuarios'
 
 /**
  * Layout principal con Sidebar (solo cuando está autenticado).
@@ -33,12 +36,15 @@ function AppLayout() {
 /**
  * Definición de rutas usando createBrowserRouter (Data Router)
  */
+import DojoInfo from './pages/ajustes/DojoInfo'
+import InstructorManager from './pages/ajustes/InstructorManager'
+import HorarioManager from './pages/ajustes/HorarioManager'
+
 const router = createBrowserRouter([
-  // Rutas públicas
+  // ... (rutas públicas)
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
   
-  // Rutas protegidas (con Layout)
   {
     path: "/",
     element: (
@@ -52,11 +58,28 @@ const router = createBrowserRouter([
       { path: "pagos", element: <Pagos /> },
       { path: "asistencias", element: <Asistencias /> },
       { path: "eventos", element: <Eventos /> },
-      { path: "ajustes", element: <Ajustes /> },
-      { path: "ajustes/cintas", element: <CintasSettings /> },
+      { path: "eventos/:id", element: <EventoDetalle /> },
+      {
+        path: "ajustes",
+        element: <Outlet />,
+        children: [
+          { index: true, element: <Ajustes /> },
+          {
+            path: "configuracion",
+            element: <AjustesEscuela />,
+            children: [
+              { index: true, element: <Navigate to="general" replace /> },
+              { path: "general", element: <DojoInfo /> },
+              { path: "instructores", element: <InstructorManager /> },
+              { path: "horarios", element: <HorarioManager /> },
+              { path: "cintas", element: <CintasSettings isEmbedded /> },
+            ]
+          },
+          { path: "usuarios", element: <UsuariosSettings /> },
+        ]
+      },
     ]
   },
-  // Redirección por defecto
   { path: "*", element: <Navigate to="/" replace /> }
 ])
 

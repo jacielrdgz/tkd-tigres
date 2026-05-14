@@ -10,6 +10,8 @@ class Tenant extends Model
         'nombre',
         'slug',
         'logo',
+        'direccion',
+        'telefono',
         'disciplina',
         'configuracion',
         'plan',
@@ -41,5 +43,13 @@ class Tenant extends Model
     public function eventos()
     {
         return $this->hasMany(Evento::class);
+    }
+
+    /**
+     * Relación con la Escuela (Perfil de negocio).
+     */
+    public function escuela()
+    {
+        return $this->hasOne(Escuela::class);
     }
 }

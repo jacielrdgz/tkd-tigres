@@ -11,6 +11,7 @@ class Pago extends Model
 
     protected $fillable = [
         'alumno_id',
+        'tipo',
         'mes',
         'fecha_inicio',
         'fecha_fin',

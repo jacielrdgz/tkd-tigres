@@ -27,4 +27,25 @@ class HorarioController extends Controller
         Cache::forget('horarios_lista');
         return response()->json($horario, 201);
     }
+
+    public function update(Request $request, Horario $horario)
+    {
+        $validated = $request->validate([
+            'nombre' => 'sometimes|string|max:255',
+            'hora_inicio' => 'sometimes',
+            'hora_fin' => 'sometimes',
+            'dias' => 'nullable|string',
+        ]);
+
+        $horario->update($validated);
+        Cache::forget('horarios_lista');
+        return response()->json($horario);
+    }
+
+    public function destroy(Horario $horario)
+    {
+        $horario->delete();
+        Cache::forget('horarios_lista');
+        return response()->json(['message' => 'Horario eliminado correctamente']);
+    }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../api/axios'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
 export default function Ajustes() {
@@ -13,20 +14,8 @@ export default function Ajustes() {
 
       <div style={s.gridCards}>
         <CardAppearance />
-        <CardResumenCintas />
-
-        {/* CARD: USUARIOS */}
-        <div style={{ ...s.card, opacity: 0.6 }}>
-          <div style={s.cardHeader}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={s.cardIcon}>👤</span>
-              <h3 style={s.cardTitle}>Usuarios y Roles</h3>
-            </div>
-          </div>
-          <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-            Próximamente: Gestiona el acceso de tus profesores y administrativos.
-          </div>
-        </div>
+        <CardConfigurarEscuela />
+        <CardUsuarios />
       </div>
     </div>
   )
@@ -49,7 +38,7 @@ function CardAppearance() {
           Elige el tema que mejor se adapte a tu vista.
         </p>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button 
+          <button
             onClick={() => theme !== 'light' && toggleTheme()}
             style={{
               ...s.themeBtn,
@@ -60,7 +49,7 @@ function CardAppearance() {
           >
             ☀️ Modo Claro
           </button>
-          <button 
+          <button
             onClick={() => theme !== 'dark' && toggleTheme()}
             style={{
               ...s.themeBtn,
@@ -81,50 +70,81 @@ function CardAppearance() {
   )
 }
 
-function CardResumenCintas() {
-  const navigate = useNavigate()
-  const [cintas, setCintas] = useState([])
+function CardConfigurarEscuela() {
+  const [escuela, setEscuela] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/configuraciones-cintas')
-      .then(res => setCintas(res.data))
+    api.get('/configuracion-escuela')
+      .then(res => setEscuela(res.data))
       .finally(() => setLoading(false))
   }, [])
-
-  const preview = cintas.slice(0, 5)
 
   return (
     <div style={s.card}>
       <div style={s.cardHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ ...s.cardIcon, color: 'var(--accent-blue)', background: 'var(--accent-blue-bg)' }}>🥋</span>
-          <h3 style={s.cardTitle}>Configuración de cintas</h3>
+          <span style={{ ...s.cardIcon, color: 'var(--accent-blue)', background: 'var(--accent-blue-bg)' }}>🏫</span>
+          <h3 style={s.cardTitle}>Configurar mi escuela</h3>
         </div>
-        <button style={s.btnLink} onClick={() => navigate('/ajustes/cintas')}>Editar →</button>
+        <Link style={s.btnLink} to="/ajustes/configuracion">Gestionar →</Link>
       </div>
 
       <div style={s.cardBody}>
-        {loading ? <div style={s.cardEmpty}>Cargando...</div> :
-          cintas.length === 0 ? <div style={s.cardEmpty}>No hay cintas configuradas.</div> :
-          preview.map(c => (
-            <div key={c.id} style={s.resumenRow}>
-              <div style={{ ...s.dot, background: c.color_hex }} />
-              <span style={s.resumenNombre}>{c.nombre_nivel}</span>
-              <span style={s.resumenMeta}>{c.color_hex.toUpperCase()} · orden {c.orden}</span>
+        {loading ? <div style={s.cardEmpty}>Cargando...</div> : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+              {escuela?.logo ? (
+                <img src={`${import.meta.env.VITE_API_URL}/storage/${escuela.logo}`} alt="Logo" style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🥋</div>
+              )}
+              <div>
+                <div style={{ fontWeight: '700', fontSize: '16px', color: 'var(--text-primary)' }}>{escuela?.nombre || 'Mi Escuela'}</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{escuela?.disciplina || 'Taekwondo'}</div>
+              </div>
             </div>
-          ))
-        }
-        {cintas.length > 5 && (
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'center' }}>
-            + {cintas.length - 5} grados más...
-          </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+              Personaliza los datos de tu dojo, gestiona tus instructores, configura tus horarios y define tus grados de cintas.
+            </p>
+          </>
         )}
       </div>
 
       <div style={s.cardFooter}>
-        <span style={s.cardStats}>{cintas.length} cintas configuradas</span>
-        <button style={s.btnAddQuick} onClick={() => navigate('/ajustes/cintas')}>+ Gestionar grado</button>
+        <span style={s.cardStats}>Identidad y Operatividad</span>
+        <Link style={s.btnAddQuick} to="/ajustes/configuracion">Personalizar</Link>
+      </div>
+    </div>
+  )
+}
+
+function CardUsuarios() {
+  const { user } = useAuth();
+
+  return (
+    <div style={s.card}>
+      <div style={s.cardHeader}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ ...s.cardIcon, color: 'var(--accent-purple)', background: 'var(--accent-purple-bg)' }}>👥</span>
+          <h3 style={s.cardTitle}>Usuarios y Roles</h3>
+        </div>
+        <Link style={s.btnLink} to="/ajustes/usuarios">Gestionar →</Link>
+      </div>
+
+      <div style={s.cardBody}>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+          Controla quién puede acceder al sistema y asigna permisos específicos para instructores, administradores y secretarias.
+        </p>
+        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-green)' }}></div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Tu rol actual: <strong>{user?.role?.toUpperCase()}</strong></span>
+        </div>
+      </div>
+
+      <div style={s.cardFooter}>
+        <span style={s.cardStats}>Seguridad y Accesos</span>
+        <Link style={s.btnAddQuick} to="/ajustes/usuarios">Ver Equipo</Link>
       </div>
     </div>
   )

@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\BelongsToTenant;
 
 class ConfiguracionCinta extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'configuraciones_cintas';
 
     protected $fillable = [
@@ -16,12 +19,4 @@ class ConfiguracionCinta extends Model
         'orden',
         'categoria_label',
     ];
-
-
-
-    // Scope para filtrar por tenant
-    public function scopeDelTenant($query, $tenantId = 1)
-    {
-        return $query->where('tenant_id', $tenantId)->orderBy('orden');
-    }
 }

@@ -72,11 +72,17 @@ export default function Sidebar() {
       }}>
         {/* Logo & tenant info */}
         <div style={styles.logoSection}>
-          <img
-            src={user?.tenant?.logo || logoImg}
-            alt="Logo"
-            style={styles.logoImage}
-          />
+          {user?.tenant?.logo ? (
+            <img
+              src={`${import.meta.env.VITE_API_URL || ''}/storage/${user.tenant.logo}`}
+              alt="Logo"
+              style={styles.logoImage}
+            />
+          ) : (
+            <div style={{ ...styles.logoImage, background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+              🥋
+            </div>
+          )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={styles.logoTitle}>{tenantName}</div>
             <div style={styles.logoSub}>{fechaHoy}</div>

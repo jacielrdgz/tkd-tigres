@@ -1,0 +1,205 @@
+import { useState, useEffect } from 'react'
+import api from '../../api/axios'
+import { toast } from 'react-toastify'
+import Swal from 'sweetalert2'
+import { useNavigate } from 'react-router-dom'
+
+export default function Usuarios() {
+  const navigate = useNavigate()
+  const [usuarios, setUsuarios] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [selected, setSelected] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'instructor'
+  })
+
+  const fetchUsuarios = async () => {
+    setLoading(true)
+    try {
+      const { data } = await api.get('/users')
+      setUsuarios(data)
+    } catch { toast.error('Error al cargar usuarios') }
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchUsuarios() }, [])
+
+  const handleOpenModal = (user = null) => {
+    if (user) {
+      setSelected(user)
+      setForm({
+        name: user.name,
+        email: user.email,
+        password: '',
+        role: user.role
+      })
+    } else {
+      setSelected(null)
+      setForm({ name: '', email: '', password: '', role: 'instructor' })
+    }
+    setShowModal(true)
+  }
+
+  const handleSave = async () => {
+    if (!form.name || !form.email || (!selected && !form.password)) {
+      return toast.error('Faltan campos obligatorios')
+    }
+
+    setSaving(true)
+    try {
+      if (selected) {
+        await api.put(`/users/${selected.id}`, form)
+        toast.success('Usuario actualizado')
+      } else {
+        await api.post('/users', form)
+        toast.success('Usuario creado correctamente')
+      }
+      setShowModal(false)
+      fetchUsuarios()
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Error al procesar'
+      toast.error(msg)
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = (user) => {
+    Swal.fire({
+      title: '¿Eliminar acceso?',
+      text: `El usuario ${user.name} ya no podrá entrar al sistema.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      confirmButtonColor: 'var(--accent-red)',
+      background: 'var(--bg-secondary)', color: 'var(--text-primary)'
+    }).then(async r => {
+      if (r.isConfirmed) {
+        try {
+          await api.delete(`/users/${user.id}`)
+          toast.success('Acceso eliminado')
+          fetchUsuarios()
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'No se pudo eliminar')
+        }
+      }
+    })
+  }
+
+  const getRoleLabel = (role) => {
+    const roles = {
+      owner: 'Dueño / Admin Total',
+      admin: 'Administrador',
+      instructor: 'Instructor',
+      secretary: 'Secretaria'
+    }
+    return roles[role] || role
+  }
+
+  return (
+    <div style={s.page}>
+      <button style={s.btnBack} onClick={() => navigate('/ajustes')}>← Volver a ajustes</button>
+      
+      <div style={s.header}>
+        <div>
+          <h2 style={s.title}>Usuarios y Roles</h2>
+          <p style={s.subtitle}>Gestiona quién tiene acceso a tu academia y qué acciones puede realizar.</p>
+        </div>
+        <button style={s.btnAdd} onClick={() => handleOpenModal()}>+ Nuevo Usuario</button>
+      </div>
+
+      {loading ? <div style={s.loading}>Cargando equipo...</div> : (
+        <div style={s.grid}>
+          {usuarios.map(u => (
+            <div key={u.id} style={s.card}>
+              <div style={s.cardAvatar}>{u.name.charAt(0).toUpperCase()}</div>
+              <div style={s.cardInfo}>
+                <div style={s.cardName}>{u.name}</div>
+                <div style={s.cardEmail}>{u.email}</div>
+                <div style={s.cardRoleBadge}>{getRoleLabel(u.role)}</div>
+              </div>
+              <div style={s.cardActions}>
+                <button style={s.btnIcon} onClick={() => handleOpenModal(u)}>✏️</button>
+                <button style={{ ...s.btnIcon, color: 'var(--accent-red)' }} onClick={() => handleDelete(u)}>🗑️</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showModal && (
+        <div style={s.overlay}>
+          <div style={s.modal}>
+            <div style={s.modalHeader}>
+              <h3 style={s.modalTitle}>{selected ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
+              <button style={s.btnClose} onClick={() => setShowModal(false)}>×</button>
+            </div>
+            <div style={s.modalBody}>
+              <div style={s.inputGroup}>
+                <label style={s.label}>Nombre Completo</label>
+                <input style={s.input} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Ej. Juan Pérez" />
+              </div>
+              <div style={s.inputGroup}>
+                <label style={s.label}>Correo Electrónico</label>
+                <input style={s.input} type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="usuario@correo.com" />
+              </div>
+              <div style={s.inputGroup}>
+                <label style={s.label}>Contraseña {selected && '(dejar en blanco para no cambiar)'}</label>
+                <input style={s.input} type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} placeholder="••••••••" />
+              </div>
+              <div style={s.inputGroup}>
+                <label style={s.label}>Rol en la Academia</label>
+                <select style={s.input} value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+                  <option value="owner">Dueño (Admin Total)</option>
+                  <option value="admin">Administrador</option>
+                  <option value="instructor">Instructor</option>
+                  <option value="secretary">Secretaria</option>
+                </select>
+              </div>
+            </div>
+            <div style={s.modalFooter}>
+              <button style={s.btnCancel} onClick={() => setShowModal(false)}>Cancelar</button>
+              <button style={s.btnSave} onClick={handleSave} disabled={saving}>{saving ? 'Procesando...' : 'Guardar Usuario'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const s = {
+  page: { padding: '40px 24px', maxWidth: '1000px', margin: '0 auto' },
+  btnBack: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginBottom: '24px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' },
+  title: { fontSize: '28px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 },
+  subtitle: { color: 'var(--text-secondary)', fontSize: '15px', marginTop: '4px' },
+  btnAdd: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-md)' },
+  loading: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' },
+  card: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', transition: 'transform 0.2s' },
+  cardAvatar: { width: '50px', height: '50px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: '800' },
+  cardInfo: { flex: 1, minWidth: 0 },
+  cardName: { fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  cardEmail: { fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px' },
+  cardRoleBadge: { display: 'inline-block', padding: '4px 10px', borderRadius: '8px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase' },
+  cardActions: { display: 'flex', gap: '8px' },
+  btnIcon: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', padding: '5px' },
+  
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
+  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '28px', width: '450px', maxWidth: '95vw', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' },
+  modalHeader: { padding: '24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  modalTitle: { margin: 0, fontSize: '20px', fontWeight: '900' },
+  btnClose: { background: 'none', border: 'none', fontSize: '24px', color: 'var(--text-muted)', cursor: 'pointer' },
+  modalBody: { padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  label: { fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  input: { width: '100%', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 14px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', transition: 'border-color 0.2s' },
+  modalFooter: { padding: '24px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' },
+  btnCancel: { background: 'none', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 20px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' },
+  btnSave: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer' }
+}

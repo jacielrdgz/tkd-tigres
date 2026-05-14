@@ -4,7 +4,7 @@ import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
 import { useNavigate } from 'react-router-dom'
 
-export default function Cintas() {
+export default function Cintas({ isEmbedded = false }) {
   const navigate = useNavigate()
   const [cintas, setCintas] = useState([])
   const [loading, setLoading] = useState(true)
@@ -50,7 +50,7 @@ export default function Cintas() {
   const startEdit = (c) => {
     setEditId(c.id)
     setForm({ nombre: c.nombre_nivel, bg: c.color_hex, tx: c.color_texto })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (!isEmbedded) window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleDelete = (c) => {
@@ -74,15 +74,18 @@ export default function Cintas() {
   }
 
   return (
-    <div style={s.pageTool}>
-      <button style={s.btnBack} onClick={() => navigate('/ajustes')}>← Volver a ajustes</button>
-
-      <div style={s.toolHeaderRow}>
-        <div>
-          <h2 style={s.titleTool}>Configuración de Grados</h2>
-          <p style={s.subtitleMain}>Administra la escala de cintas y sus identificadores visuales.</p>
-        </div>
-      </div>
+    <div style={isEmbedded ? {} : s.pageTool}>
+      {!isEmbedded && (
+        <>
+          <button style={s.btnBack} onClick={() => navigate('/ajustes')}>← Volver a ajustes</button>
+          <div style={s.toolHeaderRow}>
+            <div>
+              <h2 style={s.titleTool}>Configuración de Grados</h2>
+              <p style={s.subtitleMain}>Administra la escala de cintas y sus identificadores visuales.</p>
+            </div>
+          </div>
+        </>
+      )}
 
       <div style={s.toolLayout}>
         {/* Editor Lateral */}
