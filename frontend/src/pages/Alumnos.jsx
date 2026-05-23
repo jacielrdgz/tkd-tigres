@@ -39,6 +39,12 @@ const formatHora = (hora) => {
   return `${h12}:${m} ${ampm}`
 }
 
+const formatFechaNatural = (fecha) => {
+  if (!fecha) return '-'
+  const d = new Date(fecha + 'T12:00:00') // Evitar desfase de zona horaria
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 const toastSuccess = (msg) => {
   toast.success(msg, {
     style: {
@@ -86,6 +92,10 @@ export default function Alumnos() {
   const [historialAlumno, setHistorialAlumno] = useState(null)
   const [historialData, setHistorialData] = useState([])
   const [cargandoHistorial, setCargandoHistorial] = useState(false)
+  const [modalManual, setModalManual] = useState(false)
+  const [formManual, setFormManual] = useState({ 
+    grado_anterior_id: '', grado_nuevo_id: '', fecha_ascenso: new Date().toISOString().split('T')[0], actualizar_cinta: false 
+  })
   const [form, setForm] = useState(VACIO)
   const [errors, setErrors] = useState({})
   const [fotoFile, setFotoFile] = useState(null)
@@ -259,6 +269,17 @@ export default function Alumnos() {
       setHistorialData(res.data.historial_grados || [])
     } catch (e) { console.error(e) }
     finally { setCargandoHistorial(false) }
+  }
+
+  const guardarHistorialManual = async () => {
+    if (!formManual.grado_nuevo_id || !formManual.fecha_ascenso) return
+    try {
+      await api.post(`/alumnos/${historialAlumno.id}/historial-manual`, formManual)
+      toastSuccess('Historial registrado correctamente')
+      setModalManual(false)
+      abrirHistorial(historialAlumno) // Recargar
+      cargar() // Recargar lista principal por si cambió la cinta
+    } catch (e) { toastError('Error al registrar historial') }
   }
 
   const cerrar = () => {
@@ -777,7 +798,7 @@ export default function Alumnos() {
                           maxWidth: '240px'
                         }}
                       >
-                        ID: {a.id} {a.email && a.email !== 'NULL' && a.email !== 'null' && (
+                        {`ID: ${parseInt(a.id)}`} {a.email && a.email !== 'NULL' && a.email !== 'null' && (
                           <span style={{ opacity: 0.5 }}> | {a.email}</span>
                         )}
                       </div>
@@ -791,9 +812,6 @@ export default function Alumnos() {
                         ...s.cinta,
                         background: a.cinta_config?.color_hex || 'var(--bg-tertiary)',
                         color: a.cinta_config?.color_texto || 'var(--text-primary)',
-                        display: 'inline-block',
-                        minWidth: '100px',
-                        textAlign: 'center'
                       }}>
                         {a.cinta_config?.nombre_nivel || 'Sin cinta'}
                       </span>
@@ -954,10 +972,26 @@ export default function Alumnos() {
                 </div>
                 <div>
                   <div style={s.drawerNombre}>{historialAlumno.nombre} {historialAlumno.apellido_paterno}</div>
-                  <div style={s.drawerSub}>{historialAlumno.cinta_config?.nombre_nivel || 'Sin cinta'} · ID: {historialAlumno.id}</div>
+                  <div style={s.drawerSub}>{historialAlumno.cinta_config?.nombre_nivel || 'Sin cinta'} · ID: {Number(historialAlumno.id)}</div>
                 </div>
               </div>
-              <button style={s.btnCerrarWhite} onClick={() => setHistorialAlumno(null)}>✕</button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  style={{ ...s.btnPrimary, padding: '8px 16px', fontSize: '12px' }} 
+                  onClick={() => {
+                    setFormManual({ 
+                      grado_anterior_id: historialAlumno.configuracion_cinta_id || '', 
+                      grado_nuevo_id: '', 
+                      fecha_ascenso: new Date().toISOString().split('T')[0],
+                      actualizar_cinta: false 
+                    })
+                    setModalManual(true)
+                  }}
+                >
+                  + MANUAL
+                </button>
+                <button style={s.btnCerrarWhite} onClick={() => setHistorialAlumno(null)}>✕</button>
+              </div>
             </div>
 
             <div style={s.modalHistorialContent}>
@@ -977,7 +1011,7 @@ export default function Alumnos() {
                     </div>
                     <div style={s.resumenHistItem}>
                       <span style={{ fontSize: '22px', fontWeight: '800', color: 'var(--accent-green)' }}>
-                        {new Date(historialData[0].fecha_ascenso).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}
+                        {historialData.length > 0 ? formatFechaNatural(historialData[0].fecha_ascenso) : '-'}
                       </span>
                       <span style={s.resumenLabel}>Último Grado</span>
                     </div>
@@ -992,7 +1026,7 @@ export default function Alumnos() {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                             <div style={s.historialGrado}>{h.grado_nuevo?.nombre_nivel || 'Grado desconocido'}</div>
                             <div style={s.historialFecha}>
-                              {h.fecha_ascenso ? new Date(h.fecha_ascenso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                              {h.fecha_ascenso ? formatFechaNatural(h.fecha_ascenso) : '-'}
                             </div>
                           </div>
                           <div style={s.historialDetalle}>
@@ -1004,6 +1038,48 @@ export default function Alumnos() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL CARGA MANUAL DE GRADO ── */}
+      {modalManual && (
+        <div style={{ ...s.overlay, zIndex: 1100 }}>
+          <div style={{ ...s.modalCard, width: '450px' }}>
+            <div style={s.cardHeader}>
+              <h3 style={s.cardTitle}>Registro de Grado Manual</h3>
+              <button style={s.btnCerrarWhite} onClick={() => setModalManual(false)}>✕</button>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={s.label}>Grado Anterior</label>
+                <select style={s.select} value={formManual.grado_anterior_id} onChange={e => setFormManual({...formManual, grado_anterior_id: e.target.value})}>
+                  <option value="">- Ninguno -</option>
+                  {cintasConfig.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={s.label}>Grado Obtenido</label>
+                <select style={s.select} value={formManual.grado_nuevo_id} onChange={e => setFormManual({...formManual, grado_nuevo_id: e.target.value})}>
+                  <option value="">- Seleccionar -</option>
+                  {cintasConfig.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={s.label}>Fecha</label>
+                <input type="date" style={s.input} value={formManual.fecha_ascenso} onChange={e => setFormManual({...formManual, fecha_ascenso: e.target.value})} />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ ...s.label, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                  <input type="checkbox" checked={formManual.actualizar_cinta} onChange={e => setFormManual({...formManual, actualizar_cinta: e.target.checked})} />
+                  ¿Actualizar grado actual del alumno?
+                </label>
+              </div>
+            </div>
+            <div style={s.modalFooter}>
+              <button style={s.btnSecondary} onClick={() => setModalManual(false)}>CANCELAR</button>
+              <button style={s.btnPrimary} onClick={guardarHistorialManual}>GUARDAR</button>
             </div>
           </div>
         </div>
@@ -1249,7 +1325,7 @@ const s = {
   fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: '700', color: 'var(--accent-blue)' },
   nombreNom: { fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' },
   emailSub: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' },
-  cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', minWidth: '100px' },
+  cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', textAlign: 'center', minWidth: '110px', verticalAlign: 'middle' },
   badge: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', },
   acciones: { display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' },
   btnVer: { background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '12px' },

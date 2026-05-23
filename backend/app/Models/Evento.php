@@ -21,7 +21,7 @@ class Evento extends Model
     public function alumnos()
     {
         return $this->belongsToMany(Alumno::class, 'evento_alumno')
-            ->withPivot('id', 'resultado', 'pagado', 'fecha_pago', 'asistio')
+            ->withPivot('id', 'pagado', 'fecha_pago', 'asistio', 'pago_inscripcion')
             ->withTimestamps();
     }
 

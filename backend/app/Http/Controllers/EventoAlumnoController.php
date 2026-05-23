@@ -28,7 +28,7 @@ class EventoAlumnoController extends Controller
                 $data['pagado']     = $alumno->pivot->pagado;
                 $data['fecha_pago'] = $alumno->pivot->fecha_pago;
                 $data['asistio']    = $alumno->pivot->asistio;
-                $data['resultado_base'] = $alumno->pivot->resultado;
+                $data['pago_inscripcion'] = $alumno->pivot->pago_inscripcion;
 
                 if ($evento->tipo === 'examen') {
                     $examen = ExamenAlumno::with(['gradoActual', 'gradoSiguiente'])
@@ -78,17 +78,32 @@ class EventoAlumnoController extends Controller
         }
 
         DB::transaction(function () use ($evento, $validated) {
-            // 1. Registro base
+            $costo = 0;
+            if ($evento->tipo === 'examen') {
+                $costo = $validated['costo_examen'] ?? 0;
+            } elseif ($evento->tipo === 'torneo') {
+                $costo = $validated['costo_torneo'] ?? 0;
+            }
+
+            // 1. Registro base con resultado inicial y monto
             $evento->alumnos()->attach($validated['alumno_id'], [
-                'pagado'     => $validated['pagado'] ?? false,
-                'fecha_pago' => $validated['fecha_pago'] ?? null,
+                'pagado'           => $validated['pagado'] ?? false,
+                'fecha_pago'       => $validated['fecha_pago'] ?? null,
+                'pago_inscripcion' => $costo
             ]);
+
+            $pivotId = DB::table('evento_alumno')
+                ->where('evento_id', $evento->id)
+                ->where('alumno_id', $validated['alumno_id'])
+                ->orderBy('id', 'desc')
+                ->value('id');
 
             // 2. Detalle según tipo
             if ($evento->tipo === 'examen') {
                 ExamenAlumno::create([
                     'evento_id'          => $evento->id,
                     'alumno_id'          => $validated['alumno_id'],
+                    'evento_alumno_id'   => $pivotId,
                     'grado_actual_id'    => $validated['grado_actual_id'],
                     'grado_siguiente_id' => $validated['grado_siguiente_id'],
                     'costo_examen'       => $validated['costo_examen'] ?? null,
@@ -96,10 +111,11 @@ class EventoAlumnoController extends Controller
                 ]);
             } elseif ($evento->tipo === 'torneo') {
                 $ta = TorneoAlumno::create([
-                    'evento_id'   => $evento->id,
-                    'alumno_id'   => $validated['alumno_id'],
-                    'costo_torneo' => $validated['costo_torneo'] ?? null,
-                    'resultado'   => 'pendiente',
+                    'evento_id'          => $evento->id,
+                    'alumno_id'          => $validated['alumno_id'],
+                    'evento_alumno_id'   => $pivotId,
+                    'costo_torneo'       => $validated['costo_torneo'] ?? null,
+                    'resultado'          => 'pendiente',
                 ]);
 
                 // Inscribir en modalidades seleccionadas
@@ -135,28 +151,42 @@ class EventoAlumnoController extends Controller
             if (array_key_exists('pagado', $validated))     $pivotData['pagado']     = $validated['pagado'];
             if (array_key_exists('fecha_pago', $validated)) $pivotData['fecha_pago'] = $validated['fecha_pago'] ?? ($validated['pagado'] ? now() : null);
             if (array_key_exists('asistio', $validated))    $pivotData['asistio']    = $validated['asistio'];
+            
+            // Sincronizar costo al pivot
+            if (isset($validated['costo_examen']))          $pivotData['pago_inscripcion'] = $validated['costo_examen'];
+            if (isset($validated['costo_torneo']))          $pivotData['pago_inscripcion'] = $validated['costo_torneo'];
+
             if (!empty($pivotData)) {
                 $evento->alumnos()->updateExistingPivot($alumno->id, $pivotData);
             }
 
             // Actualizar detalle examen
-            if ($evento->tipo === 'examen' && isset($validated['resultado_examen'])) {
-                $examen = ExamenAlumno::where('evento_id', $evento->id)
-                    ->where('alumno_id', $alumno->id)
-                    ->first();
-                
+            if ($evento->tipo === 'examen') {
+                $examen = ExamenAlumno::where('evento_id', $evento->id)->where('alumno_id', $alumno->id)->first();
                 if ($examen) {
                     $oldResultado = $examen->resultado;
-                    $examen->resultado = $validated['resultado_examen'];
+                    if (isset($validated['resultado_examen'])) $examen->resultado = $validated['resultado_examen'];
                     
                     if (isset($validated['costo_examen'])) {
                         $examen->costo_examen = $validated['costo_examen'];
+                    }
+
+                    if (isset($validated['es_historico'])) {
+                        $examen->es_historico = $validated['es_historico'];
+                    }
+
+                    if (isset($validated['grado_actual_id'])) {
+                        $examen->grado_actual_id = $validated['grado_actual_id'];
+                    }
+
+                    if (isset($validated['grado_siguiente_id'])) {
+                        $examen->grado_siguiente_id = $validated['grado_siguiente_id'];
                     }
                     
                     $examen->save();
 
                     // PROMOCIÓN AUTOMÁTICA si cambia a aprobado
-                    if ($oldResultado !== 'aprobado' && $validated['resultado_examen'] === 'aprobado') {
+                    if (isset($validated['resultado_examen']) && $oldResultado !== 'aprobado' && $validated['resultado_examen'] === 'aprobado') {
                         HistorialGrado::create([
                             'alumno_id'        => $alumno->id,
                             'evento_id'        => $evento->id,
@@ -165,7 +195,10 @@ class EventoAlumnoController extends Controller
                             'fecha_ascenso'    => today(),
                         ]);
 
-                        $alumno->update(['configuracion_cinta_id' => $examen->grado_siguiente_id]);
+                        // SOLO ACTUALIZAR ALUMNO SI NO ES HISTÓRICO
+                        if (!$examen->es_historico) {
+                            $alumno->update(['configuracion_cinta_id' => $examen->grado_siguiente_id]);
+                        }
                     }
                 }
             }
@@ -229,7 +262,10 @@ class EventoAlumnoController extends Controller
                     'fecha_ascenso'    => today(),
                 ]);
 
-                $alumno->update(['configuracion_cinta_id' => $examen->grado_siguiente_id]);
+                // SOLO ACTUALIZAR ALUMNO SI NO ES HISTÓRICO
+                if (!$examen->es_historico) {
+                    $alumno->update(['configuracion_cinta_id' => $examen->grado_siguiente_id]);
+                }
                 $promovidos++;
             }
         });

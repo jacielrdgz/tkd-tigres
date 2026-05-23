@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard'
 import Alumnos from './pages/Alumnos'
 import Pagos from './pages/Pagos'
 import Asistencias from './pages/Asistencias'
+import AsistenciasAntiguo from './pages/AsistenciasAntiguo'
 import Eventos from './pages/Eventos'
 import EventoDetalle from './pages/EventoDetalle'
 import Login from './pages/Login'
@@ -57,6 +58,7 @@ const router = createBrowserRouter([
       { path: "alumnos", element: <Alumnos /> },
       { path: "pagos", element: <Pagos /> },
       { path: "asistencias", element: <Asistencias /> },
+      { path: "asistencias-antiguo", element: <AsistenciasAntiguo /> },
       { path: "eventos", element: <Eventos /> },
       { path: "eventos/:id", element: <EventoDetalle /> },
       {

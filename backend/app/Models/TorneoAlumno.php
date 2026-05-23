@@ -11,9 +11,15 @@ class TorneoAlumno extends Model
     protected $fillable = [
         'evento_id',
         'alumno_id',
+        'evento_alumno_id',
         'costo_torneo',
         'resultado',
     ];
+
+    public function pivot()
+    {
+        return $this->belongsTo(EventoAlumno::class, 'evento_alumno_id');
+    }
 
     public function evento()
     {

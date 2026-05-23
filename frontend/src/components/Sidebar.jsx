@@ -111,6 +111,24 @@ export default function Sidebar() {
 
         {/* User info + logout */}
         <div style={styles.footer}>
+          {/* Asistencias antiguo link (temporal) */}
+          <NavLink
+            to="/asistencias-antiguo"
+            onClick={closeMobile}
+            style={({ isActive }) => ({
+              ...styles.link,
+              ...(isActive ? styles.linkActive : {}),
+              marginBottom: '4px',
+              border: '1px dashed var(--accent-red)',
+              borderRadius: '10px',
+              background: isActive ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
+              color: isActive ? 'var(--accent-red)' : 'var(--text-secondary)'
+            })}
+          >
+            <span style={styles.icon}>📋⚠️</span>
+            <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 'bold' }}>Asistencias ANTIGUO</span>
+          </NavLink>
+
           {/* Ajustes link */}
           <NavLink
             to="/ajustes"

@@ -11,11 +11,18 @@ class ExamenAlumno extends Model
     protected $fillable = [
         'evento_id',
         'alumno_id',
+        'evento_alumno_id',
         'grado_actual_id',
         'grado_siguiente_id',
         'costo_examen',
         'resultado',
+        'es_historico',
     ];
+
+    public function pivot()
+    {
+        return $this->belongsTo(EventoAlumno::class, 'evento_alumno_id');
+    }
 
     public function evento()
     {

@@ -26,6 +26,12 @@ const formatCosto = (val) => {
   return num % 1 === 0 ? num.toString() : num.toFixed(2)
 }
 
+const formatFechaNatural = (fecha) => {
+  if (!fecha) return '-'
+  const d = new Date(fecha + 'T12:00:00')
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 export default function EventoDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -48,7 +54,8 @@ export default function EventoDetalle() {
   const [editandoInscrito, setEditandoInscrito] = useState(null)
   const [form, setForm] = useState({
     alumno_id: '', nombre_alumno: '', pagado: false,
-    grado_actual_id: '', grado_siguiente_id: '', costo_examen: ''
+    grado_actual_id: '', grado_siguiente_id: '', costo_examen: '',
+    es_historico: false
   })
 
   // Búsqueda en tabla
@@ -100,7 +107,8 @@ export default function EventoDetalle() {
       pagado: false, 
       grado_actual_id: '', 
       grado_siguiente_id: '', 
-      costo: evento?.costo || '' 
+      costo: evento?.costo || '',
+      es_historico: false
     })
     setBusquedaAlumno('')
     setEditandoInscrito(null)
@@ -114,7 +122,8 @@ export default function EventoDetalle() {
       pagado: inscrito.pagado,
       grado_actual_id: inscrito.examen_detalle?.grado_actual_id || '',
       grado_siguiente_id: inscrito.examen_detalle?.grado_siguiente_id || inscrito.torneo_detalle?.grado_siguiente_id || '',
-      costo: esExamen ? (inscrito.examen_detalle?.costo_examen) : (inscrito.torneo_detalle?.costo_torneo || evento?.costo || '')
+      costo: esExamen ? (inscrito.examen_detalle?.costo_examen) : (inscrito.torneo_detalle?.costo_torneo || evento?.costo || ''),
+      es_historico: inscrito.examen_detalle?.es_historico || false
     })
     setEditandoInscrito(inscrito.id)
     setModalInscripcion(true)
@@ -129,7 +138,8 @@ export default function EventoDetalle() {
         nombre_alumno: `${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`.trim(),
         grado_actual_id: res.data.grado_actual?.id || '',
         grado_siguiente_id: res.data.grado_siguiente?.id || '',
-        costo: prev.costo || evento?.costo || ''
+        costo: prev.costo || evento?.costo || '',
+        es_historico: false
       }))
     } catch (e) {
       setForm(prev => ({
@@ -152,6 +162,7 @@ export default function EventoDetalle() {
         pagado: form.pagado,
         grado_actual_id: form.grado_actual_id,
         grado_siguiente_id: form.grado_siguiente_id,
+        es_historico: form.es_historico
       }
       
       if (esExamen) {
@@ -196,10 +207,18 @@ export default function EventoDetalle() {
   }, [alumnos, busquedaAlumno])
 
   const inscritosFiltrados = useMemo(() => {
-    if (!busquedaTabla) return inscritos
-    return inscritos.filter(a =>
-      `${a.nombre} ${a.apellido_paterno}`.toLowerCase().includes(busquedaTabla.toLowerCase())
-    )
+    let list = [...inscritos]
+    if (busquedaTabla) {
+      list = list.filter(a =>
+        `${a.nombre} ${a.apellido_paterno}`.toLowerCase().includes(busquedaTabla.toLowerCase())
+      )
+    }
+    // Ordenar por cintas de menor a mayor
+    return list.sort((a, b) => {
+      const ordenA = a.examen_detalle?.grado_actual?.orden || a.cinta_config?.orden || 99
+      const ordenB = b.examen_detalle?.grado_actual?.orden || b.cinta_config?.orden || 99
+      return ordenA - ordenB
+    })
   }, [inscritos, busquedaTabla])
 
   const COLOR_TIPO = {
@@ -244,7 +263,7 @@ export default function EventoDetalle() {
                 ✏️
               </button>
             </div>
-            <p style={s.sub}>📅 {evento.fecha}{evento.lugar ? ` · 📍 ${evento.lugar}` : ''}</p>
+            <p style={s.sub}>📅 {formatFechaNatural(evento.fecha)}{evento.lugar ? ` · 📍 ${evento.lugar}` : ''}</p>
           </div>
         </div>
         <button style={s.btnNuevo} onClick={abrirInscripcion}>+ Inscribir Alumno</button>
@@ -333,7 +352,14 @@ export default function EventoDetalle() {
                           <div style={{ ...s.nombreNom, maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {a.nombre} {a.apellido_paterno}
                           </div>
-                          <div style={s.emailSub}>ID: {a.id}</div>
+                          <div style={s.emailSub}>
+                            {`ID: ${parseInt(a.id)}`}
+                            {a.examen_detalle?.es_historico && (
+                              <span style={{ marginLeft: '6px', color: 'var(--accent-orange)', fontSize: '9px', fontWeight: '800', background: 'rgba(249, 115, 22, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>
+                                HIST
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -366,9 +392,11 @@ export default function EventoDetalle() {
 
                     {/* Costo */}
                     <td style={s.td}>
-                      {esExamen
-                        ? (a.examen_detalle?.costo_examen ? `$${formatCosto(a.examen_detalle.costo_examen)}` : '-')
-                        : (a.torneo_detalle?.costo_torneo ? `$${formatCosto(a.torneo_detalle.costo_torneo)}` : '-')}
+                      <div style={s.costoBadge}>
+                        {esExamen
+                          ? (a.examen_detalle?.costo_examen ? `$${formatCosto(a.examen_detalle.costo_examen)}` : '-')
+                          : (a.torneo_detalle?.costo_torneo ? `$${formatCosto(a.torneo_detalle.costo_torneo)}` : '-')}
+                      </div>
                     </td>
 
                     {/* Pagado */}
@@ -397,19 +425,16 @@ export default function EventoDetalle() {
 
                     {/* Resultado */}
                     <td style={s.td}>
-                      <select
-                        style={s.selectCompact}
-                        value={esExamen ? (a.examen_detalle?.resultado || 'pendiente') : (a.torneo_detalle?.resultado || 'pendiente')}
-                        onChange={e => actualizarAtributo(a.id, esExamen ? { resultado_examen: e.target.value } : { resultado_torneo: e.target.value })}
-                        onMouseOver={e => {
-                          e.currentTarget.style.borderColor = 'var(--accent-blue)';
-                          e.currentTarget.style.background = 'var(--bg-secondary)';
-                        }}
-                        onMouseOut={e => {
-                          e.currentTarget.style.borderColor = 'var(--border)';
-                          e.currentTarget.style.background = 'var(--bg-tertiary)';
-                        }}
-                      >
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                        <select
+                          style={{
+                            ...s.selectCompact,
+                            color: (esExamen ? (a.examen_detalle?.resultado) : (a.torneo_detalle?.resultado)) === 'aprobado' || (esExamen ? (a.examen_detalle?.resultado) : (a.torneo_detalle?.resultado)) === 'oro' ? '#22c55e' : 
+                                   (esExamen ? (a.examen_detalle?.resultado) : (a.torneo_detalle?.resultado)) === 'reprobado' ? '#ef4444' : 'var(--text-primary)'
+                          }}
+                          value={esExamen ? (a.examen_detalle?.resultado || 'pendiente') : (a.torneo_detalle?.resultado || 'pendiente')}
+                          onChange={e => actualizarAtributo(a.id, esExamen ? { resultado_examen: e.target.value } : { resultado_torneo: e.target.value })}
+                        >
                         <option value="pendiente">Pendiente</option>
                         {esExamen ? (
                           <>
@@ -424,7 +449,8 @@ export default function EventoDetalle() {
                             <option value="eliminado">Eliminado</option>
                           </>
                         )}
-                      </select>
+                        </select>
+                      </div>
                     </td>
 
                     {/* Acciones */}
@@ -504,7 +530,7 @@ export default function EventoDetalle() {
                     {alumnosFiltrados.map(a => (
                       <div key={a.id} style={s.dropItem} onMouseDown={() => seleccionarAlumno(a)}>
                         <div style={{ fontWeight: 600, fontSize: '14px' }}>{a.nombre} {a.apellido_paterno} {a.apellido_materno}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {a.id}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {Number(a.id)}</div>
                       </div>
                     ))}
                   </div>
@@ -514,9 +540,24 @@ export default function EventoDetalle() {
               {/* Grados (solo examen) */}
               {esExamen && (
                 <>
+                  <div style={{ gridColumn: '1 / -1', marginBottom: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', color: 'var(--accent-orange)' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={form.es_historico} 
+                        onChange={e => setForm({ ...form, es_historico: e.target.checked })} 
+                      />
+                      REGISTRO HISTÓRICO (No actualiza cinta actual del alumno)
+                    </label>
+                  </div>
                   <div>
                     <label style={s.label}>Grado Actual</label>
-                    <select disabled style={{ ...s.select, opacity: 0.6, background: 'var(--bg-tertiary)' }} value={form.grado_actual_id}>
+                    <select 
+                      disabled={!form.es_historico} 
+                      style={{ ...s.select, opacity: form.es_historico ? 1 : 0.6, background: form.es_historico ? 'var(--bg-primary)' : 'var(--bg-tertiary)' }} 
+                      value={form.grado_actual_id}
+                      onChange={e => setForm({ ...form, grado_actual_id: e.target.value })}
+                    >
                       <option value="">-</option>
                       {cintas.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
                     </select>
@@ -619,7 +660,7 @@ const s = {
   header:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
   titulo:      { fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
   sub:         { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
-  badge:       { padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' },
+  badge:       { padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', border: '1px solid rgba(0,0,0,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '100px' },
   btnBack:     { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '9px 16px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '13px', transition: 'all 0.2s' },
   btnNuevo:    { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' },
   barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '16px' },
@@ -636,11 +677,17 @@ const s = {
   fotoVacia:   { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: 'var(--accent-blue)', position: 'absolute', top: 0, left: 0 },
   nombreNom:   { fontWeight: '600', color: 'var(--text-primary)', fontSize: '14px' },
   emailSub:    { fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' },
-  cinta:       { padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', display: 'inline-block', minWidth: '100px', textAlign: 'center' },
+  cinta:       { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', textAlign: 'center', minWidth: '110px', verticalAlign: 'middle' },
   btnEditMini: { background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px' },
   paymentBadge: { 
     display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', 
-    fontSize: '11px', fontWeight: '800', cursor: 'pointer', border: 'none', transition: 'all 0.2s ease', outline: 'none'
+    fontSize: '11px', fontWeight: '800', cursor: 'pointer', border: '1px solid transparent', 
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', outline: 'none'
+  },
+  costoBadge: { 
+    display: 'inline-block', padding: '4px 10px', borderRadius: '8px', 
+    background: 'var(--bg-tertiary)', color: 'var(--text-primary)', 
+    fontWeight: '700', fontSize: '13px', border: '1px solid var(--border)' 
   },
   btnIcon:     { width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease' },
   btnEditRow:  { background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' },
@@ -648,7 +695,7 @@ const s = {
   selectCompact: { 
     padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border)', 
     fontSize: '12px', fontWeight: '700', background: 'var(--bg-tertiary)', 
-    color: 'var(--text-primary)', cursor: 'pointer', maxWidth: '140px', 
+    color: 'var(--text-primary)', cursor: 'pointer', minWidth: '110px', 
     outline: 'none', transition: 'all 0.2s', appearance: 'none',
     textAlign: 'center', boxShadow: 'var(--shadow-sm)'
   },

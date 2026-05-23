@@ -70,7 +70,7 @@ class Alumno extends Model
     public function eventos()
     {
         return $this->belongsToMany(Evento::class, 'evento_alumno')
-            ->withPivot('id', 'resultado', 'pagado', 'fecha_pago', 'asistio')
+            ->withPivot('id', 'pagado', 'fecha_pago', 'asistio', 'pago_inscripcion')
             ->withTimestamps();
     }
 

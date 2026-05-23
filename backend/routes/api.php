@@ -49,15 +49,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('alumnos/{alumno}/toggle-estatus', [AlumnoController::class, 'toggleEstatus']);
     Route::apiResource('alumnos', AlumnoController::class);
     Route::patch('alumnos/{alumno}/quitar-foto', [AlumnoController::class, 'quitarFoto']);
+    Route::post('alumnos/{alumno}/historial-manual', [AlumnoController::class, 'addHistorialManual']);
 
     // Pagos
     Route::get('pagos/alumno/{alumno}', [PagoController::class, 'porAlumno']);
     Route::apiResource('pagos', PagoController::class);
 
-    // Asistencias
-    Route::get('asistencias', [AsistenciaController::class, 'index']);
+    // Asistencias — rutas fijas primero (antes de las paramétricas)
+    Route::get('asistencias/resumen', [AsistenciaController::class, 'resumen']);
+    Route::get('asistencias/por-alumno', [AsistenciaController::class, 'porAlumno']);
+    Route::get('asistencias/por-fecha', [AsistenciaController::class, 'porFecha']);
     Route::post('asistencias/registrar-dia', [AsistenciaController::class, 'registrarDia']);
-    Route::get('asistencias/alumno/{alumno}', [AsistenciaController::class, 'porAlumno']);
+    // Asistencias — rutas paramétricas
+    Route::get('asistencias/dia/{fecha}', [AsistenciaController::class, 'dia']);
+    Route::get('asistencias/alumno-legacy/{alumno}', [AsistenciaController::class, 'alumnoHistorialLegacy']);
+    Route::get('asistencias/alumno/{alumno}', [AsistenciaController::class, 'alumno']);
+    Route::get('asistencias', [AsistenciaController::class, 'index']);
 
     // Eventos - CRUD
     Route::apiResource('eventos', EventoController::class);

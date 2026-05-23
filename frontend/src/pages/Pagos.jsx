@@ -59,6 +59,7 @@ export default function Pagos() {
   const [alumnos, setAlumnos] = useState([])
   const [pagosActivos, setPagosActivos] = useState([]) // pagos del período actual de cada alumno
   const [cargando, setCargando] = useState(true)
+  const [escuelaInfo, setEscuelaInfo] = useState(null)
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState('todos') // todos | pagado | pendiente
   const [submodulo, setSubmodulo] = useState('mensualidades') // mensualidades | inscripciones
@@ -89,16 +90,18 @@ export default function Pagos() {
   const cargar = async () => {
     setCargando(true)
     try {
-      const [resAlumnos, resPagos, resCintas, resHorarios] = await Promise.all([
+      const [resAlumnos, resPagos, resCintas, resHorarios, resEscuela] = await Promise.all([
         api.get('/alumnos', { params: { estatus: 'activo' } }),
         api.get('/pagos'),
         api.get('/configuraciones-cintas'),
-        api.get('/horarios')
+        api.get('/horarios'),
+        api.get('/configuracion-escuela')
       ])
       setAlumnos(resAlumnos.data)
       setPagosActivos(resPagos.data)
       setCintas(resCintas.data)
       setHorarios(resHorarios.data)
+      setEscuelaInfo(resEscuela.data)
 
       // Calcular ingresos del mes actual
       const ahora = new Date()
@@ -289,7 +292,7 @@ export default function Pagos() {
     } catch { toast.error("Error al generar PDF") }
   }
 
-  const generarRecibo = (pago, alumno) => {
+  const generarRecibo = async (pago, alumno) => {
     try {
       const doc = new jsPDF({
         orientation: 'p',
@@ -298,65 +301,134 @@ export default function Pagos() {
       })
 
       // FONDO Y CABECERA (Hoja Membretada)
-      doc.setFillColor(245, 247, 250) // Fondo muy claro
+      doc.setFillColor(245, 247, 250)
       doc.rect(0, 0, 216, 279, 'F')
-
-      // Franja lateral decorativa
       doc.setFillColor(59, 130, 246)
       doc.rect(0, 0, 5, 279, 'F')
 
-      // LOGO
+      // FUNCIÓN AUXILIAR PARA CARGAR IMAGEN (con soporte CORS y fallback)
+      const cargarImagen = (url) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          if (url.startsWith('http')) img.crossOrigin = 'Anonymous';
+          img.src = url;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg'));
+          };
+          img.onerror = (err) => reject(err);
+        });
+      };
+
+      // CARGAR LOGO (Con múltiples fallbacks)
       try {
-        doc.addImage('/tigreslogo.jpg', 'JPEG', 15, 10, 35, 35)
+        let logoSrc = null;
+        if (escuelaInfo?.logo_url) {
+          try {
+            logoSrc = await cargarImagen(`${import.meta.env.VITE_API_URL}/storage/${escuelaInfo.logo_url}`);
+          } catch (err) {
+            console.warn("Fallo al cargar logo personalizado, intentando genérico...");
+          }
+        }
+        
+        if (!logoSrc) {
+          try {
+            logoSrc = await cargarImagen('/tigreslogo.jpg');
+          } catch (err) {
+            console.warn("Fallo al cargar logo genérico.");
+          }
+        }
+
+        if (logoSrc) {
+          doc.addImage(logoSrc, 'JPEG', 15, 12, 32, 32);
+        } else {
+          // Si todo falla, dibujar un círculo con un icono de texto
+          doc.setFillColor(240, 242, 245);
+          doc.circle(31, 28, 16, 'F');
+          doc.setFontSize(24);
+          doc.text("🥋", 31, 31, { align: 'center' });
+        }
       } catch (e) {
-        console.warn("No se pudo cargar el logo:", e)
+        console.error("Error crítico en carga de logo:", e);
       }
 
       // TEXTO CABECERA
       doc.setTextColor(30, 41, 59)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(22)
-      doc.text("TAE KWON DO TIGRES", 55, 22)
+      if (escuelaInfo?.nombre) {
+        doc.text(escuelaInfo.nombre.toUpperCase(), 52, 22)
+      }
 
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(10)
       doc.setTextColor(100)
-      doc.text("Formación, Disciplina y Valores", 55, 28)
-      doc.text("Av. Principal #123, Ciudad de México", 55, 33)
-      doc.text("Tel: (55) 1234 5678 | WhatsApp: 55 8899 0011", 55, 38)
+      
+      // DIRECCIÓN DINÁMICA CON AJUSTE DE LÍNEAS
+      let addressStr = ""
+      if (escuelaInfo?.direccion) {
+        const d = escuelaInfo.direccion
+        const parts = [
+          d.calle && `#${d.numero_exterior || ''}`,
+          d.colonia && `Col. ${d.colonia}`,
+          d.ciudad,
+          d.estado
+        ].filter(Boolean)
+        
+        addressStr = (d.calle ? d.calle + " " : "") + parts.join(", ").replace(/,,/g, ',').trim()
+      }
+      
+      let nextY = 28;
+      if (addressStr) {
+        const splitAddress = doc.splitTextToSize(addressStr, 85);
+        doc.text(splitAddress, 52, nextY)
+        nextY += (splitAddress.length * 4.5);
+      }
 
-      // TITULO RECIBO
+      const contacts = [];
+      if (escuelaInfo?.telefono_contacto) contacts.push(`Tel: ${escuelaInfo.telefono_contacto}`);
+      if (escuelaInfo?.email_contacto) contacts.push(`Email: ${escuelaInfo.email_contacto}`);
+      
+      if (contacts.length > 0) {
+        doc.text(contacts.join(" | "), 52, nextY)
+      }
+
+      // TITULO RECIBO (DERECHA)
       doc.setFillColor(59, 130, 246)
-      doc.rect(140, 15, 60, 12, 'F')
+      doc.rect(145, 15, 55, 12, 'F')
       doc.setTextColor(255)
-      doc.setFontSize(14)
-      doc.text("RECIBO DE PAGO", 170, 23, { align: 'center' })
+      doc.setFontSize(13)
+      doc.text("RECIBO DE PAGO", 172.5, 23, { align: 'center' })
 
       doc.setTextColor(40)
       doc.setFontSize(10)
-      doc.text(`Folio: #${pago.id || '001'}`, 140, 32)
-      doc.text(`Fecha: ${fmtFecha(pago.fecha_pago)}`, 140, 37)
+      doc.text(`Folio: #${pago.id || '001'}`, 145, 32)
+      doc.text(`Fecha: ${fmtFecha(pago.fecha_pago)}`, 145, 37)
 
       // SECCIÓN ALUMNO
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
-      doc.text("DATOS DEL ALUMNO", 15, 60)
-      doc.line(15, 62, 200, 62)
+      doc.text("DATOS DEL ALUMNO", 15, 65)
+      doc.line(15, 67, 200, 67)
 
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(11)
-      doc.text(`Nombre: ${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`, 15, 70)
-      doc.text(`ID del Alumno: ${alumno.id}`, 15, 77)
+      doc.text(`Nombre: ${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`, 15, 75)
+      doc.text(`ID del Alumno: ${parseInt(alumno.id)}`, 15, 82)
 
       const horario = horarios.find(h => String(h.id) === String(alumno.horario_id))
       const txtHorario = horario ? `${formatHora(horario.hora_inicio)} - ${formatHora(horario.hora_fin)}` : '-'
-      doc.text(`Clase / Horario: ${txtHorario}`, 15, 84)
+      doc.text(`Clase / Horario: ${txtHorario}`, 15, 89)
 
       // SECCIÓN PAGO
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
-      doc.text("DETALLES DEL MOVIMIENTO", 15, 100)
-      doc.line(15, 102, 200, 102)
+      doc.text("DETALLES DEL MOVIMIENTO", 15, 105)
+      doc.line(15, 107, 200, 107)
 
       const fechaRef = (pago.fecha_inicio || hoy) + 'T12:00:00'
       const esMensualidad = pago.tipo === 'mensualidad'
@@ -365,7 +437,7 @@ export default function Pagos() {
         : 'INSCRIPCIÓN ÚNICA'
 
       autoTable(doc, {
-        startY: 108,
+        startY: 115,
         head: [['CONCEPTO', 'PERIODO', 'MÉTODO', 'TOTAL']],
         body: [[
           esMensualidad ? 'MENSUALIDAD TAEKWONDO' : 'INSCRIPCIÓN TAEKWONDO',
@@ -405,10 +477,12 @@ export default function Pagos() {
       // FOOTER
       doc.setFontSize(9)
       doc.setTextColor(150)
-      doc.text("Este documento es un comprobante fiscal simplificado generado por Tigres Payments.", 108, 265, { align: 'center' })
-      doc.text("Tigres Do - Pasión por el Taekwondo", 108, 270, { align: 'center' })
+      doc.text(`Este documento es un comprobante de pago simplificado generado por ${escuelaInfo?.nombre || 'Administración'}.`, 108, 265, { align: 'center' })
+      if (escuelaInfo?.nombre) {
+        doc.text(escuelaInfo.nombre, 108, 270, { align: 'center' })
+      }
 
-      doc.save(`Recibo_Tigres_${alumno.nombre}_${pago.fecha_inicio}.pdf`)
+      doc.save(`Recibo_${escuelaInfo?.nombre || 'Pago'}_${alumno.nombre}_${pago.fecha_pago}.pdf`)
       toast.success("Recibo generado ✓")
     } catch (e) {
       console.error(e)

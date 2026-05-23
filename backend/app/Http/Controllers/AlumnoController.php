@@ -9,8 +9,35 @@ use App\Models\Asistencia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
+use App\Models\HistorialGrado;
+
 class AlumnoController extends Controller
 {
+    public function addHistorialManual(Request $request, Alumno $alumno)
+    {
+        $validated = $request->validate([
+            'grado_anterior_id' => 'nullable|exists:configuraciones_cintas,id',
+            'grado_nuevo_id'    => 'required|exists:configuraciones_cintas,id',
+            'fecha_ascenso'     => 'required|date',
+            'comentario'        => 'nullable|string',
+            'actualizar_cinta'  => 'boolean'
+        ]);
+
+        $historial = HistorialGrado::create([
+            'alumno_id'        => $alumno->id,
+            'grado_anterior_id' => $validated['grado_anterior_id'],
+            'grado_nuevo_id'   => $validated['grado_nuevo_id'],
+            'fecha_ascenso'    => $validated['fecha_ascenso'],
+            'evento_id'        => null, // Registro manual
+        ]);
+
+        if ($request->boolean('actualizar_cinta')) {
+            $alumno->update(['configuracion_cinta_id' => $validated['grado_nuevo_id']]);
+        }
+
+        return response()->json(['message' => 'Historial agregado correctamente', 'historial' => $historial]);
+    }
+
     public function index(Request $request)
     {
         $query = Alumno::with(['cintaConfig', 'ultimoPago', 'horarioConfig']);
