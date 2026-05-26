@@ -111,8 +111,8 @@ export default function Sidebar() {
 
         {/* User info + logout */}
         <div style={styles.footer}>
-          {/* Asistencias antiguo link (temporal) */}
-          {<NavLink
+          {/* Asistencias antiguo link (temporal) - Comentado por ahora
+          <NavLink
             to="/asistencias-antiguo"
             onClick={closeMobile}
             style={({ isActive }) => ({
@@ -127,9 +127,10 @@ export default function Sidebar() {
           >
             <span style={styles.icon}>📋⚠️</span>
             <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 'bold' }}>Asistencias ANTIGUO</span>
-          </NavLink>}
+          </NavLink>
+          */}
 
-          {/* Ajustes link */}
+          {/*Ajustes link*/}
           <NavLink
             to="/ajustes"
             onClick={closeMobile}

@@ -505,7 +505,10 @@ export default function EventoDetalle() {
         <div style={s.overlay}>
           <div style={{ ...s.modal, overflow: 'visible' }}>
             <div style={s.modalHeader}>
-              <h3 style={s.modalTitulo}>{editandoInscrito ? 'Editar Inscripción' : 'Inscribir Alumno'}</h3>
+              <div>
+                <h3 style={s.modalTitulo}>{editandoInscrito ? 'Editar Inscripción' : 'Inscribir Alumno'}</h3>
+                <p style={s.modalSub}>Selecciona al alumno y asigna los detalles</p>
+              </div>
               <button style={s.btnCerrar} onClick={() => setModalInscripcion(false)}>✕</button>
             </div>
 
@@ -587,7 +590,7 @@ export default function EventoDetalle() {
 
             <div style={s.modalFooter}>
               <button style={s.btnSecondary} onClick={() => setModalInscripcion(false)}>Cancelar</button>
-              <button style={s.btnPrimary} onClick={guardarInscripcion} disabled={!form.alumno_id || guardando}>
+              <button style={s.btnPrimaryModal} onClick={guardarInscripcion} disabled={!form.alumno_id || guardando}>
                 {guardando ? 'Guardando...' : (editandoInscrito ? 'Guardar Cambios' : 'Inscribir Ahora')}
               </button>
             </div>
@@ -600,7 +603,10 @@ export default function EventoDetalle() {
         <div style={s.overlay}>
           <div style={s.modal}>
             <div style={s.modalHeader}>
-              <h3 style={s.modalTitulo}>Editar Detalles del Evento</h3>
+              <div>
+                <h3 style={s.modalTitulo}>Editar Detalles del Evento</h3>
+                <p style={s.modalSub}>Completa los detalles para tu actividad</p>
+              </div>
               <button style={s.btnCerrar} onClick={() => setModalEvento(false)}>✕</button>
             </div>
             <div style={s.campoGroup}>
@@ -645,7 +651,7 @@ export default function EventoDetalle() {
             </div>
             <div style={s.modalFooter}>
               <button style={s.btnSecondary} onClick={() => setModalEvento(false)}>Cancelar</button>
-              <button style={s.btnPrimary} onClick={guardarEvento}>Guardar Cambios</button>
+              <button style={s.btnPrimaryModal} onClick={guardarEvento}>Guardar Cambios</button>
             </div>
           </div>
         </div>
@@ -700,18 +706,22 @@ const s = {
     textAlign: 'center', boxShadow: 'var(--shadow-sm)'
   },
   acciones:    { display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' },
-  overlay:     { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
-  modal:       { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px', width: '560px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
-  modalTitulo: { color: 'var(--text-primary)', fontSize: '18px', fontWeight: '700' },
-  btnCerrar:   { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
-  grid2:       { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
-  label:       { display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600' },
-  input:       { width: '100%', fontSize: '14px', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' },
-  select:      { width: '100%', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' },
-  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' },
-  btnPrimary:  { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s' },
-  btnSecondary:{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
+  overlay:         { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal:           { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '20px', padding: '32px', width: '560px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' },
+  modalHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
+  modalTitulo:     { fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
+  modalSub:        { fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' },
+  btnCerrar:       { background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' },
+  
+  campoGroup:      { marginBottom: '16px' },
+  label:           { display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' },
+  input:           { width: '100%', padding: '12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none', fontSize: '14px', transition: 'border-color 0.2s' },
+  select:          { width: '100%', padding: '12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none', fontSize: '14px' },
+  grid2:           { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' },
+  
+  modalFooter:     { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid var(--border)' },
+  btnPrimaryModal: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)' },
+  btnSecondary:    { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 20px', fontWeight: '600', cursor: 'pointer' },
   dropdown:    { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', zIndex: 100, maxHeight: '220px', overflowY: 'auto' },
   dropItem:    { padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', transition: 'background 0.15s' },
 }

@@ -89,6 +89,18 @@ export default function Pagos() {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   }) // Filtro por mes calendario (YYYY-MM)
+
+  // Ingresos calculados dinámicamente según el filtroMes seleccionado
+  const ingresosDelMes = useMemo(() => {
+    const mesRef = filtroMes
+    const mensualidades = pagosActivos
+      .filter(p => p.tipo === 'mensualidad' && p.fecha_inicio && p.fecha_inicio.startsWith(mesRef))
+      .reduce((acc, p) => acc + parseFloat(p.monto || 0), 0)
+    const inscripciones = pagosActivos
+      .filter(p => p.tipo === 'inscripcion' && p.fecha_pago && p.fecha_pago.startsWith(mesRef))
+      .reduce((acc, p) => acc + parseFloat(p.monto || 0), 0)
+    return { mensualidades, inscripciones }
+  }, [pagosActivos, filtroMes])
   const [anioHistorial, setAnioHistorial] = useState(new Date().getFullYear()) // Año visible en el drawer
 
   const cargar = async () => {
@@ -106,24 +118,6 @@ export default function Pagos() {
       setCintas(resCintas.data)
       setHorarios(resHorarios.data)
       setEscuelaInfo(resEscuela.data)
-
-      // Calcular ingresos del mes actual
-      const ahora = new Date()
-      const suma = resPagos.data
-        .filter(p => {
-          const d = new Date(p.fecha_pago + 'T12:00:00')
-          return d.getMonth() === ahora.getMonth() && d.getFullYear() === ahora.getFullYear() && p.tipo === 'mensualidad'
-        })
-        .reduce((acc, p) => acc + parseFloat(p.monto), 0)
-
-      const sumaInsc = resPagos.data
-        .filter(p => {
-          const d = new Date(p.fecha_pago + 'T12:00:00')
-          return d.getMonth() === ahora.getMonth() && d.getFullYear() === ahora.getFullYear() && p.tipo === 'inscripcion'
-        })
-        .reduce((acc, p) => acc + parseFloat(p.monto), 0)
-
-      setStats({ ingresos_mes: suma, ingresos_inscripciones: sumaInsc })
     } catch { toast.error('Error al cargar datos') }
     setCargando(false)
   }
@@ -153,17 +147,30 @@ export default function Pagos() {
 
   // Para cada alumno, encontrar si ya pagó su período activo y anteriores (para mensualidades)
   // O si ya pagó su inscripción (para inscripciones)
+  // Si hay filtroMes activo, el pagoActivo refleja ese mes específico en lugar del período actual.
   const alumnosConEstado = useMemo(() => {
     return alumnos.map(a => {
       const pagosAlumno = pagosActivos.filter(p => p.alumno_id === a.id)
 
       if (submodulo === 'mensualidades') {
-        const periodoActual = calcularPeriodo(a.dia_pago || 1)
-        const pagoActivo = pagosAlumno.find(p =>
-          p.tipo === 'mensualidad' && p.fecha_inicio === periodoActual.fechaInicio
-        )
+        let pagoActivo
+        let periodoActual
 
-        // Detección de deuda anterior
+        if (filtroMes) {
+          // Con filtro de mes: buscar si pagó el período correspondiente a ese mes
+          // Usamos fecha_inicio (mes del período) en lugar de fecha_pago (día que pagó)
+          pagoActivo = pagosAlumno.find(p =>
+            p.tipo === 'mensualidad' && p.fecha_inicio && p.fecha_inicio.startsWith(filtroMes)
+          )
+          periodoActual = calcularPeriodo(a.dia_pago || 1)
+        } else {
+          periodoActual = calcularPeriodo(a.dia_pago || 1)
+          pagoActivo = pagosAlumno.find(p =>
+            p.tipo === 'mensualidad' && p.fecha_inicio === periodoActual.fechaInicio
+          )
+        }
+
+        // Detección de deuda anterior (siempre sobre el período actual real)
         const fechaPrevia = new Date(periodoActual.fechaInicio + 'T12:00:00')
         fechaPrevia.setMonth(fechaPrevia.getMonth() - 1)
         const periodoPrevio = calcularPeriodo(a.dia_pago || 1, fechaPrevia)
@@ -182,7 +189,6 @@ export default function Pagos() {
         }
       } else {
         // Inscripciones: Buscamos si tiene ALGUNA inscripción registrada
-        // (Podríamos limitar por año si fuera necesario, pero el usuario pidió algo simple)
         const pagoInscripcion = pagosAlumno.find(p => p.tipo === 'inscripcion')
         return {
           ...a,
@@ -191,7 +197,7 @@ export default function Pagos() {
         }
       }
     })
-  }, [alumnos, pagosActivos, submodulo])
+  }, [alumnos, pagosActivos, submodulo, filtroMes])
 
   const alumnosFiltrados = useMemo(() => {
     return alumnosConEstado.filter(a => {
@@ -227,19 +233,22 @@ export default function Pagos() {
         matchFechaPago = pagosActivos.some(p => p.alumno_id === a.id && p.fecha_pago === filtroFechaPago && p.tipo === (submodulo === 'mensualidades' ? 'mensualidad' : 'inscripcion'))
       }
 
-      // Filtro por mes calendario (fecha_pago dentro del mes)
-      let matchMes = true
-      if (filtroMes) {
-        matchMes = pagosActivos.some(p => {
-          if (p.alumno_id !== a.id) return false
-          if (p.tipo !== (submodulo === 'mensualidades' ? 'mensualidad' : 'inscripcion')) return false
-          return p.fecha_pago && p.fecha_pago.startsWith(filtroMes)
-        })
-      }
+      // Nota: El filtro de mes ya NO oculta alumnos. Solo cambia qué pagoActivo se calcula
+      // en alumnosConEstado, de modo que el filtro todos/pagado/pendiente funciona sobre ese mes.
 
-      return matchBusqueda && matchFiltro && matchCinta && matchHorario && matchFechaPago && matchMes
+      return matchBusqueda && matchFiltro && matchCinta && matchHorario && matchFechaPago
     })
-  }, [alumnosConEstado, busqueda, filtro, filtroCinta, filtroHorario, filtroFechaPago, submodulo, filtroMes, pagosActivos])
+    // Ordenar: primero los que pagaron (por fecha_pago desc, el más reciente arriba),
+    // luego los que no han pagado (sin orden especial)
+    .sort((a, b) => {
+      const fa = a.pagoActivo?.fecha_pago
+      const fb = b.pagoActivo?.fecha_pago
+      if (fa && fb) return fa.localeCompare(fb) // ambos pagados: más antiguo primero
+      if (fa) return -1  // a pagado, b no → a primero
+      if (fb) return 1   // b pagado, a no → b primero
+      return 0           // ambos pendientes
+    })
+  }, [alumnosConEstado, busqueda, filtro, filtroCinta, filtroHorario, filtroFechaPago, submodulo, pagosActivos])
 
   const exportarExcel = () => {
     if (alumnosFiltrados.length === 0) return toast.info('No hay datos para exportar')
@@ -580,13 +589,42 @@ export default function Pagos() {
       estado: 'pagado'
     }
 
-    // Validar duplicados solo si es UN NUEVO PAGO
-    if (!pagoAEditar) {
+    if (esMensualidad && !pagoAEditar) {
+      // --- Validación: no permitir adelantar pago si el mes anterior no está pagado ---
+      const [yTarget, mTarget] = formPago.mes_periodo.split('-').map(Number)
+      const fechaPrevRef = new Date(yTarget, mTarget - 2, modalPago.dia_pago || 1) // mes anterior
+
+      if (fechaPrevRef.getFullYear() > 2020) {
+        const periodoPrevio = calcularPeriodo(modalPago.dia_pago || 1, fechaPrevRef)
+        const mesPrevPagado = pagosActivos.some(p =>
+          p.alumno_id === modalPago.id &&
+          p.tipo === 'mensualidad' &&
+          p.fecha_inicio === periodoPrevio.fechaInicio
+        )
+        const hayPagosAnteriores = pagosActivos.some(p =>
+          p.alumno_id === modalPago.id && p.tipo === 'mensualidad'
+        )
+        if (hayPagosAnteriores && !mesPrevPagado) {
+          const nombreMesAnterior = `${MESES[fechaPrevRef.getMonth()]} ${fechaPrevRef.getFullYear()}`
+          const nombreMesSel = `${MESES[mTarget - 1]} ${yTarget}`
+          await Swal.fire({
+            title: 'No se puede adelantar pago',
+            html: `El mes de <b>${nombreMesAnterior}</b> aún no está pagado.<br>Debes registrar ese mes primero antes de pagar <b>${nombreMesSel}</b>.`,
+            icon: 'warning',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: 'var(--accent-blue)',
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)'
+          })
+          return
+        }
+      }
+
+      // --- Validación de duplicado ---
       const existePago = pagosActivos.some(p =>
         p.alumno_id === modalPago.id && p.fecha_inicio === periodo.fechaInicio && p.tipo === 'mensualidad'
       )
-
-      if (esMensualidad && existePago) {
+      if (existePago) {
         const res = await Swal.fire({
           title: '¡Periodo ya pagado!',
           text: `Ya existe un pago registrado para el periodo: ${periodo.label}. ¿Deseas registrar un pago duplicado?`,
@@ -715,12 +753,12 @@ export default function Pagos() {
         </div>
         <div style={{ display: 'flex', gap: '16px' }}>
           <div style={s.ingresosBadge}>
-            <span style={s.ingresosLabel}>Mensualidades mes</span>
-            <span style={s.ingresosValor}>${stats.ingresos_mes.toLocaleString()}</span>
+            <span style={s.ingresosLabel}>Mensualidades · {filtroMes ? new Date(filtroMes + '-15').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Mes actual'}</span>
+            <span style={s.ingresosValor}>${ingresosDelMes.mensualidades.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div style={{ ...s.ingresosBadge, background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.3)' }}>
-            <span style={s.ingresosLabel}>Inscripciones mes</span>
-            <span style={s.ingresosValor}>${(stats.ingresos_inscripciones || 0).toLocaleString()}</span>
+            <span style={s.ingresosLabel}>Inscripciones · {filtroMes ? new Date(filtroMes + '-15').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Mes actual'}</span>
+            <span style={s.ingresosValor}>${ingresosDelMes.inscripciones.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
       </div>
@@ -760,7 +798,7 @@ export default function Pagos() {
             style={filtro === 'pagado' ? s.tabActiveVerde : s.tab}
             onClick={() => setFiltro('pagado')}
           >
-            Al corriente ({totalPagados})
+            Pagado ({totalPagados})
           </button>
           <button
             style={filtro === 'pendiente' ? s.tabActiveRojo : s.tab}
@@ -928,6 +966,9 @@ export default function Pagos() {
                   {pagado && (
                     <div style={s.montoInfo}>
                       ${parseFloat(a.pagoActivo.monto).toFixed(2)} · {a.pagoActivo.metodo_pago}
+                      {a.pagoActivo.fecha_pago && (
+                        <span style={{ marginLeft: '6px', opacity: 0.75 }}>· {fmtFecha(a.pagoActivo.fecha_pago)}</span>
+                      )}
                     </div>
                   )}
                 </div>
