@@ -1,202 +1,154 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import api from '../api/axios'
-import { useAuth } from '../context/AuthContext'
 import { toast } from 'react-toastify'
 
-const DISCIPLINAS = [
-  { value: 'taekwondo', label: '🥋 Taekwondo' },
-  { value: 'karate', label: '🥋 Karate' },
-  { value: 'judo', label: '🥋 Judo' },
-  { value: 'bjj', label: '🤼 Jiu-Jitsu Brasileño' },
-  { value: 'mma', label: '🥊 MMA' },
-  { value: 'kung_fu', label: '🐉 Kung Fu' },
-  { value: 'otro', label: '⚡ Otra disciplina' },
-]
-
 export default function Register() {
-  const [step, setStep] = useState(1)
   const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
     password_confirmation: '',
     escuela: '',
-    disciplina: 'taekwondo',
   })
   const [cargando, setCargando] = useState(false)
-  const { setUserDirect } = useAuth()
-  const navigate = useNavigate()
+  const [enviado, setEnviado] = useState(false)
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
-  const nextStep = () => {
-    if (step === 1) {
-      if (!form.name || !form.email || !form.password) {
-        return toast.error('Completa todos los campos')
-      }
-      if (form.password.length < 6) {
-        return toast.error('La contraseña debe tener al menos 6 caracteres')
-      }
-      if (form.password !== form.password_confirmation) {
-        return toast.error('Las contraseñas no coinciden')
-      }
-    }
-    setStep(2)
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.escuela) return toast.error('Escribe el nombre de tu escuela')
+    if (!form.name || !form.email || !form.password || !form.escuela) {
+      return toast.error('Completa todos los campos')
+    }
+    if (form.password.length < 6) {
+      return toast.error('La contraseña debe tener al menos 6 caracteres')
+    }
+    if (form.password !== form.password_confirmation) {
+      return toast.error('Las contraseñas no coinciden')
+    }
 
     setCargando(true)
     try {
-      const res = await api.post('/register', form)
-      localStorage.setItem('token', res.data.token)
-      // Set token in axios headers
-      api.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`
-      if (setUserDirect) setUserDirect(res.data.user)
-      toast.success('🎉 ¡Tu escuela está lista!')
-      navigate('/')
+      await api.post('/register', form)
+      setEnviado(true)
     } catch (err) {
       const errors = err.response?.data?.errors
       if (errors) {
         const firstError = Object.values(errors)[0][0]
         toast.error(firstError)
       } else {
-        toast.error(err.response?.data?.message || 'Error al registrar')
+        toast.error(err.response?.data?.message || 'Error al registrarse')
       }
     } finally {
       setCargando(false)
     }
   }
 
+  // ─── Pantalla de éxito ─────────────────────────────────────────────────────
+  if (enviado) {
+    return (
+      <div style={s.container}>
+        <div style={s.bgGlow} />
+        <div style={s.card}>
+          <div style={s.successIcon}>✅</div>
+          <h1 style={s.title}>¡Solicitud enviada!</h1>
+          <p style={s.successText}>
+            Tu cuenta ha sido registrada correctamente. El administrador revisará
+            tu solicitud y te asignará tu escuela. Una vez activada podrás
+            iniciar sesión normalmente.
+          </p>
+          <Link to="/login" style={s.btnPrimary} id="go-to-login-after-register">
+            Ir al inicio de sesión
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Formulario ────────────────────────────────────────────────────────────
   return (
     <div style={s.container}>
-      <div style={s.bgGlow2} />
+      <div style={s.bgGlow} />
 
       <div style={s.card}>
         <div style={s.brand}>
           <div style={s.logoCircle}>🥋</div>
-          <h1 style={s.title}>Crea tu cuenta</h1>
+          <h1 style={s.title}>Registrarse</h1>
           <p style={s.subtitle}>
-            {step === 1
-              ? 'Tus datos personales'
-              : 'Configura tu escuela'}
+            Crea tu cuenta y espera la activación del administrador
           </p>
         </div>
 
-        {/* Progress bar */}
-        <div style={s.progressContainer}>
-          <div style={{ ...s.progressBar, width: step === 1 ? '50%' : '100%' }} />
-        </div>
-        <div style={s.stepLabels}>
-          <span style={{ color: 'var(--accent-blue)', fontWeight: 700 }}>1. Tu cuenta</span>
-          <span style={{ color: step === 2 ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: step === 2 ? 700 : 400 }}>2. Tu escuela</span>
-        </div>
+        <form onSubmit={handleSubmit} style={s.form}>
+          <div>
+            <label style={s.label}>Tu nombre completo</label>
+            <input
+              id="register-name"
+              style={s.input}
+              placeholder="Ej. Juan Pérez"
+              value={form.name}
+              onChange={e => update('name', e.target.value)}
+              autoFocus
+            />
+          </div>
 
-        <form onSubmit={step === 1 ? (e) => { e.preventDefault(); nextStep() } : handleSubmit} style={s.form}>
-          {step === 1 ? (
-            <>
-              <div>
-                <label style={s.label}>Tu nombre completo</label>
-                <input
-                  id="register-name"
-                  style={s.input}
-                  value={form.name}
-                  onChange={e => update('name', e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label style={s.label}>Correo electrónico</label>
-                <input
-                  id="register-email"
-                  style={s.input}
-                  type="email"
-                  placeholder="tu@correo.com"
-                  value={form.email}
-                  onChange={e => update('email', e.target.value)}
-                />
-              </div>
-              <div style={s.grid2}>
-                <div>
-                  <label style={s.label}>Contraseña</label>
-                  <input
-                    id="register-password"
-                    style={s.input}
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={form.password}
-                    onChange={e => update('password', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label style={s.label}>Confirmar</label>
-                  <input
-                    id="register-password-confirm"
-                    style={s.input}
-                    type="password"
-                    placeholder="Repite tu contraseña"
-                    value={form.password_confirmation}
-                    onChange={e => update('password_confirmation', e.target.value)}
-                  />
-                </div>
-              </div>
-              <button id="register-next" type="submit" style={s.btnPrimary}>
-                Siguiente →
-              </button>
-            </>
-          ) : (
-            <>
-              <div>
-                <label style={s.label}>Nombre de tu escuela / dojo</label>
-                <input
-                  id="register-escuela"
-                  style={s.input}
-                  placeholder="Ej. Leones TKD, Dragon Gym, etc."
-                  value={form.escuela}
-                  onChange={e => update('escuela', e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label style={s.label}>Disciplina principal</label>
-                <div style={s.disciplinaGrid}>
-                  {DISCIPLINAS.map(d => (
-                    <button
-                      key={d.value}
-                      type="button"
-                      style={{
-                        ...s.disciplinaBtn,
-                        ...(form.disciplina === d.value ? s.disciplinaBtnActive : {}),
-                      }}
-                      onClick={() => update('disciplina', d.value)}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={s.btnRow}>
-                <button type="button" onClick={() => setStep(1)} style={s.btnSecondary}>
-                  ← Atrás
-                </button>
-                <button
-                  id="register-submit"
-                  type="submit"
-                  style={{
-                    ...s.btnPrimary,
-                    flex: 1,
-                    opacity: cargando ? 0.7 : 1,
-                  }}
-                  disabled={cargando}
-                >
-                  {cargando ? 'Creando...' : '🚀 Crear mi escuela'}
-                </button>
-              </div>
-            </>
-          )}
+          <div>
+            <label style={s.label}>Nombre de tu escuela / dojo</label>
+            <input
+              id="register-escuela"
+              style={s.input}
+              placeholder="Ej. Leones TKD, Dragon Gym…"
+              value={form.escuela}
+              onChange={e => update('escuela', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label style={s.label}>Correo electrónico</label>
+            <input
+              id="register-email"
+              style={s.input}
+              type="email"
+              placeholder="tu@correo.com"
+              value={form.email}
+              onChange={e => update('email', e.target.value)}
+            />
+          </div>
+
+          <div style={s.grid2}>
+            <div>
+              <label style={s.label}>Contraseña</label>
+              <input
+                id="register-password"
+                style={s.input}
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={form.password}
+                onChange={e => update('password', e.target.value)}
+              />
+            </div>
+            <div>
+              <label style={s.label}>Confirmar contraseña</label>
+              <input
+                id="register-password-confirm"
+                style={s.input}
+                type="password"
+                placeholder="Repite tu contraseña"
+                value={form.password_confirmation}
+                onChange={e => update('password_confirmation', e.target.value)}
+              />
+            </div>
+          </div>
+
+          <button
+            id="register-submit"
+            type="submit"
+            style={{ ...s.btnPrimary, opacity: cargando ? 0.7 : 1 }}
+            disabled={cargando}
+          >
+            {cargando ? 'Enviando solicitud…' : '📨 Enviar solicitud'}
+          </button>
         </form>
 
         <div style={s.divider}>
@@ -225,7 +177,7 @@ const s = {
     position: 'relative',
     overflow: 'hidden',
   },
-  bgGlow2: {
+  bgGlow: {
     position: 'absolute',
     width: '600px',
     height: '600px',
@@ -237,7 +189,7 @@ const s = {
   },
   card: {
     width: '100%',
-    maxWidth: '480px',
+    maxWidth: '460px',
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border)',
     borderRadius: '20px',
@@ -248,7 +200,7 @@ const s = {
   },
   brand: {
     textAlign: 'center',
-    marginBottom: '24px',
+    marginBottom: '28px',
   },
   logoCircle: {
     width: '56px',
@@ -269,29 +221,10 @@ const s = {
     margin: '0 0 4px',
   },
   subtitle: {
-    fontSize: '14px',
-    color: 'var(--text-secondary)',
+    fontSize: '13px',
+    color: 'var(--text-muted)',
     margin: 0,
-  },
-  progressContainer: {
-    width: '100%',
-    height: '4px',
-    background: 'var(--border)',
-    borderRadius: '10px',
-    overflow: 'hidden',
-    marginBottom: '8px',
-  },
-  progressBar: {
-    height: '100%',
-    background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-purple))',
-    borderRadius: '10px',
-    transition: 'width 0.4s ease',
-  },
-  stepLabels: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '11px',
-    marginBottom: '24px',
+    lineHeight: 1.5,
   },
   form: {
     display: 'flex',
@@ -316,37 +249,15 @@ const s = {
     fontFamily: 'Inter, sans-serif',
     outline: 'none',
     transition: 'border-color 0.2s',
+    boxSizing: 'border-box',
   },
   grid2: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
     gap: '12px',
   },
-  disciplinaGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '8px',
-  },
-  disciplinaBtn: {
-    padding: '10px 8px',
-    background: 'var(--bg-primary)',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
-    color: 'var(--text-muted)',
-    fontSize: '12px',
-    fontFamily: 'Inter, sans-serif',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    textAlign: 'center',
-  },
-  disciplinaBtnActive: {
-    background: 'var(--accent-blue-bg)',
-    borderColor: 'var(--accent-blue)',
-    color: 'var(--accent-blue)',
-    fontWeight: '700',
-    boxShadow: 'var(--shadow-glow-blue)',
-  },
   btnPrimary: {
+    display: 'block',
     width: '100%',
     padding: '14px',
     background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
@@ -359,22 +270,21 @@ const s = {
     cursor: 'pointer',
     boxShadow: '0 8px 30px rgba(59, 130, 246, 0.25)',
     transition: 'all 0.2s',
-  },
-  btnSecondary: {
-    padding: '14px 20px',
-    background: 'var(--bg-tertiary)',
-    color: 'var(--text-secondary)',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
-    fontFamily: 'Inter, sans-serif',
-    cursor: 'pointer',
-  },
-  btnRow: {
-    display: 'flex',
-    gap: '12px',
+    textAlign: 'center',
+    textDecoration: 'none',
     marginTop: '4px',
+  },
+  successIcon: {
+    fontSize: '48px',
+    textAlign: 'center',
+    marginBottom: '16px',
+  },
+  successText: {
+    fontSize: '14px',
+    color: 'var(--text-secondary)',
+    lineHeight: 1.7,
+    textAlign: 'center',
+    marginBottom: '24px',
   },
   divider: {
     display: 'flex',

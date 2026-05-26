@@ -27,6 +27,7 @@ Route::get('/ping', fn() => response()->json([
 
 // Auth
 Route::post('/login',    [AuthController::class, 'login']);
+Route::post('/register', [RegisterController::class, 'register']);
 
 /*
 |--------------------------------------------------------------------------
@@ -50,9 +51,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('alumnos/{alumno}/quitar-foto', [AlumnoController::class, 'quitarFoto']);
     Route::post('alumnos/{alumno}/historial-manual', [AlumnoController::class, 'addHistorialManual']);
 
-    // Pagos
-    Route::get('pagos/alumno/{alumno}', [PagoController::class, 'porAlumno'])->middleware('role:owner,secretario');
-    Route::apiResource('pagos', PagoController::class)->middleware('role:owner,secretario');
+    // Pagos (accesibles para owner, secretario e instructor — el Policy controla cada acción)
+    Route::get('pagos/alumno/{alumno}', [PagoController::class, 'porAlumno']);
+    Route::get('pagos', [PagoController::class, 'index']);
+    Route::get('pagos/{pago}', [PagoController::class, 'show']);
+    Route::post('pagos', [PagoController::class, 'store'])->middleware('role:owner,secretario');
+    Route::put('pagos/{pago}', [PagoController::class, 'update'])->middleware('role:owner,secretario');
+    Route::patch('pagos/{pago}', [PagoController::class, 'update'])->middleware('role:owner,secretario');
+    Route::delete('pagos/{pago}', [PagoController::class, 'destroy'])->middleware('role:owner');
 
     // Asistencias — rutas fijas primero (antes de las paramétricas)
     Route::get('asistencias/resumen', [AsistenciaController::class, 'resumen']);

@@ -19,12 +19,7 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const filteredMenu = menu.filter(item => {
-    if (item.path === '/pagos') {
-      return user?.role === 'owner' || user?.role === 'secretario';
-    }
-    return true;
-  });
+  const filteredMenu = menu
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 1024);

@@ -93,7 +93,7 @@ export default function Login() {
         </div>
 
         <Link to="/register" style={s.linkRegister} id="go-to-register">
-          Registrar mi escuela gratis
+          Registrarse
         </Link>
       </div>
 

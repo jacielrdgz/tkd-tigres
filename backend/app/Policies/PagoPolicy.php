@@ -12,7 +12,7 @@ class PagoPolicy
      */
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['owner', 'secretario']);
+        return in_array($user->role, ['owner', 'secretario', 'instructor']);
     }
 
     /**
@@ -20,7 +20,7 @@ class PagoPolicy
      */
     public function view(User $user, Pago $pago): bool
     {
-        return in_array($user->role, ['owner', 'secretario']) && $user->tenant_id === $pago->tenant_id;
+        return in_array($user->role, ['owner', 'secretario', 'instructor']) && $user->tenant_id === $pago->tenant_id;
     }
 
     /**

@@ -44,7 +44,7 @@ import HorarioManager from './pages/ajustes/HorarioManager'
 const router = createBrowserRouter([
   // ... (rutas públicas)
   { path: "/login", element: <Login /> },
-  { path: "/register", element: <Navigate to="/login" replace /> },
+  { path: "/register", element: <Register /> },
   
   {
     path: "/",
@@ -56,14 +56,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "alumnos", element: <Alumnos /> },
-      { 
-        path: "pagos", 
-        element: (
-          <ProtectedRoute allowedRoles={['owner', 'secretario']}>
-            <Pagos />
-          </ProtectedRoute>
-        ) 
-      },
+      { path: "pagos", element: <Pagos /> },
       { path: "asistencias", element: <Asistencias /> },
       { path: "asistencias-antiguo", element: <AsistenciasAntiguo /> },
       { path: "eventos", element: <Eventos /> },
