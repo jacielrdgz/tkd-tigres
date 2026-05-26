@@ -105,10 +105,10 @@ const s = {
     flexWrap: 'wrap',
   },
   titulo: {
-    fontSize: '26px',
+    fontSize: '24px',
     fontWeight: '800',
     color: 'var(--text-primary)',
-    letterSpacing: '-0.02em',
+    margin: 0,
   },
   subtitulo: {
     display: 'flex',
