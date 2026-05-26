@@ -1,5 +1,15 @@
 import React, { useState } from 'react'
 import { FiSearch, FiEye, FiChevronDown } from 'react-icons/fi'
+import { toast } from 'react-toastify'
+
+const formatHora = (hora) => {
+  if (!hora) return ''
+  const [h, m] = hora.split(':')
+  const hrs = parseInt(h)
+  const ampm = hrs >= 12 ? 'PM' : 'AM'
+  const h12 = hrs % 12 || 12
+  return `${h12}:${m} ${ampm}`
+}
 
 const norm = (s) => (s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : '')
 
@@ -54,9 +64,11 @@ function SkeletonRow() {
   )
 }
 
-export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes }) {
+export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCambiarMes, onFiltradosChange }) {
   const [busqueda, setBusqueda] = useState('')
   const [filtroGrado, setFiltroGrado] = useState('')
+  const [filtroHorario, setFiltroHorario] = useState('')
+  const [filtroRiesgo, setFiltroRiesgo] = useState(false)
   const [rowHover, setRowHover] = useState(null)
 
   const gradosUnicos = React.useMemo(() => {
@@ -64,7 +76,22 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes }) {
     alumnos.forEach(a => {
       if (a.cinta_config) map.set(a.cinta_config.id ?? a.cinta_config.nombre_nivel, a.cinta_config)
     })
-    return [...map.values()]
+    return [...map.values()].sort((a, b) => {
+      const ordA = a.orden ?? 999;
+      const ordB = b.orden ?? 999;
+      return ordA - ordB;
+    })
+  }, [alumnos])
+
+  const horariosUnicos = React.useMemo(() => {
+    const map = new Map()
+    alumnos.forEach(a => {
+      if (a.horario_config) map.set(a.horario_config.id ?? a.horario_config.nombre, a.horario_config)
+    })
+    return [...map.values()].sort((a, b) => {
+      if (a.hora_inicio && b.hora_inicio) return a.hora_inicio.localeCompare(b.hora_inicio)
+      return (a.nombre || '').localeCompare(b.nombre || '')
+    })
   }, [alumnos])
 
   const filtrados = React.useMemo(() => {
@@ -72,13 +99,46 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes }) {
       const nombre = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`
       const cumpleNombre = norm(nombre).includes(norm(busqueda))
       const cumpleGrado = !filtroGrado || String(a.cinta_config?.id) === filtroGrado || a.cinta_config?.nombre_nivel === filtroGrado
-      return cumpleNombre && cumpleGrado
+      const cumpleHorario = !filtroHorario || String(a.horario_config?.id) === filtroHorario || a.horario_config?.nombre === filtroHorario
+      const cumpleRiesgo = !filtroRiesgo || a.racha_faltas >= 3
+      return cumpleNombre && cumpleGrado && cumpleHorario && cumpleRiesgo
+    }).sort((a, b) => {
+      // 1. Horario (hora_inicio ascendente)
+      const horaA = a.horario_config?.hora_inicio || '23:59:59'
+      const horaB = b.horario_config?.hora_inicio || '23:59:59'
+      if (horaA !== horaB) return horaA.localeCompare(horaB)
+
+      // 2. Cinta (orden ascendente)
+      const ordA = a.cinta_config?.orden ?? 999
+      const ordB = b.cinta_config?.orden ?? 999
+      if (ordA !== ordB) return ordA - ordB
+
+      // 3. Edad (menores primero = fecha de nacimiento más reciente/alta)
+      const fnA = new Date(a.fecha_nacimiento || '1900-01-01').getTime()
+      const fnB = new Date(b.fecha_nacimiento || '1900-01-01').getTime()
+      return fnB - fnA // Si fnB (2010) - fnA (2015) es negativo, a va primero
     })
-  }, [alumnos, busqueda, filtroGrado])
+  }, [alumnos, busqueda, filtroGrado, filtroHorario, filtroRiesgo])
+
+  React.useEffect(() => {
+    if (onFiltradosChange) {
+      onFiltradosChange(filtrados)
+    }
+  }, [filtrados, onFiltradosChange])
+
+  const abrirWhatsApp = (a, e) => {
+    e.stopPropagation()
+    if (!a.telefono_tutor || a.telefono_tutor.trim() === '') {
+      return toast.warning('Este alumno no tiene teléfono registrado')
+    }
+    const tel = '52' + a.telefono_tutor.replace(/\D/g, '')
+    const msg = encodeURIComponent(`Hola tutor de ${a.nombre}, notamos que ha faltado a sus últimas clases de Taekwondo. ¿Todo se encuentra bien? ¡Esperamos verlo pronto por el tatami!`)
+    window.open(`https://wa.me/${tel}?text=${msg}`, '_blank')
+  }
 
   return (
     <div>
-      {/* Buscador + Filtro Grado */}
+      {/* Buscador + Filtro Grado + Filtro Horario + Mes */}
       <div style={s.filtros}>
         <div style={s.searchWrapper}>
           <FiSearch size={15} style={s.searchIcon} />
@@ -98,7 +158,7 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes }) {
             value={filtroGrado}
             onChange={e => setFiltroGrado(e.target.value)}
           >
-            <option value="">Todos los grados</option>
+            <option value="">Todas las cintas</option>
             {gradosUnicos.map(c => (
               <option key={c.id ?? c.nombre_nivel} value={c.id ?? c.nombre_nivel}>
                 {c.nombre_nivel}
@@ -107,6 +167,42 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes }) {
           </select>
           <FiChevronDown size={14} style={s.selectIcon} />
         </div>
+
+        <div style={{ position: 'relative' }}>
+          <select
+            id="filtro-horario"
+            style={s.select}
+            value={filtroHorario}
+            onChange={e => setFiltroHorario(e.target.value)}
+          >
+            <option value="">Todos los horarios</option>
+            {horariosUnicos.map(h => (
+              <option key={h.id ?? h.nombre} value={h.id ?? h.nombre}>
+                {h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})
+              </option>
+            ))}
+          </select>
+          <FiChevronDown size={14} style={s.selectIcon} />
+        </div>
+
+        <input
+          type="month"
+          style={{ ...s.select, paddingRight: 14 }}
+          value={mes}
+          onChange={e => onCambiarMes(e.target.value)}
+        />
+
+        <button
+          onClick={() => setFiltroRiesgo(!filtroRiesgo)}
+          style={{
+            ...s.btnRiesgo,
+            background: filtroRiesgo ? 'var(--accent-red)' : 'var(--bg-secondary)',
+            color: filtroRiesgo ? '#fff' : 'var(--text-secondary)',
+            borderColor: filtroRiesgo ? 'var(--accent-red)' : 'var(--border)'
+          }}
+        >
+          ⚠️ En riesgo
+        </button>
 
         <span style={s.conteo}>
           {cargando ? '…' : `${filtrados.length} alumnos`}
@@ -120,7 +216,7 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes }) {
             <thead>
               <tr>
                 <th style={s.th}>Alumno</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Grado</th>
+                <th style={{ ...s.th, textAlign: 'center' }}>Cinta</th>
                 <th style={{ ...s.th, textAlign: 'center' }}>% Asistencia</th>
                 <th style={{ ...s.th, textAlign: 'center' }}>Clases</th>
                 <th style={{ ...s.th, textAlign: 'center', width: 80 }}></th>
@@ -158,10 +254,21 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes }) {
                             <div style={s.nombre}>
                               {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
                             </div>
-                            <div style={s.horario}>
-                              {a.horario_config
-                                ? `🕒 ${a.horario_config.nombre}`
-                                : 'Sin horario'}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                              <div style={s.horario}>
+                                {a.horario_config
+                                  ? `🕒 ${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
+                                  : 'Sin horario'}
+                              </div>
+                              {a.racha_faltas >= 3 && (
+                                <button
+                                  onClick={(e) => abrirWhatsApp(a, e)}
+                                  title={`Contactar Tutor por WhatsApp (${a.racha_faltas} faltas seguidas)`}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: 0, filter: 'drop-shadow(0 0 5px rgba(239, 68, 68, 0.6))', transform: 'scale(1.1)' }}
+                                >
+                                  ⚠️
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -174,11 +281,12 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes }) {
                             ...s.badge,
                             background: a.cinta_config.color_hex || 'var(--bg-tertiary)',
                             color: a.cinta_config.color_texto || 'var(--text-primary)',
+                            display: 'inline-block', minWidth: 100, textAlign: 'center', fontSize: 13
                           }}>
                             {a.cinta_config.nombre_nivel}
                           </span>
                         ) : (
-                          <span style={{ ...s.badge, background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+                          <span style={{ ...s.badge, background: 'var(--bg-tertiary)', color: 'var(--text-muted)', display: 'inline-block', minWidth: 100, textAlign: 'center', fontSize: 13 }}>
                             Sin cinta
                           </span>
                         )}
@@ -272,7 +380,7 @@ const s = {
   },
   select: {
     appearance: 'none',
-    padding: '9px 32px 9px 14px',
+    padding: '8px 30px 8px 12px',
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border)',
     borderRadius: 10,
@@ -281,7 +389,8 @@ const s = {
     outline: 'none',
     cursor: 'pointer',
     fontFamily: 'inherit',
-    minWidth: 160,
+    minWidth: 150,
+    maxWidth: 170,
   },
   selectIcon: {
     position: 'absolute',
@@ -306,7 +415,7 @@ const s = {
   },
   th: {
     padding: '13px 16px',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     color: 'var(--text-muted)',
     textTransform: 'uppercase',
@@ -367,5 +476,18 @@ const s = {
     cursor: 'pointer',
     transition: 'all 0.15s',
     fontFamily: 'inherit',
+  },
+  btnRiesgo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 14px',
+    borderRadius: 10,
+    border: '1px solid var(--border)',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    transition: 'all 0.15s',
   },
 }

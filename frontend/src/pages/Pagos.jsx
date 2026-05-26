@@ -85,7 +85,11 @@ export default function Pagos() {
   const [filtroHorario, setFiltroHorario] = useState('')
   const [filtroFechaPago, setFiltroFechaPago] = useState('')
   const [stats, setStats] = useState({ ingresos_mes: 0 })
-  const [selectedIds, setSelectedIds] = useState([]) // Para acciones masivas
+  const [filtroMes, setFiltroMes] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }) // Filtro por mes calendario (YYYY-MM)
+  const [anioHistorial, setAnioHistorial] = useState(new Date().getFullYear()) // Año visible en el drawer
 
   const cargar = async () => {
     setCargando(true)
@@ -223,19 +227,30 @@ export default function Pagos() {
         matchFechaPago = pagosActivos.some(p => p.alumno_id === a.id && p.fecha_pago === filtroFechaPago && p.tipo === (submodulo === 'mensualidades' ? 'mensualidad' : 'inscripcion'))
       }
 
-      return matchBusqueda && matchFiltro && matchCinta && matchHorario && matchFechaPago
+      // Filtro por mes calendario (fecha_pago dentro del mes)
+      let matchMes = true
+      if (filtroMes) {
+        matchMes = pagosActivos.some(p => {
+          if (p.alumno_id !== a.id) return false
+          if (p.tipo !== (submodulo === 'mensualidades' ? 'mensualidad' : 'inscripcion')) return false
+          return p.fecha_pago && p.fecha_pago.startsWith(filtroMes)
+        })
+      }
+
+      return matchBusqueda && matchFiltro && matchCinta && matchHorario && matchFechaPago && matchMes
     })
-  }, [alumnosConEstado, busqueda, filtro, filtroCinta, filtroHorario, filtroFechaPago, submodulo])
+  }, [alumnosConEstado, busqueda, filtro, filtroCinta, filtroHorario, filtroFechaPago, submodulo, filtroMes, pagosActivos])
 
   const exportarExcel = () => {
     if (alumnosFiltrados.length === 0) return toast.info('No hay datos para exportar')
 
     try {
-      const data = alumnosFiltrados.map(a => {
+      const data = alumnosFiltrados.map((a, i) => {
         const horario = horarios.find(h => String(h.id) === String(a.horario_id))
         return {
-          ID: a.id,
+          '#': i + 1,
           Alumno: `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`,
+          Cinta: cintas.find(c => String(c.id) === String(a.configuracion_cinta_id))?.nombre_nivel || '-',
           Horario: horario ? horario.nombre : '-',
           Estado: a.pagoActivo ? 'PAGADO' : 'PENDIENTE',
           Monto: a.pagoActivo ? `$${a.pagoActivo.monto}` : '-',
@@ -263,15 +278,15 @@ export default function Pagos() {
       doc.setFontSize(10)
       doc.setTextColor(100)
       doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 28)
-      if (filtroFechaPago) {
-        doc.text(`Filtro de fecha: ${filtroFechaPago}`, 14, 34)
-      }
+      if (filtroMes) doc.text(`Mes: ${filtroMes}`, 14, 34)
+      else if (filtroFechaPago) doc.text(`Filtro de fecha: ${filtroFechaPago}`, 14, 34)
 
-      const rows = alumnosFiltrados.map(a => {
+      const rows = alumnosFiltrados.map((a, i) => {
         const horario = horarios.find(h => String(h.id) === String(a.horario_id))
         return [
-          a.id,
+          i + 1,
           `${a.nombre} ${a.apellido_paterno}`,
+          cintas.find(c => String(c.id) === String(a.configuracion_cinta_id))?.nombre_nivel || '-',
           horario ? horario.nombre : '-',
           a.pagoActivo ? 'PAGADO' : 'PENDIENTE',
           a.pagoActivo ? `$${a.pagoActivo.monto}` : '-',
@@ -280,9 +295,9 @@ export default function Pagos() {
       })
 
       autoTable(doc, {
-        head: [['ID', 'Alumno', 'Horario', 'Estado', 'Monto', 'Periodo']],
+        head: [['#', 'Alumno', 'Cinta', 'Horario', 'Estado', 'Monto', 'Periodo']],
         body: rows,
-        startY: filtroFechaPago ? 40 : 35,
+        startY: (filtroMes || filtroFechaPago) ? 40 : 35,
         theme: 'striped',
         headStyles: { fillColor: [59, 130, 246] }
       })
@@ -306,54 +321,35 @@ export default function Pagos() {
       doc.setFillColor(59, 130, 246)
       doc.rect(0, 0, 5, 279, 'F')
 
-      // FUNCIÓN AUXILIAR PARA CARGAR IMAGEN (con soporte CORS y fallback)
-      const cargarImagen = (url) => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          if (url.startsWith('http')) img.crossOrigin = 'Anonymous';
-          img.src = url;
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/jpeg'));
-          };
-          img.onerror = (err) => reject(err);
-        });
-      };
+      // CARGAR LOGO — directo desde el backend en base64 para evitar CORS
+      let logoFinal = escuelaInfo?.logo_base64
 
-      // CARGAR LOGO (Con múltiples fallbacks)
-      try {
-        let logoSrc = null;
-        if (escuelaInfo?.logo_url) {
-          try {
-            logoSrc = await cargarImagen(`${import.meta.env.VITE_API_URL}/storage/${escuelaInfo.logo_url}`);
-          } catch (err) {
-            console.warn("Fallo al cargar logo personalizado, intentando genérico...");
-          }
+      // Fallback a logo genérico si no hay logo de escuela
+      if (!logoFinal) {
+        try {
+          const resp = await fetch('/tigreslogo.jpg')
+          const blob = await resp.blob()
+          logoFinal = await new Promise((res, rej) => {
+            const reader = new FileReader()
+            reader.onload = () => res(reader.result)
+            reader.onerror = rej
+            reader.readAsDataURL(blob)
+          })
+        } catch (err) {
+          console.warn('Logo genérico no disponible:', err.message)
         }
-        
-        if (!logoSrc) {
-          try {
-            logoSrc = await cargarImagen('/tigreslogo.jpg');
-          } catch (err) {
-            console.warn("Fallo al cargar logo genérico.");
-          }
-        }
+      }
 
-        if (logoSrc) {
-          doc.addImage(logoSrc, 'JPEG', 15, 12, 32, 32);
-        } else {
-          // Si todo falla, dibujar un círculo con un icono de texto
-          doc.setFillColor(240, 242, 245);
-          doc.circle(31, 28, 16, 'F');
-          doc.setFontSize(24);
-          doc.text("🥋", 31, 31, { align: 'center' });
-        }
-      } catch (e) {
-        console.error("Error crítico en carga de logo:", e);
+      if (logoFinal) {
+        // En jsPDF base64, usualmente viene con 'data:image/png;base64,...'
+        const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
+        doc.addImage(logoFinal, ext, 15, 12, 32, 32)
+      } else {
+        doc.setFillColor(240, 242, 245)
+        doc.circle(31, 28, 16, 'F')
+        doc.setFontSize(20)
+        doc.setTextColor(59, 130, 246)
+        doc.text('TKD', 31, 31, { align: 'center' })
       }
 
       // TEXTO CABECERA
@@ -519,54 +515,6 @@ export default function Pagos() {
     window.open(url, '_blank')
   }
 
-  const toggleSeleccion = (id, e) => {
-    e.stopPropagation()
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    )
-  }
-
-  const pagarMasivo = async () => {
-    if (selectedIds.length === 0) return
-
-    const res = await Swal.fire({
-      title: 'Pago Masivo',
-      text: `¿Registrar pago para ${selectedIds.length} alumnos? Se usará el monto sugerido y método efectivo para el periodo actual.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, cobrar a todos',
-      confirmButtonColor: 'var(--accent-blue)',
-      background: 'var(--bg-secondary)',
-      color: 'var(--text-primary)'
-    })
-
-    if (res.isConfirmed) {
-      toast.info('Procesando pagos...')
-      try {
-        const promesas = selectedIds.map(id => {
-          const alumno = alumnosConEstado.find(a => a.id === id)
-          if (alumno.pagoActivo) return null // Saltamos si ya pagó
-
-          const periodo = calcularPeriodo(alumno.dia_pago || 1)
-          return api.post('/pagos', {
-            alumno_id: id,
-            fecha_inicio: periodo.fechaInicio,
-            fecha_fin: periodo.fechaFin,
-            monto: 1000, // Monto por defecto si no hay otro
-            metodo_pago: 'efectivo',
-            fecha_pago: hoy,
-            estado: 'pagado',
-            tipo: submodulo === 'mensualidades' ? 'mensualidad' : 'inscripcion'
-          })
-        }).filter(Boolean)
-
-        await Promise.all(promesas)
-        toast.success(`Se registraron ${promesas.length} pagos correctamente ✓`)
-        setSelectedIds([])
-        cargar()
-      } catch { toast.error('Error al procesar algunos pagos') }
-    }
-  }
 
   const abrirModalPago = (alumno, e) => {
     e.stopPropagation()
@@ -824,7 +772,7 @@ export default function Pagos() {
       </div>
 
       <div style={s.filtrosSecundarios}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <select style={s.selectFiltro} value={filtroCinta} onChange={e => setFiltroCinta(e.target.value)}>
             <option value="">Todas las cintas</option>
             {cintas.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
@@ -835,20 +783,23 @@ export default function Pagos() {
             {horarios.map(h => <option key={h.id} value={h.id}>{h.nombre}</option>)}
           </select>
 
-          <div style={s.dateFilterContainer}>
-            <input
-              type="date"
-              style={s.dateInput}
-              value={filtroFechaPago}
-              onChange={e => setFiltroFechaPago(e.target.value)}
-            />
-            {filtroFechaPago && (
-              <button style={s.btnClearDate} onClick={() => setFiltroFechaPago('')}>✕</button>
-            )}
-          </div>
+          {/* Filtro por mes */}
+          <input
+            type="month"
+            style={{ ...s.selectFiltro, paddingRight: 14 }}
+            value={filtroMes}
+            onChange={e => setFiltroMes(e.target.value)}
+          />
+
+          <input
+            type="date"
+            style={{ ...s.selectFiltro, paddingRight: 14 }}
+            value={filtroFechaPago}
+            onChange={e => setFiltroFechaPago(e.target.value)}
+          />
 
           {submodulo === 'inscripciones' && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', marginLeft: '8px', padding: '6px 12px', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', padding: '6px 12px', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
               <input
                 type="checkbox"
                 checked={mostrarTodosInscripciones}
@@ -899,18 +850,6 @@ export default function Pagos() {
               <div key={a.id} style={{ ...s.card, borderLeft: `4px solid ${pagado ? 'var(--accent-green)' : 'var(--accent-red)'}`, position: 'relative' }}
                 onClick={() => abrirHistorial(a)}>
 
-                {/* Checkbox selección */}
-                <div
-                  onClick={(e) => toggleSeleccion(a.id, e)}
-                  style={{
-                    width: '20px', height: '20px', borderRadius: '4px', border: '2px solid var(--border)',
-                    background: selectedIds.includes(a.id) ? 'var(--accent-blue)' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                    transition: '0.2s', flexShrink: 0
-                  }}
-                >
-                  {selectedIds.includes(a.id) && <span style={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>✓</span>}
-                </div>
 
                 {/* Avatar */}
                 <div style={s.avatar}>
@@ -998,19 +937,6 @@ export default function Pagos() {
         </div>
       )}
 
-      {/* BARRA DE ACCIONES MASIVAS */}
-      {selectedIds.length > 0 && (
-        <div style={s.bulkBar}>
-          <div style={s.bulkInfo}>
-            <strong>{selectedIds.length}</strong> alumnos seleccionados
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button style={s.btnSecondary} onClick={() => setSelectedIds([])}>Cancelar</button>
-            <button style={s.btnConfirmar} onClick={pagarMasivo}>💰 Registrar Pagos ($1000/u)</button>
-          </div>
-        </div>
-      )}
-
       {/* ── MODAL RÁPIDO DE PAGO ── */}
       {modalPago && (
         <div style={s.overlayModal} onClick={() => { setModalPago(null); setPagoAEditar(null); }}>
@@ -1077,116 +1003,190 @@ export default function Pagos() {
         </div>
       )}
 
-      {/* ── PANEL DE HISTORIAL ── */}
-      {historialAlumno && (
-        <div style={s.overlay} onClick={cerrarHistorial}>
-          <div style={s.drawer} onClick={e => e.stopPropagation()}>
-            <div style={s.drawerHeader}>
-              <div style={s.drawerTituloRow}>
-                <div style={s.avatarSm}>
-                  {historialAlumno.foto_url
-                    ? <img src={historialAlumno.foto_url} alt="" style={s.avatarImg} />
-                    : <div style={s.avatarInicialSm}>{historialAlumno.nombre[0]}{historialAlumno.apellido_paterno[0]}</div>
-                  }
-                </div>
-                <div>
-                  <div style={s.drawerNombre}>{historialAlumno.nombre} {historialAlumno.apellido_paterno} {historialAlumno.apellido_materno}</div>
-                  <div style={s.drawerSub}>Día de corte: <strong>{String(historialAlumno.dia_pago || 1).padStart(2, '0')}</strong> de cada mes</div>
-                </div>
-              </div>
-              <button style={s.btnCerrar} onClick={cerrarHistorial}>✕</button>
-            </div>
+      {/* ── PANEL DE HISTORIAL (GRILLA DE MESES) ── */}
+      {historialAlumno && (() => {
+        // Separar mensualidades de inscripciones
+        const mensualidades = historial.filter(p => p.tipo === 'mensualidad')
+        const inscripciones = historial.filter(p => p.tipo === 'inscripcion')
 
-            <div style={s.drawerContent}>
-              {cargandoHistorial ? (
-                <div style={s.empty}>Cargando historial...</div>
-              ) : historial.length === 0 ? (
-                <div style={s.empty}>Sin pagos registrados</div>
-              ) : (
-                <>
-                  {/* Resumen */}
-                  <div style={s.resumenHistorial}>
-                    <div style={s.resumenHistItem}>
-                      <span style={{ ...s.resumenNum, fontSize: '20px', color: 'var(--accent-green)' }}>
-                        {new Set(historial.filter(p => p.estado === 'pagado').map(p => p.fecha_inicio)).size}
-                      </span>
-                      <span style={s.resumenLabel}>Meses pagados</span>
-                    </div>
-                    <div style={s.resumenHistItem}>
-                      <span style={{ ...s.resumenNum, fontSize: '20px', color: 'var(--accent-green)' }}>
-                        ${historial.filter(p => p.estado === 'pagado')
-                          .reduce((sum, p) => sum + parseFloat(p.monto), 0).toFixed(2)}
-                      </span>
-                      <span style={s.resumenLabel}>Total pagado</span>
-                    </div>
+        const pagosPorMes = {} // 'YYYY-MM' -> pago (solo mensualidades)
+        mensualidades.forEach(p => {
+          if (p.fecha_inicio) {
+            const key = p.fecha_inicio.slice(0, 7)
+            if (!pagosPorMes[key]) pagosPorMes[key] = p
+          }
+        })
+        const totalPagadoAnio = mensualidades
+          .filter(p => p.estado === 'pagado' && p.fecha_inicio && p.fecha_inicio.startsWith(String(anioHistorial)))
+          .reduce((sum, p) => sum + parseFloat(p.monto), 0)
+        const mesesPagados = new Set(mensualidades.filter(p => p.estado === 'pagado').map(p => p.fecha_inicio?.slice(0, 7))).size
+        const totalGeneral = mensualidades.filter(p => p.estado === 'pagado').reduce((sum, p) => sum + parseFloat(p.monto), 0)
+
+        return (
+          <div style={s.overlay} onClick={cerrarHistorial}>
+            <div style={{ ...s.drawer, width: 600, maxWidth: '96vw' }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={s.drawerHeader}>
+                <div style={s.drawerTituloRow}>
+                  <div style={s.avatarSm}>
+                    {historialAlumno.foto_url
+                      ? <img src={historialAlumno.foto_url} alt="" style={s.avatarImg} />
+                      : <div style={s.avatarInicialSm}>{historialAlumno.nombre[0]}{historialAlumno.apellido_paterno[0]}</div>
+                    }
                   </div>
+                  <div>
+                    <div style={s.drawerNombre}>{historialAlumno.nombre} {historialAlumno.apellido_paterno} {historialAlumno.apellido_materno}</div>
+                    <div style={s.drawerSub}>Día de corte: <strong>{String(historialAlumno.dia_pago || 1).padStart(2, '0')}</strong> de cada mes</div>
+                  </div>
+                </div>
+                <button style={s.btnCerrar} onClick={cerrarHistorial}>✕</button>
+              </div>
 
-                  {/* Lista de pagos */}
-                  <div style={s.historialLista}>
-                    {historial.map(p => (
-                      <div key={p.id} style={s.historialItem}>
-                        <div style={s.historialPeriodo}>
-                          <div style={s.historialFechas}>
-                            {p.fecha_inicio ? `${fmtFecha(p.fecha_inicio)} → ${fmtFecha(p.fecha_fin)}` : p.mes}
+              <div style={s.drawerContent}>
+                {cargandoHistorial ? (
+                  <div style={s.empty}>Cargando historial...</div>
+                ) : (
+                  <>
+                    {/* Resumen general */}
+                    <div style={s.resumenHistorial}>
+                      <div style={s.resumenHistItem}>
+                        <span style={{ fontSize: '22px', fontWeight: '800', color: 'var(--accent-green)' }}>{mesesPagados}</span>
+                        <span style={s.resumenLabel}>Meses pagados</span>
+                      </div>
+                      <div style={s.resumenHistItem}>
+                        <span style={{ fontSize: '22px', fontWeight: '800', color: 'var(--accent-green)' }}>${totalGeneral.toFixed(2)}</span>
+                        <span style={s.resumenLabel}>Total pagado</span>
+                      </div>
+                      <div style={s.resumenHistItem}>
+                        <span style={{ fontSize: '22px', fontWeight: '800', color: 'var(--accent-blue)' }}>${totalPagadoAnio.toFixed(2)}</span>
+                        <span style={s.resumenLabel}>Pagado en {anioHistorial}</span>
+                      </div>
+                    </div>
+
+                    {/* Selector de año */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Año {anioHistorial}</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => setAnioHistorial(y => y - 1)} style={s.btnNavAnio}>‹ {anioHistorial - 1}</button>
+                        <button onClick={() => setAnioHistorial(new Date().getFullYear())} style={{ ...s.btnNavAnio, background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontWeight: 700 }}>Hoy</button>
+                        <button onClick={() => setAnioHistorial(y => y + 1)} style={s.btnNavAnio}>{anioHistorial + 1} ›</button>
+                      </div>
+                    </div>
+
+                    {/* Grilla de 12 meses */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+                      {MESES.map((mes, idx) => {
+                        const mesKey = `${anioHistorial}-${String(idx + 1).padStart(2, '0')}`
+                        const pago = pagosPorMes[mesKey]
+                        const esPagado = !!pago
+                        const esMesActual = new Date().getMonth() === idx && new Date().getFullYear() === anioHistorial
+                        return (
+                          <div
+                            key={mesKey}
+                            style={{
+                              background: esPagado ? 'rgba(16,185,129,0.08)' : 'var(--bg-primary)',
+                              border: `1px solid ${esPagado ? 'rgba(16,185,129,0.35)' : esMesActual ? 'var(--accent-blue)' : 'var(--border)'}`,
+                              borderRadius: 12,
+                              padding: '12px 14px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 4,
+                              position: 'relative',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: esPagado ? 'var(--accent-green)' : esMesActual ? 'var(--accent-blue)' : 'var(--text-muted)' }}>{mes}</span>
+                              <span style={{ fontSize: 18, lineHeight: 1 }}>{esPagado ? '✅' : '❌'}</span>
+                            </div>
+                            {esPagado ? (
+                              <>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent-green)' }}>${parseFloat(pago.monto).toFixed(2)}</div>
+                                <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{pago.metodo_pago} · {fmtFecha(pago.fecha_pago)}</div>
+                                <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                                  <button
+                                    style={s.btnIconEdit}
+                                    onClick={() => abrirModalEdicion(pago)}
+                                    title="Editar"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                  </button>
+                                  <button
+                                    style={s.btnIconBlueSmall}
+                                    onClick={() => generarRecibo(pago, historialAlumno)}
+                                    title="Recibo PDF"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                  </button>
+                                  <button
+                                    style={s.btnIconGreenSmall}
+                                    onClick={() => enviarComprobanteWhatsApp(pago, historialAlumno)}
+                                    title="WhatsApp"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
+                                  </button>
+                                  <button
+                                    style={s.btnIconTrash}
+                                    onClick={(e) => eliminarPago(pago.id, e)}
+                                    title="Eliminar"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Sin pago registrado</div>
+                            )}
                           </div>
-                          <div style={s.historialDetalle}>{p.metodo_pago} · {fmtFecha(p.fecha_pago)}</div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Sección de Inscripciones */}
+                    {inscripciones.length > 0 && (
+                      <div style={{ marginBottom: 16, marginTop: 4 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                          🎟️ Inscripciones ({inscripciones.length})
                         </div>
-                        <div style={s.historialDerecha}>
-                          <div style={{ ...s.historialMonto, color: 'var(--accent-green)' }}>
-                            ${parseFloat(p.monto).toFixed(2)}
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <button
-                              style={s.btnIconEdit}
-                              onClick={() => abrirModalEdicion(p)}
-                              title="Editar este pago"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                              </svg>
-                            </button>
-
-                            <button
-                              style={s.btnIconBlueSmall}
-                              onClick={() => generarRecibo(p, historialAlumno)}
-                              title="Descargar Recibo"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                              </svg>
-                            </button>
-                            <button
-                              style={s.btnIconGreenSmall}
-                              onClick={() => enviarComprobanteWhatsApp(p, historialAlumno)}
-                              title="Enviar por WhatsApp"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/>
-                              </svg>
-                            </button>
-                            <button
-                              style={s.btnIconTrash}
-                              onClick={(e) => eliminarPago(p.id, e)}
-                              title="Eliminar este pago"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                              </svg>
-                            </button>
-                          </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {inscripciones.map(p => (
+                            <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 12, padding: '12px 14px' }}>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-blue)' }}>Inscripción</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'capitalize', marginTop: 2 }}>{p.metodo_pago} · {fmtFecha(p.fecha_pago)}</div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>${parseFloat(p.monto).toFixed(2)}</span>
+                                <button style={s.btnIconEdit} onClick={() => abrirModalEdicion(p)} title="Editar">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                                <button style={s.btnIconBlueSmall} onClick={() => generarRecibo(p, historialAlumno)} title="Recibo PDF">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                </button>
+                                <button style={s.btnIconTrash} onClick={(e) => eliminarPago(p.id, e)} title="Eliminar">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
+                    )}
+
+                    {/* Registrar pago */}
+                    <button
+                      style={{ ...s.btnConfirmar, width: '100%', justifyContent: 'center', display: 'flex', gap: 8 }}
+                      onClick={(e) => { cerrarHistorial(); setTimeout(() => abrirModalPago(historialAlumno, e), 100) }}
+                    >
+                      + Registrar nuevo pago
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
@@ -1264,6 +1264,9 @@ const s = {
   resumenHistorial: { display: 'flex', gap: '12px', marginBottom: '20px' },
   resumenHistItem: { flex: 1, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px' },
   historialLista: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  resumenLabel: { fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  resumenNum: { fontWeight: '800' },
+  btnNavAnio: { padding: '5px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' },
   historialItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px' },
   historialPeriodo: { flex: 1 },
   historialFechas: { fontWeight: '600', color: 'var(--text-primary)', fontSize: '13px' },

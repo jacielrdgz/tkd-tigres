@@ -56,22 +56,18 @@ export default function AsistenciasTopbar({
           {exportOpen && (
             <div style={s.dropdown}>
               <button
-                style={s.dropItem}
+                style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
                 onClick={() => { onExportar('excel'); setExportOpen(false) }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <span style={{ color: '#10b981', fontWeight: 700 }}>XLS</span>
-                Exportar Excel
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Excel
               </button>
               <button
-                style={s.dropItem}
+                style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
                 onClick={() => { onExportar('pdf'); setExportOpen(false) }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <span style={{ color: '#ef4444', fontWeight: 700 }}>PDF</span>
-                Exportar PDF
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                PDF
               </button>
             </div>
           )}
@@ -176,25 +172,14 @@ const s = {
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border)',
     borderRadius: '12px',
-    padding: '6px',
+    padding: '8px',
     zIndex: 100,
-    minWidth: '180px',
+    minWidth: '160px',
     boxShadow: 'var(--shadow-md)',
-  },
-  dropItem: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    width: '100%',
-    padding: '9px 12px',
-    background: 'transparent',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    color: 'var(--text-secondary)',
-    fontFamily: 'inherit',
-    textAlign: 'left',
-    transition: 'background 0.15s',
+    flexDirection: 'column',
+    gap: '8px',
   },
+  btnExportExcel: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)', },
+  btnExportPdf: { background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)', },
 }

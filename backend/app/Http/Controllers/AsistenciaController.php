@@ -83,12 +83,26 @@ class AsistenciaController extends Controller
 
         $asistenciasMes = Asistencia::where('fecha', 'like', $mes . '%')->get();
 
-        $resultado = $alumnos->map(function ($alumno) use ($asistenciasMes) {
+        $fechaLimite = Carbon::now()->subDays(60)->toDateString();
+        $asistenciasRecientes = Asistencia::whereIn('alumno_id', $alumnos->pluck('id'))
+            ->where('fecha', '>=', $fechaLimite)
+            ->orderBy('fecha', 'desc')
+            ->get()
+            ->groupBy('alumno_id');
+
+        $resultado = $alumnos->map(function ($alumno) use ($asistenciasMes, $asistenciasRecientes) {
             $registros = $asistenciasMes->where('alumno_id', $alumno->id);
             $total     = $registros->count();
             $asistio   = $registros->where('presente', true)->count();
             $falto     = $total - $asistio;
             $pct       = $total > 0 ? round(($asistio / $total) * 100) : 0;
+
+            $recientes = $asistenciasRecientes->get($alumno->id, collect());
+            $rachaFaltas = 0;
+            foreach ($recientes as $asist) {
+                if ($asist->presente == 0) $rachaFaltas++;
+                else break;
+            }
 
             return [
                 'alumno_id'      => $alumno->id,
@@ -96,12 +110,15 @@ class AsistenciaController extends Controller
                 'apellido_paterno' => $alumno->apellido_paterno,
                 'apellido_materno' => $alumno->apellido_materno,
                 'foto_url'       => $alumno->foto_url,
+                'telefono_tutor' => $alumno->telefono_tutor,
                 'cinta_config'   => $alumno->cintaConfig,
                 'horario_config' => $alumno->horarioConfig,
+                'fecha_nacimiento' => $alumno->fecha_nacimiento,
                 'asistio'        => $asistio,
                 'falto'          => $falto,
                 'total'          => $total,
                 'pct'            => $pct,
+                'racha_faltas'   => $rachaFaltas,
             ];
         });
 
@@ -137,30 +154,35 @@ class AsistenciaController extends Controller
 
             $esFinDeSemana = in_array($diaSemana, [0, 6]);
 
-            if ($esFinDeSemana) {
+            if (isset($registros[$fechaStr])) {
+                $dias[$fechaStr] = $registros[$fechaStr]->presente ? 'asistio' : 'falto';
+            } elseif ($esFinDeSemana) {
                 $dias[$fechaStr] = 'sin_clase';
             } elseif ($diasConClaseSet !== null && !in_array($diaSemana, $diasConClaseSet)) {
                 $dias[$fechaStr] = 'sin_clase';
-            } elseif (isset($registros[$fechaStr])) {
-                $dias[$fechaStr] = $registros[$fechaStr]->presente ? 'asistio' : 'falto';
             } else {
                 // Si hay horario definido y ese día tiene clase, pero no hay registro
-                // Lo marcamos según si la fecha ya pasó
-                $dias[$fechaStr] = Carbon::parse($fechaStr)->isPast() && isset($registros[$fechaStr])
-                    ? 'falto'
-                    : 'sin_clase';
+                // A petición del usuario: si no se registró falta, no se cuenta como falta
+                $dias[$fechaStr] = 'sin_clase';
             }
         }
 
-        // Calcular stats del mes para la respuesta
-        $registrosMes = Asistencia::where('alumno_id', $alumnoId)
-            ->where('fecha', 'like', $mes . '%')
-            ->get();
-
-        $totalClases = $registrosMes->count();
-        $asistio     = $registrosMes->where('presente', true)->count();
-        $falto       = $totalClases - $asistio;
-        $pct         = $totalClases > 0 ? round(($asistio / $totalClases) * 100) : 0;
+        // Calcular stats del mes para la respuesta basados exactamente en lo que muestra el calendario
+        $totalClases = 0;
+        $asistio     = 0;
+        $falto       = 0;
+        
+        foreach ($dias as $estado) {
+            if ($estado === 'asistio') {
+                $asistio++;
+                $totalClases++;
+            } elseif ($estado === 'falto') {
+                $falto++;
+                $totalClases++;
+            }
+        }
+        
+        $pct = $totalClases > 0 ? round(($asistio / $totalClases) * 100) : 0;
 
         return response()->json([
             'alumno' => [

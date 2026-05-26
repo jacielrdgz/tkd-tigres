@@ -24,6 +24,18 @@ class EscuelaController extends Controller
             ]
         );
 
+        $escuela->load('direccion');
+
+        // Adjuntar logo en base64 para evitar problemas de CORS en el PDF del frontend
+        $logoBase64 = null;
+        if ($escuela->logo_url && Storage::disk('public')->exists($escuela->logo_url)) {
+            $path = Storage::disk('public')->path($escuela->logo_url);
+            $type = pathinfo($path, PATHINFO_EXTENSION);
+            $data = file_get_contents($path);
+            $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+        }
+        $escuela->logo_base64 = $logoBase64;
+
         return response()->json($escuela);
     }
 

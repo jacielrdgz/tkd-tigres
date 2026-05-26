@@ -2,6 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { FiX, FiChevronLeft, FiChevronRight, FiCheck } from 'react-icons/fi'
 import api from '../../api/axios'
 
+const formatHora = (hora) => {
+  if (!hora) return ''
+  const [h, m] = hora.split(':')
+  const hrs = parseInt(h)
+  const ampm = hrs >= 12 ? 'PM' : 'AM'
+  const h12 = hrs % 12 || 12
+  return `${h12}:${m} ${ampm}`
+}
+
 function pctColor(pct) {
   if (pct >= 80) return 'var(--accent-green)'
   if (pct >= 60) return 'var(--accent-yellow)'
@@ -113,7 +122,7 @@ export default function ModalAlumno({ alumno, onCerrar }) {
             </h2>
             <div style={s.subinfo}>
               {aluData.horario_config
-                ? `🕒 ${aluData.horario_config.nombre} · ${aluData.horario_config.dias || ''}`
+                ? `🕒 ${aluData.horario_config.nombre} (${formatHora(aluData.horario_config.hora_inicio)} - ${formatHora(aluData.horario_config.hora_fin)}) · ${aluData.horario_config.dias || ''}`
                 : 'Sin horario'}
             </div>
             {aluData.cinta_config && (

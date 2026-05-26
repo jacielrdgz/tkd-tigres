@@ -112,7 +112,7 @@ export default function Sidebar() {
         {/* User info + logout */}
         <div style={styles.footer}>
           {/* Asistencias antiguo link (temporal) */}
-          <NavLink
+          {<NavLink
             to="/asistencias-antiguo"
             onClick={closeMobile}
             style={({ isActive }) => ({
@@ -127,7 +127,7 @@ export default function Sidebar() {
           >
             <span style={styles.icon}>📋⚠️</span>
             <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 'bold' }}>Asistencias ANTIGUO</span>
-          </NavLink>
+          </NavLink>}
 
           {/* Ajustes link */}
           <NavLink

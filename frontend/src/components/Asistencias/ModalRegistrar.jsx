@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { FiX, FiCalendar, FiCheck } from 'react-icons/fi'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { FiX, FiCalendar, FiCheck, FiSearch } from 'react-icons/fi'
 import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import * as XLSX from 'xlsx'
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -12,6 +15,8 @@ const formatHora = (hora) => {
   const h12 = hrs % 12 || 12
   return `${h12}:${m} ${ampm}`
 }
+
+const norm = (s) => (s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : '')
 
 function Avatar({ alumno, size = 38 }) {
   const [imgError, setImgError] = useState(false)
@@ -46,6 +51,9 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
   const [cargando, setCargando] = useState(false)
   const [guardando, setGuardando] = useState(false)
 
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroHorario, setFiltroHorario] = useState('')
+
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onCerrar() }
     window.addEventListener('keydown', handler)
@@ -72,11 +80,198 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
 
   const toggle = (id) => setPresencias(prev => ({ ...prev, [id]: !prev[id] }))
 
+  const horariosUnicos = useMemo(() => {
+    const map = new Map()
+    alumnos.forEach(a => {
+      if (a.horario_config) map.set(a.horario_config.id ?? a.horario_config.nombre, a.horario_config)
+    })
+    return [...map.values()].sort((a, b) => {
+      if (a.hora_inicio && b.hora_inicio) return a.hora_inicio.localeCompare(b.hora_inicio)
+      return (a.nombre || '').localeCompare(b.nombre || '')
+    })
+  }, [alumnos])
+
+  const filtrados = useMemo(() => {
+    return alumnos.filter(a => {
+      const nombre = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`
+      const cumpleNombre = norm(nombre).includes(norm(busqueda))
+      const cumpleHorario = !filtroHorario || String(a.horario_config?.id) === filtroHorario || a.horario_config?.nombre === filtroHorario
+      return cumpleNombre && cumpleHorario
+    }).sort((a, b) => {
+      // 1. Horario (hora_inicio ascendente)
+      const horaA = a.horario_config?.hora_inicio || '23:59:59'
+      const horaB = b.horario_config?.hora_inicio || '23:59:59'
+      if (horaA !== horaB) return horaA.localeCompare(horaB)
+
+      // 2. Cinta (orden ascendente)
+      const ordA = a.cinta_config?.orden ?? 999
+      const ordB = b.cinta_config?.orden ?? 999
+      if (ordA !== ordB) return ordA - ordB
+
+      // 3. Edad (menores primero = fecha de nacimiento más reciente/alta)
+      const fnA = new Date(a.fecha_nacimiento || '1900-01-01').getTime()
+      const fnB = new Date(b.fecha_nacimiento || '1900-01-01').getTime()
+      return fnB - fnA
+    })
+  }, [alumnos, busqueda, filtroHorario])
+
   const marcarTodos = () => {
-    const todos = alumnos.every(a => presencias[a.alumno_id])
-    const mapa = {}
-    alumnos.forEach(a => { mapa[a.alumno_id] = !todos })
+    const todos = filtrados.every(a => presencias[a.alumno_id])
+    const mapa = { ...presencias }
+    filtrados.forEach(a => { mapa[a.alumno_id] = !todos })
     setPresencias(mapa)
+  }
+
+  const exportarPDF = async () => {
+    if (filtrados.length === 0) return toast.warning('No hay datos para exportar')
+
+    let escuelaInfo = null
+    try {
+      const res = await api.get('/configuracion-escuela')
+      escuelaInfo = res.data
+    } catch (e) {
+      console.warn('No se pudo cargar escuelaInfo para el PDF')
+    }
+
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
+
+    // FONDO Y CABECERA (Hoja Membretada)
+    doc.setFillColor(245, 247, 250)
+    doc.rect(0, 0, 216, 279, 'F')
+    doc.setFillColor(59, 130, 246)
+    doc.rect(0, 0, 5, 279, 'F')
+
+    // CARGAR LOGO
+    let logoFinal = escuelaInfo?.logo_base64
+    if (!logoFinal) {
+      try {
+        const resp = await fetch('/tigreslogo.jpg')
+        const blob = await resp.blob()
+        logoFinal = await new Promise((res, rej) => {
+          const reader = new FileReader()
+          reader.onload = () => res(reader.result)
+          reader.onerror = rej
+          reader.readAsDataURL(blob)
+        })
+      } catch (err) {
+        console.warn('Logo genérico no disponible')
+      }
+    }
+
+    if (logoFinal) {
+      const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
+      doc.addImage(logoFinal, ext, 15, 12, 32, 32)
+    } else {
+      doc.setFillColor(240, 242, 245)
+      doc.circle(31, 28, 16, 'F')
+      doc.setFontSize(20)
+      doc.setTextColor(59, 130, 246)
+      doc.text('TKD', 31, 31, { align: 'center' })
+    }
+
+    // TEXTO CABECERA ESCUELA
+    doc.setTextColor(30, 41, 59)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(22)
+    if (escuelaInfo?.nombre) doc.text(escuelaInfo.nombre.toUpperCase(), 52, 22)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(100)
+    
+    let addressStr = ""
+    if (escuelaInfo?.direccion) {
+      const d = escuelaInfo.direccion
+      const parts = [
+        d.calle && `#${d.numero_exterior || ''}`,
+        d.colonia && `Col. ${d.colonia}`,
+        d.ciudad,
+        d.estado
+      ].filter(Boolean)
+      addressStr = (d.calle ? d.calle + " " : "") + parts.join(", ").replace(/,,/g, ',').trim()
+    }
+    
+    let nextY = 28;
+    if (addressStr) {
+      const splitAddress = doc.splitTextToSize(addressStr, 85);
+      doc.text(splitAddress, 52, nextY)
+      nextY += (splitAddress.length * 4.5);
+    }
+
+    const contacts = [];
+    if (escuelaInfo?.telefono_contacto) contacts.push(`Tel: ${escuelaInfo.telefono_contacto}`);
+    if (escuelaInfo?.email_contacto) contacts.push(`Email: ${escuelaInfo.email_contacto}`);
+    if (contacts.length > 0) doc.text(contacts.join(" | "), 52, nextY)
+
+    // TITULO REPORTE (DERECHA)
+    doc.setFillColor(59, 130, 246)
+    doc.rect(145, 15, 55, 12, 'F')
+    doc.setTextColor(255)
+    doc.setFontSize(11)
+    doc.text("PASE DE LISTA", 172.5, 23, { align: 'center' })
+
+    doc.setTextColor(40)
+    doc.setFontSize(10)
+    doc.text(`Fecha:`, 145, 32)
+    doc.setFont('helvetica', 'bold')
+    doc.text(new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }), 145, 37)
+    doc.setFont('helvetica', 'normal')
+
+    const tableColumn = ["#", "Nombre Alumno", "Cinta", "Horario", "Asistencia"]
+    const tableRows = filtrados.map((a, index) => [
+      index + 1,
+      `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`,
+      a.cinta_config?.nombre_nivel || 'Sin cinta',
+      a.horario_config
+        ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
+        : 'Sin horario',
+      presencias[a.alumno_id] ? 'PRESENTE' : 'AUSENTE'
+    ])
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 55,
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] },
+      didParseCell: function (data) {
+        if (data.section === 'body' && data.column.index === 4) {
+          if (data.cell.raw === 'PRESENTE') {
+            data.cell.styles.textColor = [16, 185, 129] // verde
+            data.cell.styles.fontStyle = 'bold'
+          } else {
+            data.cell.styles.textColor = [239, 68, 68] // rojo
+            data.cell.styles.fontStyle = 'bold'
+          }
+        }
+      }
+    })
+
+    // FOOTER
+    const finalY = doc.lastAutoTable.finalY + 15
+    doc.setFontSize(9)
+    doc.setTextColor(150)
+    doc.text(`Generado el ${new Date().toLocaleDateString('es-MX')} a las ${new Date().toLocaleTimeString('es-MX')}`, 108, 270, { align: 'center' })
+
+    doc.save(`Asistencias_${fecha}.pdf`)
+  }
+
+  const exportarExcel = () => {
+    if (filtrados.length === 0) return toast.warning('No hay datos para exportar')
+    const data = filtrados.map((a, index) => ({
+      "#": index + 1,
+      "Nombre Completo": `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`,
+      "Cinta": a.cinta_config?.nombre_nivel || 'Sin cinta',
+      "Horario": a.horario_config
+        ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
+        : 'Sin horario',
+      "Asistencia": presencias[a.alumno_id] ? 'PRESENTE' : 'AUSENTE'
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(data)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Asistencias")
+    XLSX.writeFile(workbook, `Asistencias_${fecha}.xlsx`)
   }
 
   const guardar = async () => {
@@ -88,11 +283,11 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
         presente: presencias[a.alumno_id] || false,
       }))
       await api.post('/asistencias/registrar-dia', { fecha, asistencias: lista })
-      const presentes = lista.filter(x => x.presente).length
+      const presentesCount = lista.filter(x => x.presente).length
       Swal.fire({
         icon: 'success',
         title: '¡Asistencia Guardada!',
-        text: `${presentes} presentes registrados para ${fecha}`,
+        text: `${presentesCount} presentes registrados para ${fecha}`,
         timer: 2000,
         showConfirmButton: false,
         background: 'var(--bg-secondary)',
@@ -108,8 +303,8 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
     }
   }
 
-  const presentes = alumnos.filter(a => presencias[a.alumno_id]).length
-  const ausentes = alumnos.length - presentes
+  const presentes = filtrados.filter(a => presencias[a.alumno_id]).length
+  const ausentes = filtrados.length - presentes
 
   return (
     <div style={s.overlay} onClick={onCerrar}>
@@ -145,9 +340,34 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
               onClick={marcarTodos}
             >
               <FiCheck size={13} />
-              {alumnos.every(a => presencias[a.alumno_id]) ? 'Desmarcar todos' : 'Marcar todos'}
+              {filtrados.length > 0 && filtrados.every(a => presencias[a.alumno_id]) ? 'Desmarcar todos' : 'Marcar todos'}
             </button>
           </div>
+        </div>
+
+        {/* Filtros: Buscador y Horario */}
+        <div style={{ display: 'flex', gap: 10, padding: '12px 22px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+            <FiSearch size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+            <input
+              style={{ ...s.inputFecha, width: '100%', paddingLeft: 34 }}
+              placeholder="Buscar alumno..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+            />
+          </div>
+          <select
+            style={{ ...s.inputFecha, minWidth: 160 }}
+            value={filtroHorario}
+            onChange={e => setFiltroHorario(e.target.value)}
+          >
+            <option value="">Todos los horarios</option>
+            {horariosUnicos.map(h => (
+              <option key={h.id ?? h.nombre} value={h.id ?? h.nombre}>
+                {h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Lista */}
@@ -159,18 +379,25 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
                 <div style={{ flex: 1, height: 14, background: 'var(--bg-tertiary)', borderRadius: 4 }} />
               </div>
             ))
-            : alumnos.map(a => (
+            : filtrados.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No hay alumnos que coincidan con la búsqueda.
+              </div>
+            ) : filtrados.map((a, idx) => (
               <div
                 key={a.alumno_id}
                 style={s.fila(presencias[a.alumno_id])}
                 onClick={() => toggle(a.alumno_id)}
               >
+                <div style={{ color: 'var(--text-dim)', fontSize: 11, width: 16, textAlign: 'right' }}>
+                  {idx + 1}
+                </div>
                 <Avatar alumno={a} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={s.nombre}>{a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}</div>
                   <div style={s.horario}>
                     {a.horario_config
-                      ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)})`
+                      ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
                       : 'Sin horario'}
                   </div>
                 </div>
@@ -201,14 +428,26 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
 
         {/* Footer */}
         <div style={s.footer}>
-          <button style={s.btnCancelar} onClick={onCerrar}>Cancelar</button>
-          <button
-            style={{ ...s.btnGuardar, opacity: guardando ? 0.7 : 1 }}
-            onClick={guardar}
-            disabled={guardando}
-          >
-            {guardando ? 'Guardando…' : '💾 Guardar Asistencias'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={s.btnExportExcel} onClick={exportarExcel}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              Excel
+            </button>
+            <button style={s.btnExportPdf} onClick={exportarPDF}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              PDF
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button style={s.btnCancelar} onClick={onCerrar}>Cancelar</button>
+            <button
+              style={{ ...s.btnGuardar, opacity: guardando ? 0.7 : 1 }}
+              onClick={guardar}
+              disabled={guardando}
+            >
+              {guardando ? 'Guardando…' : '💾 Guardar Asistencias'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -267,7 +506,7 @@ const s = {
   },
   labelFecha: { fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' },
   inputFecha: {
-    padding: '7px 12px', background: 'var(--bg-primary)',
+    padding: '8px 12px', background: 'var(--bg-primary)',
     border: '1px solid var(--border)', borderRadius: 8,
     color: 'var(--text-primary)', fontSize: 13, outline: 'none', fontFamily: 'inherit',
   },
@@ -292,8 +531,8 @@ const s = {
   nombre: { fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' },
   horario: { fontSize: 11, color: 'var(--text-muted)', marginTop: 1 },
   badge: {
-    display: 'inline-flex', alignItems: 'center', flexShrink: 0,
-    padding: '3px 9px', borderRadius: 99, fontSize: 10, fontWeight: 700,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 700, minWidth: 100,
   },
   checkBox: {
     width: 30, height: 30, borderRadius: 9, flexShrink: 0,
@@ -301,9 +540,25 @@ const s = {
     transition: 'all 0.2s',
   },
   footer: {
-    display: 'flex', justifyContent: 'flex-end', gap: 10,
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
     padding: '14px 22px',
     borderTop: '1px solid var(--border)', flexShrink: 0,
+  },
+  btnExportExcel: {
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    color: '#fff', border: 'none', borderRadius: '10px',
+    padding: '10px 14px', fontSize: '12px', fontWeight: '700',
+    cursor: 'pointer', display: 'flex', alignItems: 'center',
+    gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap',
+    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+  },
+  btnExportPdf: {
+    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+    color: '#fff', border: 'none', borderRadius: '10px',
+    padding: '10px 14px', fontSize: '12px', fontWeight: '700',
+    cursor: 'pointer', display: 'flex', alignItems: 'center',
+    gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap',
+    boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)',
   },
   btnCancelar: {
     padding: '10px 20px', background: 'var(--bg-tertiary)',
@@ -319,3 +574,4 @@ const s = {
     boxShadow: 'var(--shadow-glow-blue)',
   },
 }
+
