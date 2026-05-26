@@ -50,21 +50,67 @@ export default function Register() {
     return (
       <div style={s.container}>
         <div style={s.bgGlow} />
-        <div style={s.card}>
-          <div style={s.successIcon}>✅</div>
-          <h1 style={s.title}>¡Solicitud enviada!</h1>
-          <p style={s.successText}>
-            Tu cuenta ha sido registrada correctamente. El administrador revisará
-            tu solicitud y te asignará tu escuela. Una vez activada podrás
-            iniciar sesión normalmente.
+        <div style={s.bgGlow2} />
+
+        <div style={{ ...s.card, textAlign: 'center', maxWidth: '500px' }}>
+          {/* Ícono animado */}
+          <div style={s.successRing}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+
+          <h1 style={{ ...s.title, fontSize: '26px', marginBottom: '10px' }}>
+            ¡Solicitud enviada!
+          </h1>
+          <p style={{ ...s.successText, marginBottom: '28px' }}>
+            Tu cuenta fue registrada. Recibirás un correo de confirmación
+            y el administrador la activará asignándote tu escuela.
           </p>
-          <Link to="/login" style={s.btnPrimary} id="go-to-login-after-register">
+
+          {/* Pasos */}
+          <div style={s.stepsBox}>
+            <div style={s.step}>
+              <div style={{ ...s.stepDot, background: '#22c55e' }}>✓</div>
+              <div style={s.stepText}>
+                <strong>Solicitud recibida</strong>
+                <span>Tu información fue guardada</span>
+              </div>
+            </div>
+            <div style={s.stepLine} />
+            <div style={s.step}>
+              <div style={{ ...s.stepDot, background: 'var(--accent-blue)' }}>2</div>
+              <div style={s.stepText}>
+                <strong>Revisión del administrador</strong>
+                <span>Validará tu solicitud</span>
+              </div>
+            </div>
+            <div style={s.stepLine} />
+            <div style={s.step}>
+              <div style={{ ...s.stepDot, background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>3</div>
+              <div style={s.stepText}>
+                <strong>Cuenta activada</strong>
+                <span>Recibirás confirmación por correo</span>
+              </div>
+            </div>
+          </div>
+
+          <Link
+            to="/login"
+            style={{ ...s.btnPrimary, marginTop: '8px', display: 'block' }}
+            id="go-to-login-after-register"
+          >
             Ir al inicio de sesión
           </Link>
+
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>
+            ¿Problemas? Contacta al administrador directamente.
+          </p>
         </div>
       </div>
     )
   }
+
 
   // ─── Formulario ────────────────────────────────────────────────────────────
   return (
@@ -274,17 +320,74 @@ const s = {
     textDecoration: 'none',
     marginTop: '4px',
   },
-  successIcon: {
-    fontSize: '48px',
-    textAlign: 'center',
-    marginBottom: '16px',
+  bgGlow2: {
+    position: 'absolute',
+    width: '500px',
+    height: '500px',
+    borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%)',
+    top: '-150px',
+    right: '-150px',
+    pointerEvents: 'none',
+  },
+  successRing: {
+    width: '80px',
+    height: '80px',
+    borderRadius: '50%',
+    background: 'rgba(34,197,94,0.12)',
+    border: '2px solid rgba(34,197,94,0.3)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 24px',
+    boxShadow: '0 0 30px rgba(34,197,94,0.2)',
   },
   successText: {
-    fontSize: '14px',
+    fontSize: '15px',
     color: 'var(--text-secondary)',
     lineHeight: 1.7,
     textAlign: 'center',
+  },
+  stepsBox: {
+    background: 'var(--bg-primary)',
+    borderRadius: '14px',
+    border: '1px solid var(--border)',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0',
     marginBottom: '24px',
+    textAlign: 'left',
+  },
+  step: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+  },
+  stepDot: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '12px',
+    fontWeight: '800',
+    color: '#fff',
+    flexShrink: 0,
+  },
+  stepText: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1px',
+    fontSize: '13px',
+    color: 'var(--text-primary)',
+  },
+  stepLine: {
+    width: '1px',
+    height: '16px',
+    background: 'var(--border)',
+    margin: '4px 0 4px 13px',
   },
   divider: {
     display: 'flex',

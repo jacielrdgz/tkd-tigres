@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Mail\SolicitudRecibidaMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class RegisterController extends Controller
 {
@@ -23,13 +25,21 @@ class RegisterController extends Controller
 
         // Guardar el nombre de la escuela solicitada en un campo temporal (como nota)
         // El tenant_id queda NULL — el admin lo asigna manualmente
-        User::create([
+        $user = User::create([
             'name'      => $request->name,
             'email'     => $request->email,
             'password'  => Hash::make($request->password),
             'role'      => 'owner',
             'tenant_id' => null, // Pendiente de aprobación
         ]);
+
+        // Enviar correo de confirmación al usuario
+        try {
+            Mail::to($user->email)->send(new SolicitudRecibidaMail($user->name, $request->escuela));
+        } catch (\Exception $e) {
+            // Loggear el error o ignorarlo para no bloquear el registro
+            \Log::error('Error al enviar correo de solicitud: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Solicitud recibida. Tu cuenta quedará activa una vez que sea revisada y aprobada por el administrador.',
