@@ -10,11 +10,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 use App\Models\HistorialGrado;
+use Illuminate\Support\Facades\Gate;
 
 class AlumnoController extends Controller
 {
     public function addHistorialManual(Request $request, Alumno $alumno)
     {
+        Gate::authorize('update', $alumno);
+
         $validated = $request->validate([
             'grado_anterior_id' => 'nullable|exists:configuraciones_cintas,id',
             'grado_nuevo_id'    => 'required|exists:configuraciones_cintas,id',
@@ -40,6 +43,8 @@ class AlumnoController extends Controller
 
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Alumno::class);
+
         $query = Alumno::with(['cintaConfig', 'ultimoPago', 'horarioConfig']);
 
         if ($request->filled('search')) {
@@ -91,6 +96,8 @@ class AlumnoController extends Controller
 
     public function store(StoreAlumnoRequest $request)
     {
+        Gate::authorize('create', Alumno::class);
+
         $validated = $request->validated();
 
         if ($request->hasFile('foto')) {
@@ -103,6 +110,8 @@ class AlumnoController extends Controller
 
     public function show(Alumno $alumno)
     {
+        Gate::authorize('view', $alumno);
+
         return response()->json($alumno->load([
             'pagos', 
             'asistencias', 
@@ -115,6 +124,8 @@ class AlumnoController extends Controller
 
     public function update(UpdateAlumnoRequest $request, Alumno $alumno)
     {
+        Gate::authorize('update', $alumno);
+
         $validated = $request->validated();
 
         if ($request->has('eliminar_foto') && $request->eliminar_foto == '1') {
@@ -137,6 +148,8 @@ class AlumnoController extends Controller
 
     public function quitarFoto(Alumno $alumno)
     {
+        Gate::authorize('update', $alumno);
+
         if ($alumno->foto) {
             Storage::disk('public')->delete($alumno->foto);
         }
@@ -147,6 +160,8 @@ class AlumnoController extends Controller
 
     public function destroy(Alumno $alumno)
     {
+        Gate::authorize('delete', $alumno);
+
         if ($alumno->foto) {
             Storage::disk('public')->delete($alumno->foto);
         }
@@ -156,6 +171,8 @@ class AlumnoController extends Controller
 
     public function toggleEstatus(Alumno $alumno)
     {
+        Gate::authorize('update', $alumno);
+
         $alumno->estatus = $alumno->estatus === 'activo' ? 'inactivo' : 'activo';
         $alumno->save();
         return response()->json($alumno);

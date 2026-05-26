@@ -44,7 +44,7 @@ import HorarioManager from './pages/ajustes/HorarioManager'
 const router = createBrowserRouter([
   // ... (rutas públicas)
   { path: "/login", element: <Login /> },
-  { path: "/register", element: <Register /> },
+  { path: "/register", element: <Navigate to="/login" replace /> },
   
   {
     path: "/",
@@ -56,7 +56,14 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "alumnos", element: <Alumnos /> },
-      { path: "pagos", element: <Pagos /> },
+      { 
+        path: "pagos", 
+        element: (
+          <ProtectedRoute allowedRoles={['owner', 'secretario']}>
+            <Pagos />
+          </ProtectedRoute>
+        ) 
+      },
       { path: "asistencias", element: <Asistencias /> },
       { path: "asistencias-antiguo", element: <AsistenciasAntiguo /> },
       { path: "eventos", element: <Eventos /> },
@@ -68,7 +75,11 @@ const router = createBrowserRouter([
           { index: true, element: <Ajustes /> },
           {
             path: "configuracion",
-            element: <AjustesEscuela />,
+            element: (
+              <ProtectedRoute allowedRoles={['owner', 'secretario']}>
+                <AjustesEscuela />
+              </ProtectedRoute>
+            ),
             children: [
               { index: true, element: <Navigate to="general" replace /> },
               { path: "general", element: <DojoInfo /> },
@@ -77,7 +88,14 @@ const router = createBrowserRouter([
               { path: "cintas", element: <CintasSettings isEmbedded /> },
             ]
           },
-          { path: "usuarios", element: <UsuariosSettings /> },
+          { 
+            path: "usuarios", 
+            element: (
+              <ProtectedRoute allowedRoles={['owner']}>
+                <UsuariosSettings />
+              </ProtectedRoute>
+            ) 
+          },
         ]
       },
     ]

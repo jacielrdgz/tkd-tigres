@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Evento;
 use Illuminate\Http\Request;
 
+use Illuminate\Support\Facades\Gate;
+
 class EventoController extends Controller
 {
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Evento::class);
+
         $query = Evento::orderBy('fecha', 'asc');
 
         if ($request->has('tipo') && $request->tipo) {
@@ -20,6 +24,8 @@ class EventoController extends Controller
 
     public function store(Request $request)
     {
+        Gate::authorize('create', Evento::class);
+
         $validated = $request->validate([
             'nombre'      => 'required|string|max:150',
             'tipo'        => 'required|in:examen,torneo,demostracion,seminario',
@@ -36,12 +42,16 @@ class EventoController extends Controller
 
     public function show(Evento $evento)
     {
+        Gate::authorize('view', $evento);
+
         $evento->load(['modalidades']);
         return response()->json($evento);
     }
 
     public function update(Request $request, Evento $evento)
     {
+        Gate::authorize('update', $evento);
+
         $validated = $request->validate([
             'nombre'      => 'sometimes|string|max:150',
             'tipo'        => 'sometimes|in:examen,torneo,demostracion,seminario',
@@ -58,6 +68,8 @@ class EventoController extends Controller
 
     public function destroy(Evento $evento)
     {
+        Gate::authorize('delete', $evento);
+
         $evento->delete();
         return response()->json(['message' => 'Evento eliminado correctamente']);
     }

@@ -19,6 +19,13 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  const filteredMenu = menu.filter(item => {
+    if (item.path === '/pagos') {
+      return user?.role === 'owner' || user?.role === 'secretario';
+    }
+    return true;
+  });
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 1024);
     check();
@@ -92,7 +99,7 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav style={styles.nav}>
-          {menu.map(item => (
+          {filteredMenu.map(item => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -162,7 +169,7 @@ export default function Sidebar() {
       {/* Mobile bottom navigation */}
       {isMobile && !mobileOpen && (
         <nav style={styles.bottomNav}>
-          {[...menu, menuAjustes].map(item => (
+          {[...filteredMenu, menuAjustes].map(item => (
             <NavLink
               key={item.path}
               to={item.path}

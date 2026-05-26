@@ -7,10 +7,14 @@ use App\Models\Pago;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
+use Illuminate\Support\Facades\Gate;
+
 class PagoController extends Controller
 {
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Pago::class);
+
         $query = Pago::with('alumno');
 
         if ($request->filled('alumno_id')) {
@@ -39,6 +43,8 @@ class PagoController extends Controller
      */
     public function porAlumno(Alumno $alumno)
     {
+        Gate::authorize('viewAny', Pago::class);
+
         $pagos = Pago::where('alumno_id', $alumno->id)
             ->orderBy('fecha_inicio', 'desc')
             ->get();
@@ -48,6 +54,8 @@ class PagoController extends Controller
 
     public function store(Request $request)
     {
+        Gate::authorize('create', Pago::class);
+
         $validated = $request->validate([
             'alumno_id'   => 'required|exists:alumnos,id',
             'tipo'        => 'nullable|in:mensualidad,inscripcion',
@@ -66,6 +74,9 @@ class PagoController extends Controller
             $validated['mes'] = Carbon::parse($validated['fecha_inicio'])->format('Y-m');
         }
 
+        // Asignar el tenant_id del usuario actual
+        $validated['tenant_id'] = auth()->user()->tenant_id;
+
         $pago = Pago::create($validated);
 
         return response()->json($pago->load('alumno'), 201);
@@ -73,11 +84,14 @@ class PagoController extends Controller
 
     public function show(Pago $pago)
     {
+        Gate::authorize('view', $pago);
         return response()->json($pago->load('alumno'));
     }
 
     public function update(Request $request, Pago $pago)
     {
+        Gate::authorize('update', $pago);
+
         $validated = $request->validate([
             'tipo'         => 'sometimes|in:mensualidad,inscripcion',
             'fecha_inicio' => 'sometimes|nullable|date',
@@ -99,6 +113,7 @@ class PagoController extends Controller
 
     public function destroy(Pago $pago)
     {
+        Gate::authorize('delete', $pago);
         $pago->delete();
         return response()->json(['message' => 'Pago eliminado correctamente']);
     }

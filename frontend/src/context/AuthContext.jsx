@@ -59,8 +59,22 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const isOwner      = user?.role === 'owner';
+  const isSecretario = user?.role === 'secretario';
+  const isInstructor = user?.role === 'instructor';
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, setUserDirect, refreshUser }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      logout, 
+      loading, 
+      setUserDirect, 
+      refreshUser,
+      isOwner,
+      isSecretario,
+      isInstructor
+    }}>
       {children}
     </AuthContext.Provider>
   );

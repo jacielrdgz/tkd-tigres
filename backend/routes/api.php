@@ -27,7 +27,6 @@ Route::get('/ping', fn() => response()->json([
 
 // Auth
 Route::post('/login',    [AuthController::class, 'login']);
-Route::post('/register', [RegisterController::class, 'register']);
 
 /*
 |--------------------------------------------------------------------------
@@ -52,8 +51,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('alumnos/{alumno}/historial-manual', [AlumnoController::class, 'addHistorialManual']);
 
     // Pagos
-    Route::get('pagos/alumno/{alumno}', [PagoController::class, 'porAlumno']);
-    Route::apiResource('pagos', PagoController::class);
+    Route::get('pagos/alumno/{alumno}', [PagoController::class, 'porAlumno'])->middleware('role:owner,secretario');
+    Route::apiResource('pagos', PagoController::class)->middleware('role:owner,secretario');
 
     // Asistencias — rutas fijas primero (antes de las paramétricas)
     Route::get('asistencias/resumen', [AsistenciaController::class, 'resumen']);
@@ -94,7 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('instructores', \App\Http\Controllers\InstructorController::class)->parameters([
         'instructores' => 'instructor'
     ]);
-    Route::apiResource('users', \App\Http\Controllers\UserController::class);
+    Route::apiResource('users', \App\Http\Controllers\UserController::class)->middleware('role:owner');
     
     // Configuración de la Escuela (Perfiles y Direcciones)
     Route::get('/configuracion-escuela', [\App\Http\Controllers\EscuelaController::class, 'show']);

@@ -5,6 +5,7 @@ import { toast } from 'react-toastify'
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { useAuth } from '../context/AuthContext'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -56,6 +57,7 @@ function calcularPeriodo(diaPago = 1, fechaReferencia) {
 const hoy = new Date().toLocaleDateString('sv-SE')
 
 export default function Pagos() {
+  const { user } = useAuth()
   const [alumnos, setAlumnos] = useState([])
   const [pagosActivos, setPagosActivos] = useState([]) // pagos del período actual de cada alumno
   const [cargando, setCargando] = useState(true)
@@ -751,16 +753,18 @@ export default function Pagos() {
           <h2 style={s.titulo}>Control de Pagos</h2>
           <p style={s.sub}>{submodulo === 'mensualidades' ? 'Administración de mensualidades y periodos activos' : 'Registro de inscripciones'}</p>
         </div>
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <div style={s.ingresosBadge}>
-            <span style={s.ingresosLabel}>Mensualidades · {filtroMes ? new Date(filtroMes + '-15').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Mes actual'}</span>
-            <span style={s.ingresosValor}>${ingresosDelMes.mensualidades.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        {user?.role === 'owner' && (
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <div style={s.ingresosBadge}>
+              <span style={s.ingresosLabel}>Mensualidades · {filtroMes ? new Date(filtroMes + '-15').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Mes actual'}</span>
+              <span style={s.ingresosValor}>${ingresosDelMes.mensualidades.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div style={{ ...s.ingresosBadge, background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.3)' }}>
+              <span style={s.ingresosLabel}>Inscripciones · {filtroMes ? new Date(filtroMes + '-15').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Mes actual'}</span>
+              <span style={s.ingresosValor}>${ingresosDelMes.inscripciones.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
           </div>
-          <div style={{ ...s.ingresosBadge, background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.3)' }}>
-            <span style={s.ingresosLabel}>Inscripciones · {filtroMes ? new Date(filtroMes + '-15').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Mes actual'}</span>
-            <span style={s.ingresosValor}>${ingresosDelMes.inscripciones.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* SUBMODULOS NAVIGATION */}
@@ -921,15 +925,17 @@ export default function Pagos() {
                     {pagado && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span style={submodulo === 'mensualidades' ? s.badgePagado : s.badgeInscrito}>✓ {submodulo === 'mensualidades' ? 'PAGADO' : 'INSCRITO'}</span>
-                        <button
-                          style={s.btnIconTrash}
-                          onClick={(e) => eliminarPago(a.pagoActivo.id, e)}
-                          title="Quitar registro"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                          </svg>
-                        </button>
+                        {user?.role === 'owner' && (
+                          <button
+                            style={s.btnIconTrash}
+                            onClick={(e) => eliminarPago(a.pagoActivo.id, e)}
+                            title="Quitar registro"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                          </button>
+                        )}
 
                         {/* Botones de recibo rápido */}
                         <button
@@ -1166,13 +1172,15 @@ export default function Pagos() {
                                   >
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
                                   </button>
-                                  <button
-                                    style={s.btnIconTrash}
-                                    onClick={(e) => eliminarPago(pago.id, e)}
-                                    title="Eliminar"
-                                  >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                                  </button>
+                                  {user?.role === 'owner' && (
+                                    <button
+                                      style={s.btnIconTrash}
+                                      onClick={(e) => eliminarPago(pago.id, e)}
+                                      title="Eliminar"
+                                    >
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                    </button>
+                                  )}
                                 </div>
                               </>
                             ) : (
@@ -1204,9 +1212,11 @@ export default function Pagos() {
                                 <button style={s.btnIconBlueSmall} onClick={() => generarRecibo(p, historialAlumno)} title="Recibo PDF">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 </button>
-                                <button style={s.btnIconTrash} onClick={(e) => eliminarPago(p.id, e)} title="Eliminar">
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                                </button>
+                                {user?.role === 'owner' && (
+                                  <button style={s.btnIconTrash} onClick={(e) => eliminarPago(p.id, e)} title="Eliminar">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}

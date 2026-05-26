@@ -13,6 +13,10 @@ class UserController extends Controller
      */
     public function index()
     {
+        if (!auth()->user()->isOwner()) {
+            return response()->json(['message' => 'No autorizado. Permisos insuficientes.'], 403);
+        }
+
         // El trait BelongsToTenant ya filtra por tenant_id
         return User::all();
     }
@@ -22,18 +26,23 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        if (!auth()->user()->isOwner()) {
+            return response()->json(['message' => 'No autorizado. Permisos insuficientes.'], 403);
+        }
+
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
-            'role'     => 'required|string|in:owner,admin,instructor,secretary',
+            'role'     => 'required|string|in:owner,instructor,secretario',
         ]);
 
         $user = User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role'     => $validated['role'],
+            'name'      => $validated['name'],
+            'email'     => $validated['email'],
+            'password'  => Hash::make($validated['password']),
+            'role'      => $validated['role'],
+            'tenant_id' => auth()->user()->tenant_id,
         ]);
 
         return response()->json($user, 201);
@@ -44,11 +53,20 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
+        if (!auth()->user()->isOwner()) {
+            return response()->json(['message' => 'No autorizado. Permisos insuficientes.'], 403);
+        }
+
+        // Asegurarse de que el usuario a editar pertenece al mismo tenant
+        if ($user->tenant_id !== auth()->user()->tenant_id) {
+            return response()->json(['message' => 'No encontrado'], 404);
+        }
+
         $validated = $request->validate([
             'name'     => 'sometimes|string|max:255',
             'email'    => 'sometimes|email|unique:users,email,' . $user->id,
             'password' => 'sometimes|nullable|string|min:6',
-            'role'     => 'sometimes|string|in:owner,admin,instructor,secretary',
+            'role'     => 'sometimes|string|in:owner,instructor,secretario',
         ]);
 
         if (isset($validated['name'])) $user->name = $validated['name'];
@@ -66,6 +84,15 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
+        if (!auth()->user()->isOwner()) {
+            return response()->json(['message' => 'No autorizado. Permisos insuficientes.'], 403);
+        }
+
+        // Asegurarse de que el usuario a eliminar pertenece al mismo tenant
+        if ($user->tenant_id !== auth()->user()->tenant_id) {
+            return response()->json(['message' => 'No encontrado'], 404);
+        }
+
         if ($user->id === auth()->id()) {
             return response()->json(['message' => 'No puedes eliminarte a ti mismo'], 400);
         }

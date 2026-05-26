@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
 export default function Ajustes() {
+  const { user } = useAuth();
+
   return (
     <div style={s.container}>
       <header style={s.headerMain}>
@@ -14,8 +16,8 @@ export default function Ajustes() {
 
       <div style={s.gridCards}>
         <CardAppearance />
-        <CardConfigurarEscuela />
-        <CardUsuarios />
+        {(user?.role === 'owner' || user?.role === 'secretario') && <CardConfigurarEscuela />}
+        {user?.role === 'owner' && <CardUsuarios />}
       </div>
     </div>
   )

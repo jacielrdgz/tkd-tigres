@@ -34,7 +34,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario es owner de su escuela.
+     * Verificar si el usuario es owner.
      */
     public function isOwner(): bool
     {
@@ -42,11 +42,19 @@ class User extends Authenticatable
     }
 
     /**
+     * Verificar si el usuario es secretario.
+     */
+    public function isSecretario(): bool
+    {
+        return $this->role === 'secretario';
+    }
+
+    /**
      * Verificar si el usuario es instructor.
      */
     public function isInstructor(): bool
     {
-        return in_array($this->role, ['owner', 'instructor']);
+        return $this->role === 'instructor';
     }
 }
 
