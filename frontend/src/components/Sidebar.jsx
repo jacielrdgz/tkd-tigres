@@ -1,6 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
+import { toast } from 'react-toastify';
 import logoImg from '../assets/tigreslogo.jpg';
 
 const menu = [
@@ -14,10 +16,13 @@ const menu = [
 const menuAjustes = { path: '/ajustes', label: 'Ajustes', icon: '⚙️' };
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [avatarHover, setAvatarHover] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef(null);
 
   const filteredMenu = menu
 
@@ -31,6 +36,26 @@ export default function Sidebar() {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('avatar', file);
+    setUploadingAvatar(true);
+    try {
+      await api.post('/me/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      await refreshUser();
+      toast.success('¡Foto actualizada!');
+    } catch {
+      toast.error('No se pudo subir la foto');
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
   };
 
   const closeMobile = () => {
@@ -147,9 +172,46 @@ export default function Sidebar() {
           </NavLink>
 
           <div style={styles.userInfo}>
-            <div style={styles.userAvatar}>
-              {user?.name?.charAt(0)?.toUpperCase() || '?'}
+            {/* Avatar clickeable */}
+            <div
+              style={{
+                ...styles.userAvatar,
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+              title="Cambiar foto"
+              onClick={() => avatarInputRef.current?.click()}
+              onMouseEnter={() => setAvatarHover(true)}
+              onMouseLeave={() => setAvatarHover(false)}
+            >
+              {user?.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt="Avatar"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                />
+              ) : (
+                uploadingAvatar ? '⏳' : (user?.name?.charAt(0)?.toUpperCase() || '?')
+              )}
+              {/* Overlay de edición */}
+              {avatarHover && !uploadingAvatar && (
+                <div style={styles.avatarOverlay}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </div>
+              )}
             </div>
+            {/* Input file oculto */}
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              style={{ display: 'none' }}
+              onChange={handleAvatarChange}
+            />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={styles.userName}>{user?.name || 'Usuario'}</div>
               <div style={styles.userRole}>{user?.role === 'owner' ? 'Administrador' : user?.role || 'Rol'}</div>
@@ -323,6 +385,17 @@ const styles = {
     fontWeight: '700',
     color: '#fff',
     flexShrink: 0,
+    transition: 'opacity 0.2s',
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'rgba(0,0,0,0.55)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#fff',
+    borderRadius: '50%',
   },
   userName: {
     fontSize: '13px',

@@ -13,7 +13,9 @@ use Laravel\Sanctum\HasApiTokens;
 
 use App\Models\Traits\BelongsToTenant;
 
-#[Fillable(['name', 'email', 'password', 'tenant_id', 'role'])]
+use Illuminate\Support\Facades\Storage;
+
+#[Fillable(['name', 'email', 'password', 'tenant_id', 'role', 'avatar'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -56,5 +58,17 @@ class User extends Authenticatable
     {
         return $this->role === 'instructor';
     }
+
+    /**
+     * Devuelve la URL pública del avatar o null si no tiene.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar
+            ? Storage::disk('public')->url($this->avatar)
+            : null;
+    }
+
+    protected $appends = ['avatar_url'];
 }
 

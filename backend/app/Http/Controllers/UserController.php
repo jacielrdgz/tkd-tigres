@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -99,5 +100,47 @@ class UserController extends Controller
 
         $user->delete();
         return response()->json(['message' => 'Usuario eliminado correctamente']);
+    }
+
+    /**
+     * Subir foto de perfil del usuario autenticado.
+     */
+    public function uploadAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ]);
+
+        $user = auth()->user();
+
+        // Borrar avatar anterior si existe
+        if ($user->avatar) {
+            Storage::disk('public')->delete($user->avatar);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $user->avatar = $path;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Foto de perfil actualizada',
+            'avatar'  => $path,
+        ]);
+    }
+
+    /**
+     * Eliminar foto de perfil del usuario autenticado.
+     */
+    public function quitarAvatar()
+    {
+        $user = auth()->user();
+
+        if ($user->avatar) {
+            Storage::disk('public')->delete($user->avatar);
+            $user->avatar = null;
+            $user->save();
+        }
+
+        return response()->json(['message' => 'Foto eliminada']);
     }
 }

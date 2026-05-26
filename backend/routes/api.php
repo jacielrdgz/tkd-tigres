@@ -38,8 +38,10 @@ Route::post('/register', [RegisterController::class, 'register']);
 Route::middleware('auth:sanctum')->group(function () {
 
     // Auth
-    Route::get('/me',      [AuthController::class, 'me']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me',           [AuthController::class, 'me']);
+    Route::post('/logout',      [AuthController::class, 'logout']);
+    Route::post('/me/avatar',   [\App\Http\Controllers\UserController::class, 'uploadAvatar']);
+    Route::delete('/me/avatar', [\App\Http\Controllers\UserController::class, 'quitarAvatar']);
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);

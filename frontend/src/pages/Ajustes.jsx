@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import api from '../api/axios'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import { toast } from 'react-toastify'
 
 export default function Ajustes() {
   const { user } = useAuth();
@@ -15,6 +16,7 @@ export default function Ajustes() {
       </header>
 
       <div style={s.gridCards}>
+        <CardMiPerfil />
         <CardAppearance />
         {(user?.role === 'owner' || user?.role === 'secretario') && <CardConfigurarEscuela />}
         {user?.role === 'owner' && <CardUsuarios />}
@@ -70,6 +72,163 @@ function CardAppearance() {
       </div>
     </div>
   )
+}
+
+function CardMiPerfil() {
+  const { user, refreshUser } = useAuth();
+  const [preview, setPreview] = useState(null); // URL de previsualización local
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const handleUpload = async () => {
+    const file = fileRef.current?.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('avatar', file);
+    setUploading(true);
+    try {
+      await api.post('/me/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      await refreshUser();
+      setPreview(null);
+      fileRef.current.value = '';
+      toast.success('¡Foto de perfil actualizada!');
+    } catch {
+      toast.error('Error al subir la foto');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setPreview(null);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      await api.delete('/me/avatar');
+      await refreshUser();
+      toast.success('Foto eliminada');
+    } catch {
+      toast.error('Error al eliminar la foto');
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const avatarSrc = preview || user?.avatar_url;
+
+  return (
+    <div style={s.card}>
+      <div style={s.cardHeader}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ ...s.cardIcon, color: '#f59e0b', background: 'rgba(245,158,11,0.1)' }}>👤</span>
+          <h3 style={s.cardTitle}>Mi Perfil</h3>
+        </div>
+        {preview && (
+          <span style={{ fontSize: '12px', color: 'var(--accent-blue)', fontWeight: '700' }}>Vista previa</span>
+        )}
+      </div>
+
+      <div style={s.cardBody}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          {/* Avatar grande */}
+          <div
+            style={{
+              width: '80px', height: '80px', borderRadius: '50%', flexShrink: 0,
+              background: avatarSrc ? 'transparent' : 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '32px', fontWeight: '800', color: '#fff',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+              border: preview ? '2px dashed var(--accent-blue)' : '2px solid var(--border)',
+              overflow: 'hidden',
+            }}
+          >
+            {avatarSrc ? (
+              <img src={avatarSrc} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              user?.name?.charAt(0)?.toUpperCase() || '?'
+            )}
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: '700', fontSize: '16px', color: 'var(--text-primary)' }}>{user?.name}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'capitalize' }}>{user?.role}</div>
+
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {/* Botón seleccionar foto */}
+              {!preview && (
+                <>
+                  <button
+                    style={s.btnAvatarAction}
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                    Cambiar foto
+                  </button>
+                  {user?.avatar_url && (
+                    <button
+                      style={{ ...s.btnAvatarAction, color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)' }}
+                      onClick={handleRemove}
+                      disabled={removing}
+                    >
+                      {removing ? 'Eliminando...' : 'Quitar foto'}
+                    </button>
+                  )}
+                </>
+              )}
+
+              {/* Botones de confirmación cuando hay preview */}
+              {preview && (
+                <>
+                  <button
+                    style={{ ...s.btnAvatarAction, background: 'var(--accent-blue)', color: '#fff', borderColor: 'var(--accent-blue)' }}
+                    onClick={handleUpload}
+                    disabled={uploading}
+                  >
+                    {uploading ? 'Guardando...' : '✓ Guardar foto'}
+                  </button>
+                  <button
+                    style={{ ...s.btnAvatarAction, color: 'var(--text-muted)' }}
+                    onClick={handleCancel}
+                    disabled={uploading}
+                  >
+                    Cancelar
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+        />
+
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+          JPG, PNG o WebP · Máximo 2 MB
+        </p>
+      </div>
+
+      <div style={s.cardFooter}>
+        <span style={s.cardStats}>Foto de perfil visible en el sidebar</span>
+      </div>
+    </div>
+  );
 }
 
 function CardConfigurarEscuela() {
@@ -187,5 +346,20 @@ const s = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-  }
+  },
+  btnAvatarAction: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 14px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-secondary)',
+    fontSize: '13px',
+    fontWeight: '600',
+    fontFamily: 'Inter, sans-serif',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
 }
