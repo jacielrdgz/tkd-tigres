@@ -15,10 +15,17 @@ class Tenant extends Model
         'disciplina',
         'configuracion',
         'plan',
+        'suscripcion_estado',
+        'suscripcion_hasta',
+        'suscripcion_monto',
+        'is_suspended',
     ];
 
     protected $casts = [
-        'configuracion' => 'array',
+        'configuracion'     => 'array',
+        'suscripcion_hasta' => 'date',
+        'suscripcion_monto' => 'decimal:2',
+        'is_suspended'      => 'boolean',
     ];
 
     /**
@@ -51,5 +58,13 @@ class Tenant extends Model
     public function escuela()
     {
         return $this->hasOne(Escuela::class);
+    }
+
+    /**
+     * Historial de suscripciones.
+     */
+    public function suscripcionHistorial()
+    {
+        return $this->hasMany(SuscripcionHistorial::class);
     }
 }

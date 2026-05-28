@@ -145,58 +145,37 @@
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
-        <h1>¡Solicitud recibida!</h1>
-        <p>Tu registro está pendiente de aprobación</p>
+        <h1>¡Cuenta Aprobada!</h1>
+        <p>Tu espacio ha sido creado con éxito</p>
       </div>
 
       <!-- Cuerpo -->
       <div class="body">
-        <p class="greeting">Hola, <strong>{{ $nombreUsuario }}</strong> 👋</p>
+        <p class="greeting">¡Felicidades, <strong>{{ $nombre }}</strong>! 👋</p>
+        
         <p class="text">
-          Hemos recibido correctamente tu solicitud de acceso para la escuela
-          <strong style="color: #e2e8f0;">{{ $nombreEscuela }}</strong>.
-          El administrador revisará tu solicitud y activará tu cuenta en breve.
+          Tu solicitud ha sido revisada y <strong>aprobada exitosamente</strong>. 
+          Hemos creado el espacio para tu escuela <strong>"{{ $escuela }}"</strong> en nuestra plataforma.
         </p>
 
-        <!-- Pasos -->
-        <div class="steps">
-          <div class="step">
-            <div class="step-dot done">✓</div>
-            <div class="step-label">
-              <strong>Solicitud recibida</strong>
-              <span>Tu información fue guardada correctamente</span>
-            </div>
-          </div>
-          <div class="step-line"></div>
-          <div class="step">
-            <div class="step-dot pending">2</div>
-            <div class="step-label">
-              <strong>Revisión del administrador</strong>
-              <span>Se asignará tu escuela y rol</span>
-            </div>
-          </div>
-          <div class="step-line"></div>
-          <div class="step">
-            <div class="step-dot inactive">3</div>
-            <div class="step-label">
-              <strong>Cuenta activada</strong>
-              <span>Recibirás otro correo cuando esté lista</span>
-            </div>
-          </div>
+        <p class="text">
+          A partir de este momento, ya tienes acceso completo como administrador (Dueño) para configurar tus grupos, instructores, alumnos y cobros.
+        </p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="{{ config('app.url') }}/login" style="background: #3b82f6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
+            Iniciar Sesión Ahora
+          </a>
         </div>
 
-        <!-- Caja de info -->
         <div class="info-box">
           <p>
-            Una vez que el administrador active tu cuenta, podrás
-            <strong>iniciar sesión normalmente</strong> con tu correo y contraseña.
-            No necesitas hacer nada más por ahora.
+            Ya puedes <strong>iniciar sesión normalmente</strong> con el correo y contraseña que registraste originalmente.
           </p>
         </div>
 
         <p class="footer-note">
-          Si no solicitaste este registro, puedes ignorar este correo.<br/>
-          Tu cuenta no será activada sin aprobación manual.
+          Si tienes dudas o problemas para acceder, no dudes en responder este correo.
         </p>
       </div>
 

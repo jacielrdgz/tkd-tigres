@@ -43,6 +43,39 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/me/avatar',   [\App\Http\Controllers\UserController::class, 'uploadAvatar']);
     Route::delete('/me/avatar', [\App\Http\Controllers\UserController::class, 'quitarAvatar']);
 
+    // Panel de Administrador Global (SuperAdmin)
+    Route::middleware(['superadmin'])->prefix('admin')->group(function () {
+        // Módulo 1: Dashboard
+        Route::get('/dashboard', [\App\Http\Controllers\AdminDashboardController::class, 'index']);
+
+        // Módulo 2: Academias
+        Route::get('/academias', [\App\Http\Controllers\AdminAcademiaController::class, 'index']);
+        Route::get('/academias/{id}', [\App\Http\Controllers\AdminAcademiaController::class, 'show']);
+        Route::post('/academias/{id}/suspender', [\App\Http\Controllers\AdminAcademiaController::class, 'suspender']);
+        Route::post('/academias/{id}/activar', [\App\Http\Controllers\AdminAcademiaController::class, 'activar']);
+        Route::delete('/academias/{id}', [\App\Http\Controllers\AdminAcademiaController::class, 'destroy']);
+
+        // Módulo 3: Solicitudes de Registro
+        Route::get('/solicitudes', [\App\Http\Controllers\AdminSolicitudController::class, 'index']);
+        Route::post('/solicitudes/{id}/aprobar', [\App\Http\Controllers\AdminSolicitudController::class, 'aprobar']);
+        Route::post('/solicitudes/{id}/rechazar', [\App\Http\Controllers\AdminSolicitudController::class, 'rechazar']);
+
+        // Módulo 4: Suscripciones
+        Route::get('/suscripciones', [\App\Http\Controllers\AdminSuscripcionController::class, 'index']);
+        Route::post('/suscripciones/{id}/renovar', [\App\Http\Controllers\AdminSuscripcionController::class, 'renovar']);
+        Route::post('/suscripciones/{id}/plan', [\App\Http\Controllers\AdminSuscripcionController::class, 'cambiarPlan']);
+
+        // Módulo 5: Usuarios
+        Route::get('/usuarios', [\App\Http\Controllers\AdminUsuarioController::class, 'index']);
+        Route::post('/usuarios/{id}/reset-password', [\App\Http\Controllers\AdminUsuarioController::class, 'resetPassword']);
+        Route::post('/usuarios/{id}/toggle-suspension', [\App\Http\Controllers\AdminUsuarioController::class, 'toggleSuspension']);
+        Route::post('/usuarios/{id}/role', [\App\Http\Controllers\AdminUsuarioController::class, 'cambiarRol']);
+
+        // Módulo 6: Configuración Global
+        Route::get('/configuracion', [\App\Http\Controllers\AdminConfiguracionController::class, 'show']);
+        Route::post('/configuracion', [\App\Http\Controllers\AdminConfiguracionController::class, 'update']);
+    });
+
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
@@ -102,6 +135,7 @@ Route::middleware('auth:sanctum')->group(function () {
         'instructores' => 'instructor'
     ]);
     Route::apiResource('users', \App\Http\Controllers\UserController::class)->middleware('role:owner');
+    Route::post('users/{id}/toggle-suspension', [\App\Http\Controllers\UserController::class, 'toggleSuspension'])->middleware('role:owner');
     
     // Configuración de la Escuela (Perfiles y Direcciones)
     Route::get('/configuracion-escuela', [\App\Http\Controllers\EscuelaController::class, 'show']);

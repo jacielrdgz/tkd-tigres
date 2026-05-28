@@ -16,6 +16,13 @@ import EventoDetalle from './pages/EventoDetalle'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Ajustes from './pages/Ajustes'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminAcademias from './pages/admin/AdminAcademias'
+import AdminAcademiaDetalle from './pages/admin/AdminAcademiaDetalle'
+import AdminSolicitudes from './pages/admin/AdminSolicitudes'
+import AdminSuscripciones from './pages/admin/AdminSuscripciones'
+import AdminUsuarios from './pages/admin/AdminUsuarios'
+import AdminConfiguracion from './pages/admin/AdminConfiguracion'
 import CintasSettings from './pages/ajustes/Cintas'
 import AjustesEscuela from './pages/ajustes/AjustesEscuela'
 import UsuariosSettings from './pages/ajustes/Usuarios'
@@ -55,6 +62,18 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Dashboard /> },
+      {
+        path: "admin",
+        children: [
+          { path: "dashboard", element: <AdminDashboard /> },
+          { path: "academias", element: <AdminAcademias /> },
+          { path: "academias/:id", element: <AdminAcademiaDetalle /> },
+          { path: "solicitudes", element: <AdminSolicitudes /> },
+          { path: "suscripciones", element: <AdminSuscripciones /> },
+          { path: "usuarios", element: <AdminUsuarios /> },
+          { path: "configuracion", element: <AdminConfiguracion /> },
+        ]
+      },
       { path: "alumnos", element: <Alumnos /> },
       { path: "pagos", element: <Pagos /> },
       { path: "asistencias", element: <Asistencias /> },

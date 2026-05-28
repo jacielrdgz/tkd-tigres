@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Mail\SolicitudRecibidaMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 
 class RegisterController extends Controller
 {
@@ -23,26 +21,19 @@ class RegisterController extends Controller
             'escuela'  => 'required|string|max:150',
         ]);
 
-        // Guardar el nombre de la escuela solicitada en un campo temporal (como nota)
+        // Guardar el nombre de la escuela solicitada en el campo escuela_solicitada
         // El tenant_id queda NULL — el admin lo asigna manualmente
         $user = User::create([
-            'name'      => $request->name,
-            'email'     => $request->email,
-            'password'  => Hash::make($request->password),
-            'role'      => 'owner',
-            'tenant_id' => null, // Pendiente de aprobación
+            'name'               => $request->name,
+            'email'              => $request->email,
+            'password'           => Hash::make($request->password),
+            'role'               => 'secretario', // Rol inicial con mínimos privilegios
+            'tenant_id'          => null, // Pendiente de aprobación
+            'escuela_solicitada' => $request->escuela,
         ]);
 
-        // Enviar correo de confirmación al usuario
-        try {
-            Mail::to($user->email)->send(new SolicitudRecibidaMail($user->name, $request->escuela));
-        } catch (\Exception $e) {
-            // Loggear el error o ignorarlo para no bloquear el registro
-            \Log::error('Error al enviar correo de solicitud: ' . $e->getMessage());
-        }
-
         return response()->json([
-            'message' => 'Solicitud recibida. Tu cuenta quedará activa una vez que sea revisada y aprobada por el administrador.',
+            'message' => 'Solicitud recibida. Tu cuenta quedará activa con el rol adecuado una vez que sea revisada y aprobada por el administrador.',
         ], 201);
     }
 }

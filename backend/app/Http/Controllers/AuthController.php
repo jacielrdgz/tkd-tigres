@@ -26,6 +26,37 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // 1. Verificar si el usuario está suspendido
+        if ($user->is_suspended) {
+            return response()->json([
+                'message' => 'Tu cuenta de usuario ha sido suspendida. Contacta con el administrador de tu escuela.'
+            ], 403);
+        }
+
+        // 2. Verificar si el tenant está suspendido (excepto SuperAdmin)
+        if (!$user->isSuperAdmin() && $user->tenant_id) {
+            $tenant = $user->tenant;
+            if ($tenant && ($tenant->is_suspended || $tenant->suscripcion_estado === 'suspendida')) {
+                return response()->json([
+                    'message' => 'El acceso para tu escuela está suspendido. Por favor, comunícate con el administrador general del sistema.'
+                ], 403);
+            }
+        }
+
+        // 3. Verificar modo mantenimiento (excepto SuperAdmin)
+        if (!$user->isSuperAdmin()) {
+            $config = \App\Models\GlobalConfig::first();
+            if ($config && $config->modo_mantenimiento) {
+                return response()->json([
+                    'message' => $config->modo_mantenimiento_mensaje ?: 'El sistema se encuentra en mantenimiento programado. Volveremos pronto.'
+                ], 503);
+            }
+        }
+
+        // Registrar último acceso
+        $user->last_login_at = now();
+        $user->save();
+
         $token = $user->createToken('tkd-token')->plainTextToken;
 
         return response()->json([

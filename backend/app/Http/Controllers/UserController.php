@@ -10,12 +10,16 @@ use Illuminate\Support\Facades\Storage;
 class UserController extends Controller
 {
     /**
-     * Listar usuarios del tenant actual.
+     * Listar usuarios.
      */
     public function index()
     {
-        if (!auth()->user()->isOwner()) {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->isOwner()) {
             return response()->json(['message' => 'No autorizado. Permisos insuficientes.'], 403);
+        }
+
+        if (auth()->user()->isSuperAdmin()) {
+            return User::with('tenant')->get();
         }
 
         // El trait BelongsToTenant ya filtra por tenant_id
@@ -27,23 +31,30 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        if (!auth()->user()->isOwner()) {
+        $isSuper = auth()->user()->isSuperAdmin();
+        if (!$isSuper && !auth()->user()->isOwner()) {
             return response()->json(['message' => 'No autorizado. Permisos insuficientes.'], 403);
         }
 
-        $validated = $request->validate([
+        $rules = [
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'role'     => 'required|string|in:owner,instructor,secretario',
-        ]);
+        ];
+
+        if ($isSuper) {
+            $rules['tenant_id'] = 'required|exists:tenants,id';
+        }
+
+        $validated = $request->validate($rules);
 
         $user = User::create([
             'name'      => $validated['name'],
             'email'     => $validated['email'],
             'password'  => Hash::make($validated['password']),
             'role'      => $validated['role'],
-            'tenant_id' => auth()->user()->tenant_id,
+            'tenant_id' => $isSuper ? $validated['tenant_id'] : auth()->user()->tenant_id,
         ]);
 
         return response()->json($user, 201);
@@ -54,26 +65,34 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        if (!auth()->user()->isOwner()) {
+        $isSuper = auth()->user()->isSuperAdmin();
+        if (!$isSuper && !auth()->user()->isOwner()) {
             return response()->json(['message' => 'No autorizado. Permisos insuficientes.'], 403);
         }
 
-        // Asegurarse de que el usuario a editar pertenece al mismo tenant
-        if ($user->tenant_id !== auth()->user()->tenant_id) {
+        // Asegurarse de que el usuario a editar pertenece al mismo tenant (solo si no es SuperAdmin)
+        if (!$isSuper && $user->tenant_id !== auth()->user()->tenant_id) {
             return response()->json(['message' => 'No encontrado'], 404);
         }
 
-        $validated = $request->validate([
+        $rules = [
             'name'     => 'sometimes|string|max:255',
             'email'    => 'sometimes|email|unique:users,email,' . $user->id,
             'password' => 'sometimes|nullable|string|min:6',
             'role'     => 'sometimes|string|in:owner,instructor,secretario',
-        ]);
+        ];
+
+        if ($isSuper) {
+            $rules['tenant_id'] = 'sometimes|exists:tenants,id';
+        }
+
+        $validated = $request->validate($rules);
 
         if (isset($validated['name'])) $user->name = $validated['name'];
         if (isset($validated['email'])) $user->email = $validated['email'];
         if (!empty($validated['password'])) $user->password = Hash::make($validated['password']);
         if (isset($validated['role'])) $user->role = $validated['role'];
+        if ($isSuper && isset($validated['tenant_id'])) $user->tenant_id = $validated['tenant_id'];
 
         $user->save();
 
@@ -85,12 +104,13 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        if (!auth()->user()->isOwner()) {
+        $isSuper = auth()->user()->isSuperAdmin();
+        if (!$isSuper && !auth()->user()->isOwner()) {
             return response()->json(['message' => 'No autorizado. Permisos insuficientes.'], 403);
         }
 
-        // Asegurarse de que el usuario a eliminar pertenece al mismo tenant
-        if ($user->tenant_id !== auth()->user()->tenant_id) {
+        // Asegurarse de que el usuario a eliminar pertenece al mismo tenant (solo si no es SuperAdmin)
+        if (!$isSuper && $user->tenant_id !== auth()->user()->tenant_id) {
             return response()->json(['message' => 'No encontrado'], 404);
         }
 
@@ -142,5 +162,42 @@ class UserController extends Controller
         }
 
         return response()->json(['message' => 'Foto eliminada']);
+    }
+
+    /**
+     * Activar o suspender cuenta de usuario del equipo.
+     */
+    public function toggleSuspension($id)
+    {
+        $currentUser = auth()->user();
+        if (!$currentUser->isOwner()) {
+            return response()->json(['message' => 'No autorizado. Permisos insuficientes.'], 403);
+        }
+
+        $user = User::findOrFail($id);
+
+        // Asegurarse de que el usuario pertenece al mismo tenant
+        if ($user->tenant_id !== $currentUser->tenant_id) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+
+        // El owner no puede suspender su propia cuenta
+        if ($user->id === $currentUser->id) {
+            return response()->json(['message' => 'No puedes suspender tu propia cuenta.'], 400);
+        }
+
+        // Solo permitir suspender rangos menores (instructor, secretario)
+        if ($user->role === 'owner') {
+            return response()->json(['message' => 'No puedes suspender a otro Administrador.'], 403);
+        }
+
+        $user->is_suspended = !$user->is_suspended;
+        $user->save();
+
+        $status = $user->is_suspended ? 'suspendido' : 'activo';
+        return response()->json([
+            'message'      => "Usuario {$status} correctamente.",
+            'is_suspended' => $user->is_suspended
+        ]);
     }
 }

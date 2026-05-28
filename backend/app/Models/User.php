@@ -15,7 +15,7 @@ use App\Models\Traits\BelongsToTenant;
 
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'tenant_id', 'role', 'avatar'])]
+#[Fillable(['name', 'email', 'password', 'tenant_id', 'role', 'avatar', 'is_superadmin', 'escuela_solicitada'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -32,7 +32,17 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_superadmin' => 'boolean',
+            'last_login_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Verificar si el usuario es el administrador global del sistema.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->is_superadmin === true;
     }
 
     /**

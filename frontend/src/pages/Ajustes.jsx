@@ -18,8 +18,8 @@ export default function Ajustes() {
       <div style={s.gridCards}>
         <CardMiPerfil />
         <CardAppearance />
-        {(user?.role === 'owner' || user?.role === 'secretario') && <CardConfigurarEscuela />}
-        {user?.role === 'owner' && <CardUsuarios />}
+        {((user?.role === 'owner' || user?.role === 'secretario') && !user?.is_superadmin) && <CardConfigurarEscuela />}
+        {(user?.role === 'owner' && !user?.is_superadmin) && <CardUsuarios />}
       </div>
     </div>
   )
@@ -255,8 +255,8 @@ function CardConfigurarEscuela() {
         {loading ? <div style={s.cardEmpty}>Cargando...</div> : (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
-              {escuela?.logo ? (
-                <img src={`${import.meta.env.VITE_API_URL}/storage/${escuela.logo}`} alt="Logo" style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover' }} />
+              {escuela?.logo_url ? (
+                <img src={`${import.meta.env.VITE_API_URL || ''}/storage/${escuela.logo_url}`} alt="Logo" style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover' }} />
               ) : (
                 <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🥋</div>
               )}
@@ -299,7 +299,19 @@ function CardUsuarios() {
         </p>
         <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-green)' }}></div>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Tu rol actual: <strong>{user?.role?.toUpperCase()}</strong></span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Tu rol actual: <strong>
+              {user?.is_superadmin 
+                ? 'SuperAdmin' 
+                : user?.role === 'owner' 
+                  ? 'Administrador' 
+                  : user?.role === 'instructor' 
+                    ? 'Instructor' 
+                    : user?.role === 'secretario' 
+                      ? 'Secretario' 
+                      : user?.role?.toUpperCase()}
+            </strong>
+          </span>
         </div>
       </div>
 

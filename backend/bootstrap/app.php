@@ -13,10 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'role' => \App\Http\Middleware\CheckRole::class,
+            'role'       => \App\Http\Middleware\CheckRole::class,
+            'superadmin' => \App\Http\Middleware\CheckSuperAdmin::class,
         ]);
         $middleware->api(prepend: [
-            \Illuminate\Http\Middleware\HandleCors::class, // ← esta línea
+            \Illuminate\Http\Middleware\HandleCors::class,
+            \App\Http\Middleware\CheckMaintenanceMode::class,
+            \App\Http\Middleware\CheckTenantStatus::class,
         ]);
 
 // $middleware->statefulApi(); // ← comentado porque usamos Bearer tokens, no cookies de sesión

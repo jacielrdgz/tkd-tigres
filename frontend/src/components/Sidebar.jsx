@@ -15,6 +15,15 @@ const menu = [
 
 const menuAjustes = { path: '/ajustes', label: 'Ajustes', icon: '⚙️' };
 
+const menuSuperAdmin = [
+  { path: '/admin/dashboard', label: 'Dashboard Global', icon: '🌍' },
+  { path: '/admin/academias', label: 'Academias', icon: '🏫' },
+  { path: '/admin/solicitudes', label: 'Solicitudes', icon: '📝' },
+  { path: '/admin/suscripciones', label: 'Suscripciones', icon: '💳' },
+  { path: '/admin/usuarios', label: 'Usuarios Globales', icon: '👥' },
+  { path: '/admin/configuracion', label: 'Configuración Global', icon: '⚙️' },
+];
+
 export default function Sidebar() {
   const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
@@ -24,7 +33,9 @@ export default function Sidebar() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef(null);
 
-  const filteredMenu = menu
+  // Si es superadmin, mostramos el menú global
+  const isSuperAdmin = user?.is_superadmin;
+  const filteredMenu = isSuperAdmin ? menuSuperAdmin : menu;
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 1024);
@@ -62,8 +73,8 @@ export default function Sidebar() {
     if (isMobile) setMobileOpen(false);
   };
 
-  const tenantName = user?.tenant?.nombre || 'Mi Escuela';
-  const planLabel = user?.tenant?.plan?.toUpperCase() || 'FREE';
+  const tenantName = isSuperAdmin ? 'Administrador Global' : (user?.tenant?.nombre || 'Mi Escuela');
+  const planLabel = isSuperAdmin ? 'SUPERADMIN' : (user?.tenant?.plan?.toUpperCase() || 'FREE');
 
   const fechaHoy = new Date().toLocaleDateString('es-MX', {
     day: 'numeric', month: 'short', year: 'numeric'
@@ -214,7 +225,17 @@ export default function Sidebar() {
             />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={styles.userName}>{user?.name || 'Usuario'}</div>
-              <div style={styles.userRole}>{user?.role === 'owner' ? 'Administrador' : user?.role || 'Rol'}</div>
+              <div style={styles.userRole}>
+                {user?.is_superadmin 
+                  ? 'SuperAdmin' 
+                  : user?.role === 'owner' 
+                    ? 'Administrador' 
+                    : user?.role === 'instructor' 
+                      ? 'Instructor' 
+                      : user?.role === 'secretario' 
+                        ? 'Secretario' 
+                        : user?.role || 'Rol'}
+              </div>
             </div>
           </div>
           <button onClick={handleLogout} style={styles.logoutBtn}>

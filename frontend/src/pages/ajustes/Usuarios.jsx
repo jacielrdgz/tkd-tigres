@@ -3,20 +3,24 @@ import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 export default function Usuarios() {
   const navigate = useNavigate()
+  const { user: currentUser } = useAuth()
   const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [selected, setSelected] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [tenants, setTenants] = useState([])
 
   const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
-    role: 'instructor'
+    role: 'instructor',
+    tenant_id: ''
   })
 
   const fetchUsuarios = async () => {
@@ -28,7 +32,14 @@ export default function Usuarios() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchUsuarios() }, [])
+  useEffect(() => {
+    fetchUsuarios()
+    if (currentUser?.is_superadmin) {
+      api.get('/admin/academias')
+        .then(res => setTenants(res.data))
+        .catch(err => console.error('Error al cargar escuelas', err))
+    }
+  }, [currentUser])
 
   const handleOpenModal = (user = null) => {
     if (user) {
@@ -37,11 +48,18 @@ export default function Usuarios() {
         name: user.name,
         email: user.email,
         password: '',
-        role: user.role
+        role: user.role,
+        tenant_id: user.tenant_id || ''
       })
     } else {
       setSelected(null)
-      setForm({ name: '', email: '', password: '', role: 'instructor' })
+      setForm({
+        name: '',
+        email: '',
+        password: '',
+        role: 'instructor',
+        tenant_id: tenants[0]?.id || ''
+      })
     }
     setShowModal(true)
   }
@@ -68,6 +86,31 @@ export default function Usuarios() {
     } finally { setSaving(false) }
   }
 
+  const handleToggleSuspension = (user) => {
+    const actionText = user.is_suspended ? 'reactivar' : 'suspender';
+    
+    Swal.fire({
+      title: `¿${actionText.charAt(0).toUpperCase() + actionText.slice(1)} usuario?`,
+      text: `¿Estás seguro de que deseas ${actionText} la cuenta de ${user.name}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: `Sí, ${actionText}`,
+      confirmButtonColor: user.is_suspended ? 'var(--accent-green)' : 'var(--accent-red)',
+      background: 'var(--bg-secondary)',
+      color: 'var(--text-primary)',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await api.post(`/users/${user.id}/toggle-suspension`);
+          toast.success(res.data.message || `Usuario actualizado correctamente`);
+          fetchUsuarios();
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error al cambiar estado de suspensión');
+        }
+      }
+    });
+  };
+
   const handleDelete = (user) => {
     Swal.fire({
       title: '¿Eliminar acceso?',
@@ -90,14 +133,14 @@ export default function Usuarios() {
     })
   }
 
-  const getRoleLabel = (role) => {
+  const getRoleLabel = (u) => {
+    if (u.is_superadmin) return 'SuperAdmin'
     const roles = {
-      owner: 'Dueño / Admin Total',
-      admin: 'Administrador',
+      owner: 'Administrador',
       instructor: 'Instructor',
-      secretary: 'Secretaria'
+      secretario: 'Secretario'
     }
-    return roles[role] || role
+    return roles[u.role] || u.role
   }
 
   return (
@@ -120,43 +163,69 @@ export default function Usuarios() {
               <div style={s.cardInfo}>
                 <div style={s.cardName}>{u.name}</div>
                 <div style={s.cardEmail}>{u.email}</div>
-                <div style={s.cardRoleBadge}>{getRoleLabel(u.role)}</div>
-              </div>
-              <div style={s.cardActions}>
-                <button
-                  style={s.btnEdit}
-                  onClick={() => handleOpenModal(u)}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = '#3b82f6';
-                    e.currentTarget.style.color = 'white';
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                    e.currentTarget.style.color = '#3b82f6';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  title="Editar"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                </button>
-                <button
-                  style={s.btnDel}
-                  onClick={() => handleDelete(u)}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = '#ef4444';
-                    e.currentTarget.style.color = 'white';
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                    e.currentTarget.style.color = '#ef4444';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  title="Borrar"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  <div style={s.cardRoleBadge}>{getRoleLabel(u)}</div>
+                  {!!u.is_suspended && (
+                    <span style={{ ...s.cardRoleBadge, background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>SUSPENDIDO</span>
+                  )}
+                </div>
+                {currentUser?.is_superadmin && (
+                  <div style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    🏫 <strong>{u.tenant?.nombre || 'Global / Sistema'}</strong>
+                    {u.tenant_id && <span style={{ marginLeft: '6px', color: 'var(--text-muted)' }}>(ID: {u.tenant_id})</span>}
+                  </div>
+                )}
+                
+                {/* Botones de acción alineados debajo */}
+                <div style={s.cardActions}>
+                  {u.id !== currentUser?.id && u.role !== 'owner' && (
+                    <button
+                      style={u.is_suspended ? s.btnActivar : s.btnSuspender}
+                      onClick={() => handleToggleSuspension(u)}
+                      title={u.is_suspended ? "Activar cuenta" : "Suspender cuenta"}
+                    >
+                      {u.is_suspended ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+                      )}
+                    </button>
+                  )}
+                  <button
+                    style={s.btnEdit}
+                    onClick={() => handleOpenModal(u)}
+                    onMouseOver={e => {
+                      e.currentTarget.style.background = '#3b82f6';
+                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.transform = 'scale(1.1)';
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                      e.currentTarget.style.color = '#3b82f6';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    title="Editar"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                  </button>
+                  <button
+                    style={s.btnDel}
+                    onClick={() => handleDelete(u)}
+                    onMouseOver={e => {
+                      e.currentTarget.style.background = '#ef4444';
+                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.transform = 'scale(1.1)';
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                      e.currentTarget.style.color = '#ef4444';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    title="Borrar"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -183,13 +252,23 @@ export default function Usuarios() {
                 <label style={s.label}>Contraseña {selected && '(dejar en blanco para no cambiar)'}</label>
                 <input style={s.input} type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} placeholder="••••••••" />
               </div>
+              {currentUser?.is_superadmin && (
+                <div style={s.inputGroup}>
+                  <label style={s.label}>Escuela / Dojo (Tenant)</label>
+                  <select style={s.input} value={form.tenant_id} onChange={e => setForm({...form, tenant_id: e.target.value})}>
+                    <option value="">Seleccionar escuela...</option>
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>[ID: {t.id}] — {t.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div style={s.inputGroup}>
                 <label style={s.label}>Rol en la Academia</label>
                 <select style={s.input} value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
-                  <option value="owner">Dueño (Admin Total)</option>
-                  <option value="admin">Administrador</option>
+                  <option value="owner">Administrador</option>
                   <option value="instructor">Instructor</option>
-                  <option value="secretary">Secretaria</option>
+                  <option value="secretario">Secretario</option>
                 </select>
               </div>
             </div>
@@ -213,7 +292,7 @@ const s = {
   btnAdd: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-md)' },
   loading: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' },
-  card: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', transition: 'transform 0.2s' },
+  card: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'flex-start', gap: '16px', transition: 'transform 0.2s' },
   cardAvatar: { width: '50px', height: '50px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: '800' },
   cardInfo: { flex: 1, minWidth: 0 },
   cardName: { fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
@@ -222,6 +301,8 @@ const s = {
   cardActions: { display: 'flex', gap: '8px' },
   btnEdit: { width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
   btnDel: { width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
+  btnActivar: { width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: 'rgba(34,197,94,0.1)', color: '#22c55e', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
+  btnSuspender: { width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
   
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
   modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '28px', width: '450px', maxWidth: '95vw', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' },

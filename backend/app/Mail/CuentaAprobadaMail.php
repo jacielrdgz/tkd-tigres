@@ -8,26 +8,36 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class SolicitudRecibidaMail extends Mailable
+class CuentaAprobadaMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(
-        public string $nombreUsuario,
-        public string $nombreEscuela,
-    ) {}
+    public $nombre;
+    public $escuela;
+
+    /**
+     * Create a new message instance.
+     */
+    public function __construct($nombre, $escuela)
+    {
+        $this->nombre = $nombre;
+        $this->escuela = $escuela;
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '✅ Solicitud recibida — ' . config('app.name'),
+            subject: '¡Tu cuenta ha sido aprobada!',
         );
     }
 
+    /**
+     * Get the message content definition.
+     */
     public function content(): Content
     {
         return new Content(
-            view: 'emails.solicitud-recibida',
+            view: 'emails.cuenta-aprobada',
         );
     }
 }

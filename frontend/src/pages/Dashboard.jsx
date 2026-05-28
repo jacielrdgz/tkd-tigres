@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 
 export default function Dashboard() {
   const { user } = useAuth()
+
+  if (user?.is_superadmin) {
+    return <Navigate to="/admin/dashboard" replace />
+  }
   const [datos, setDatos] = useState({
     alumnos_activos: 0,
     pagos_al_corriente: 0,
