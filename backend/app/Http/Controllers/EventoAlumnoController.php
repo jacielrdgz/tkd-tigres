@@ -29,6 +29,7 @@ class EventoAlumnoController extends Controller
                 $data['fecha_pago'] = $alumno->pivot->fecha_pago;
                 $data['asistio']    = $alumno->pivot->asistio;
                 $data['pago_inscripcion'] = $alumno->pivot->pago_inscripcion;
+                $data['pivot_created_at'] = $alumno->pivot->created_at;
 
                 if ($evento->tipo === 'examen') {
                     $examen = ExamenAlumno::with(['gradoActual', 'gradoSiguiente'])
@@ -200,6 +201,17 @@ class EventoAlumnoController extends Controller
                             $alumno->update(['configuracion_cinta_id' => $examen->grado_siguiente_id]);
                         }
                     }
+
+                    // REVERSIÓN AUTOMÁTICA si cambia de aprobado a pendiente o reprobado
+                    if (isset($validated['resultado_examen']) && $oldResultado === 'aprobado' && $validated['resultado_examen'] !== 'aprobado') {
+                        HistorialGrado::where('alumno_id', $alumno->id)
+                            ->where('evento_id', $evento->id)
+                            ->delete();
+
+                        if (!$examen->es_historico && $alumno->configuracion_cinta_id == $examen->grado_siguiente_id) {
+                            $alumno->update(['configuracion_cinta_id' => $examen->grado_actual_id]);
+                        }
+                    }
                 }
             }
 
@@ -225,7 +237,22 @@ class EventoAlumnoController extends Controller
     public function eliminarInscripcion(Evento $evento, Alumno $alumno)
     {
         DB::transaction(function () use ($evento, $alumno) {
-            ExamenAlumno::where('evento_id', $evento->id)->where('alumno_id', $alumno->id)->delete();
+            if ($evento->tipo === 'examen') {
+                $examen = ExamenAlumno::where('evento_id', $evento->id)->where('alumno_id', $alumno->id)->first();
+                if ($examen) {
+                    if ($examen->resultado === 'aprobado') {
+                        HistorialGrado::where('alumno_id', $alumno->id)
+                            ->where('evento_id', $evento->id)
+                            ->delete();
+
+                        if (!$examen->es_historico && $alumno->configuracion_cinta_id == $examen->grado_siguiente_id) {
+                            $alumno->update(['configuracion_cinta_id' => $examen->grado_actual_id]);
+                        }
+                    }
+                    $examen->delete();
+                }
+            }
+            
             TorneoAlumno::where('evento_id', $evento->id)->where('alumno_id', $alumno->id)->delete();
             $evento->alumnos()->detach($alumno->id);
         });

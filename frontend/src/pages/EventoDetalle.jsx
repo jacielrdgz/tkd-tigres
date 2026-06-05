@@ -2,6 +2,11 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
+import { toast } from 'react-toastify'
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { useAuth } from '../context/AuthContext'
 
 const tieneFoto = (foto) => {
   if (!foto || foto === 'null' || foto === 'NULL' || foto === '') return false
@@ -33,14 +38,35 @@ const formatFechaNatural = (fecha) => {
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+const fmtFecha = (f) => {
+  if (!f) return '—'
+  const d = new Date(f + 'T12:00:00')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${dia} ${MESES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`
+}
+
+const formatHora = (hora) => {
+  if (!hora) return ''
+  const [h, m] = hora.split(':')
+  const hrs = parseInt(h)
+  const ampm = hrs >= 12 ? 'PM' : 'AM'
+  const h12 = hrs % 12 || 12
+  return `${h12}:${m} ${ampm}`
+}
+
 export default function EventoDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [evento, setEvento]       = useState(null)
   const [inscritos, setInscritos] = useState([])
   const [alumnos, setAlumnos]     = useState([])
   const [cintas, setCintas]       = useState([])
+  const [escuelaInfo, setEscuelaInfo] = useState(null)
+  const [horarios, setHorarios]   = useState([])
   const [cargando, setCargando]   = useState(true)
   const [rowHover, setRowHover]   = useState(null)
 
@@ -61,6 +87,20 @@ export default function EventoDetalle() {
 
   // Búsqueda en tabla
   const [busquedaTabla, setBusquedaTabla] = useState('')
+  const [actualizando, setActualizando]   = useState({})
+
+  const obtenerColorResultado = (resultado, esExamen) => {
+    if (esExamen) {
+      if (resultado === 'aprobado') return '#22c55e'
+      if (resultado === 'reprobado') return '#ef4444'
+    } else {
+      if (resultado === 'oro') return '#eab308'
+      if (resultado === 'plata') return '#94a3b8'
+      if (resultado === 'bronce') return '#cd7f32'
+      if (resultado === 'eliminado') return '#ef4444'
+    }
+    return 'var(--text-primary)'
+  }
 
   useEffect(() => { cargar() }, [id])
 
@@ -78,16 +118,20 @@ export default function EventoDetalle() {
   const cargar = async () => {
     setCargando(true)
     try {
-      const [resEv, resIns, resA, resC] = await Promise.all([
+      const [resEv, resIns, resA, resC, resEsc, resHor] = await Promise.all([
         api.get(`/eventos/${id}`),
         api.get(`/eventos/${id}/inscritos`),
         api.get('/alumnos'),
         api.get('/configuraciones-cintas'),
+        api.get('/configuracion-escuela'),
+        api.get('/horarios')
       ])
       setEvento(resEv.data)
       setInscritos(resIns.data)
       setAlumnos(resA.data.filter(a => a.estatus === 'activo'))
       setCintas(resC.data)
+      setEscuelaInfo(resEsc.data)
+      setHorarios(resHor.data)
       setFormEvento({ 
         nombre: resEv.data.nombre, 
         tipo: resEv.data.tipo, 
@@ -100,8 +144,13 @@ export default function EventoDetalle() {
   }
 
   const recargarInscritos = async () => {
-    const res = await api.get(`/eventos/${id}/inscritos`)
-    setInscritos(res.data)
+    try {
+      const res = await api.get(`/eventos/${id}/inscritos`)
+      setInscritos(res.data)
+    } catch (e) {
+      console.error(e)
+      toast.error('Error al recargar la lista de inscritos')
+    }
   }
 
   const guardarEvento = async () => {
@@ -109,7 +158,10 @@ export default function EventoDetalle() {
       await api.put(`/eventos/${id}`, formEvento)
       setModalEvento(false)
       cargar()
-    } catch (e) { alert('Error al actualizar evento') }
+      toast.success('Evento actualizado con éxito')
+    } catch (e) { 
+      toast.error('Error al actualizar el evento')
+    }
   }
 
   const abrirInscripcion = () => {
@@ -185,24 +237,33 @@ export default function EventoDetalle() {
 
       if (editandoInscrito) {
         await api.put(`/eventos/${id}/alumnos/${editandoInscrito}`, payload)
+        toast.success('Inscripción actualizada correctamente')
       } else {
         await api.post(`/eventos/${id}/inscribir`, payload)
+        toast.success('Alumno inscrito correctamente')
       }
       
       setModalInscripcion(false)
       recargarInscritos()
     } catch (err) {
-      alert(err.response?.data?.message || 'Error al guardar inscripción.')
+      toast.error(err.response?.data?.message || 'Error al guardar inscripción.')
     } finally {
       setGuardando(false)
     }
   }
 
   const actualizarAtributo = async (alumnoId, data) => {
+    setActualizando(prev => ({ ...prev, [alumnoId]: true }))
     try {
       await api.put(`/eventos/${id}/alumnos/${alumnoId}`, data)
-      recargarInscritos()
-    } catch (e) { console.error(e) }
+      toast.success('Información actualizada')
+      await recargarInscritos()
+    } catch (e) { 
+      console.error(e)
+      toast.error('Error al actualizar la información')
+    } finally {
+      setActualizando(prev => ({ ...prev, [alumnoId]: false }))
+    }
   }
 
   const eliminarInscrito = async (alumnoId) => {
@@ -218,6 +279,7 @@ export default function EventoDetalle() {
       if (r.isConfirmed) {
         try {
           await api.delete(`/eventos/${id}/alumnos/${alumnoId}`)
+          toast.success('Inscripción eliminada')
           recargarInscritos()
         } catch (err) {
           Swal.fire({
@@ -246,11 +308,11 @@ export default function EventoDetalle() {
         `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.toLowerCase().includes(busquedaTabla.toLowerCase())
       )
     }
-    // Ordenar por cintas de menor a mayor
+    // Ordenar por fecha de inscripción (más antiguo a más reciente)
     return list.sort((a, b) => {
-      const ordenA = a.examen_detalle?.grado_actual?.orden || a.cinta_config?.orden || 99
-      const ordenB = b.examen_detalle?.grado_actual?.orden || b.cinta_config?.orden || 99
-      return ordenA - ordenB
+      const dateA = new Date(a.pivot_created_at || 0).getTime()
+      const dateB = new Date(b.pivot_created_at || 0).getTime()
+      return dateA - dateB
     })
   }, [inscritos, busquedaTabla])
 
@@ -270,6 +332,260 @@ export default function EventoDetalle() {
 
   const c = COLOR_TIPO[evento.tipo] || { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)' }
   const esExamen = evento.tipo === 'examen'
+
+  const recaudado = inscritosFiltrados.reduce((acc, a) => {
+    if (a.pagado) {
+      const costo = esExamen ? (a.examen_detalle?.costo_examen) : (a.torneo_detalle?.costo_torneo || evento?.costo)
+      return acc + (parseFloat(costo) || 0)
+    }
+    return acc
+  }, 0)
+
+  const handleHover = (e, color) => {
+    e.currentTarget.style.transform = 'translateY(-2px)'
+    e.currentTarget.style.boxShadow = `0 6px 20px ${color}`
+  }
+  const handleOut = (e, color) => {
+    e.currentTarget.style.transform = 'translateY(0)'
+    e.currentTarget.style.boxShadow = `0 4px 15px ${color}`
+  }
+
+  const exportarExcel = () => {
+    if (inscritosFiltrados.length === 0) return toast.info('No hay datos para exportar')
+    try {
+      const data = inscritosFiltrados.map((a, i) => {
+        const fila = {
+          '#': i + 1,
+          'Alumno': `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
+        }
+        if (esExamen) {
+          fila['Grado Actual'] = a.examen_detalle?.grado_actual?.nombre_nivel || '-'
+          fila['Grado Siguiente'] = a.examen_detalle?.grado_siguiente?.nombre_nivel || '-'
+        }
+        fila['Costo'] = esExamen 
+          ? (a.examen_detalle?.costo_examen ? `$${a.examen_detalle.costo_examen}` : '-')
+          : (a.torneo_detalle?.costo_torneo || evento?.costo ? `$${a.torneo_detalle?.costo_torneo || evento?.costo}` : '-')
+        fila['Estado Pago'] = a.pagado ? 'PAGADO' : 'PENDIENTE'
+        fila['Resultado'] = esExamen 
+          ? (a.examen_detalle?.resultado || 'pendiente')
+          : (a.torneo_detalle?.resultado || 'pendiente')
+        return fila
+      })
+      const ws = XLSX.utils.json_to_sheet(data)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "Inscritos")
+      XLSX.writeFile(wb, `Reporte_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`)
+      toast.success("Excel generado ✓")
+    } catch { toast.error("Error al generar Excel") }
+  }
+
+  const exportarPDF = () => {
+    if (inscritosFiltrados.length === 0) return toast.info('No hay datos para exportar')
+    try {
+      const doc = new jsPDF()
+      doc.setFontSize(18)
+      doc.text(`Reporte de Inscritos - TKD Tigres`, 14, 20)
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+      doc.text(`Evento: ${evento.nombre} (${evento.tipo.toUpperCase()})`, 14, 28)
+      doc.text(`Fecha del evento: ${formatFechaNatural(evento.fecha)}`, 14, 34)
+      doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 40)
+      
+      const head = esExamen 
+        ? [['#', 'Alumno', 'Grado Actual', 'Siguiente', 'Costo', 'Pago', 'Result']]
+        : [['#', 'Alumno', 'Costo', 'Pago', 'Resultado']]
+
+      const rows = inscritosFiltrados.map((a, i) => {
+        const nombre = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim()
+        const costo = esExamen ? (a.examen_detalle?.costo_examen) : (a.torneo_detalle?.costo_torneo || evento?.costo)
+        const txtCosto = costo ? `$${parseFloat(costo).toFixed(2)}` : '-'
+        const resu = esExamen ? a.examen_detalle?.resultado : a.torneo_detalle?.resultado
+        if (esExamen) {
+          return [
+            i + 1, nombre, 
+            a.examen_detalle?.grado_actual?.nombre_nivel || '-',
+            a.examen_detalle?.grado_siguiente?.nombre_nivel || '-',
+            txtCosto, a.pagado ? 'PAGADO' : 'PEND.', resu || 'pend.'
+          ]
+        }
+        return [i + 1, nombre, txtCosto, a.pagado ? 'PAGADO' : 'PEND.', resu || 'pend.']
+      })
+
+      autoTable(doc, {
+        head: head,
+        body: rows,
+        startY: 45,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246] },
+        styles: { fontSize: 8 }
+      })
+      doc.save(`Reporte_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`)
+      toast.success("PDF generado ✓")
+    } catch { toast.error("Error al generar PDF") }
+  }
+
+  const generarRecibo = async (inscrito) => {
+    try {
+      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
+      doc.setFillColor(245, 247, 250)
+      doc.rect(0, 0, 216, 279, 'F')
+      doc.setFillColor(59, 130, 246)
+      doc.rect(0, 0, 5, 279, 'F')
+
+      let logoFinal = escuelaInfo?.logo_base64
+      if (!logoFinal) {
+        try {
+          const resp = await fetch('/tigreslogo.jpg')
+          const blob = await resp.blob()
+          logoFinal = await new Promise((res, rej) => {
+            const reader = new FileReader()
+            reader.onload = () => res(reader.result)
+            reader.onerror = rej
+            reader.readAsDataURL(blob)
+          })
+        } catch (err) {}
+      }
+      if (logoFinal) {
+        const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
+        doc.addImage(logoFinal, ext, 15, 12, 32, 32)
+      } else {
+        doc.setFillColor(240, 242, 245)
+        doc.circle(31, 28, 16, 'F')
+        doc.setFontSize(20)
+        doc.setTextColor(59, 130, 246)
+        doc.text('TKD', 31, 31, { align: 'center' })
+      }
+
+      doc.setTextColor(30, 41, 59)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(22)
+      if (escuelaInfo?.nombre) doc.text(escuelaInfo.nombre.toUpperCase(), 52, 22)
+      
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+      let addressStr = ""
+      if (escuelaInfo?.direccion) {
+        const d = escuelaInfo.direccion
+        const parts = [
+          d.calle && `#${d.numero_exterior || ''}`,
+          d.colonia && `Col. ${d.colonia}`,
+          d.ciudad,
+          d.estado
+        ].filter(Boolean)
+        addressStr = (d.calle ? d.calle + " " : "") + parts.join(", ").replace(/,,/g, ',').trim()
+      }
+      let nextY = 28
+      if (addressStr) {
+        const splitAddress = doc.splitTextToSize(addressStr, 85)
+        doc.text(splitAddress, 52, nextY)
+        nextY += (splitAddress.length * 4.5)
+      }
+      const contacts = []
+      if (escuelaInfo?.telefono_contacto) contacts.push(`Tel: ${escuelaInfo.telefono_contacto}`)
+      if (escuelaInfo?.email_contacto) contacts.push(`Email: ${escuelaInfo.email_contacto}`)
+      if (contacts.length > 0) doc.text(contacts.join(" | "), 52, nextY)
+
+      doc.setFillColor(59, 130, 246)
+      doc.rect(145, 15, 55, 12, 'F')
+      doc.setTextColor(255)
+      doc.setFontSize(13)
+      doc.text("RECIBO DE PAGO", 172.5, 23, { align: 'center' })
+
+      doc.setTextColor(40)
+      doc.setFontSize(10)
+      doc.text(`Folio: #${inscrito.pivot_id || '001'}`, 145, 32)
+      doc.text(`Fecha: ${inscrito.fecha_pago ? fmtFecha(inscrito.fecha_pago.split(' ')[0]) : fmtFecha(new Date().toISOString().split('T')[0])}`, 145, 37)
+
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text("DATOS DEL ALUMNO", 15, 65)
+      doc.line(15, 67, 200, 67)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(11)
+      const nom = `${inscrito.nombre} ${inscrito.apellido_paterno} ${inscrito.apellido_materno || ''}`.trim()
+      doc.text(`Nombre: ${nom}`, 15, 75)
+      doc.text(`ID del Alumno: ${parseInt(inscrito.id)}`, 15, 81)
+      
+      const horario = horarios.find(h => String(h.id) === String(inscrito.horario_id))
+      const txtHorario = horario ? `${formatHora(horario.hora_inicio)} - ${formatHora(horario.hora_fin)}` : '-'
+      doc.text(`Clase / Horario: ${txtHorario}`, 15, 87)
+
+      const cintaTxt = esExamen 
+        ? (inscrito.examen_detalle?.grado_actual?.nombre_nivel || inscrito.cinta_config?.nombre_nivel || '-')
+        : (inscrito.cinta_config?.nombre_nivel || '-')
+      doc.text(`Grado / Cinta: ${cintaTxt}`, 15, 93)
+
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text("DETALLES DEL MOVIMIENTO", 15, 105)
+      doc.line(15, 107, 200, 107)
+
+      const costoNum = parseFloat(esExamen ? (inscrito.examen_detalle?.costo_examen) : (inscrito.torneo_detalle?.costo_torneo || evento?.costo)) || 0
+
+      let concepto = 'INSCRIPCIÓN EVENTO'
+      let detalle = evento.nombre.toUpperCase()
+      if (esExamen) {
+        concepto = 'EXAMEN TAEKWONDO'
+        const act = inscrito.examen_detalle?.grado_actual?.nombre_nivel || inscrito.cinta_config?.nombre_nivel || '-'
+        const sig = inscrito.examen_detalle?.grado_siguiente?.nombre_nivel || '-'
+        detalle = `${act.toUpperCase()} A ${sig.toUpperCase()}`
+      } else if (evento.tipo === 'torneo') {
+        concepto = 'INSCRIPCIÓN TORNEO'
+        const mods = inscrito.torneo_detalle?.modalidades?.map(m => m.nombre.toUpperCase()).join(', ')
+        detalle = mods ? `MODALIDADES: ${mods}` : evento.nombre.toUpperCase()
+      }
+
+      const fechaPagoStr = inscrito.fecha_pago 
+        ? fmtFecha(inscrito.fecha_pago.split(' ')[0]) 
+        : fmtFecha(new Date().toISOString().split('T')[0])
+
+      autoTable(doc, {
+        startY: 115,
+        head: [['CONCEPTO', 'DETALLE', 'FECHA PAGO', 'TOTAL']],
+        body: [[
+          concepto,
+          detalle,
+          fechaPagoStr,
+          `$${costoNum.toFixed(2)}`
+        ]],
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246], fontSize: 10, halign: 'center' },
+        columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
+        styles: { fontSize: 10, cellPadding: 6 }
+      })
+
+      const finalY = doc.lastAutoTable.finalY + 15
+      doc.setFillColor(255)
+      doc.rect(130, finalY, 70, 20, 'F')
+      doc.setDrawColor(59, 130, 246)
+      doc.rect(130, finalY, 70, 20, 'S')
+
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(59, 130, 246)
+      doc.text(`PAGADO: $${costoNum.toFixed(2)}`, 165, finalY + 13, { align: 'center' })
+
+      doc.setTextColor(100)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.line(15, 230, 80, 230)
+      doc.text("Firma de Administración", 47, 236, { align: 'center' })
+      doc.line(135, 230, 200, 230)
+      doc.text("Sello de la Escuela", 167, 236, { align: 'center' })
+
+      doc.setFontSize(9)
+      doc.setTextColor(150)
+      doc.text(`Este documento es un comprobante de pago simplificado generado por ${escuelaInfo?.nombre || 'Administración'}.`, 108, 265, { align: 'center' })
+      if (escuelaInfo?.nombre) {
+        doc.text(escuelaInfo.nombre, 108, 270, { align: 'center' })
+      }
+
+      doc.save(`Recibo_Evento_${nom.replace(/\s+/g, '_')}.pdf`)
+      toast.success("Recibo generado ✓")
+    } catch (e) { console.error(e); toast.error("Error al generar recibo") }
+  }
 
   const headers = [
     '#', 'Alumno',
@@ -335,31 +651,68 @@ export default function EventoDetalle() {
             <p style={s.sub}>📅 {formatFechaNatural(evento.fecha)}{evento.lugar ? ` · 📍 ${evento.lugar}` : ''}</p>
           </div>
         </div>
-        <button 
-          style={s.btnNuevo} 
-          onClick={abrirInscripcion}
-          onMouseOver={e => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
-          }}
-          onMouseOut={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-          }}
-        >+ Inscribir Alumno</button>
+        
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={s.statBadge}>
+            <span style={s.statLabel}>Total Inscritos</span>
+            <span style={s.statValor}>{inscritosFiltrados.length}</span>
+          </div>
+          <div style={{ ...s.statBadge, background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.3)' }}>
+            <span style={s.statLabel}>Total Recaudado</span>
+            <span style={s.statValor}>${recaudado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <button 
+            style={s.btnNuevo} 
+            onClick={abrirInscripcion}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+            }}
+          >+ Inscribir Alumno</button>
+        </div>
       </div>
 
-      {/* ── BARRA BÚSQUEDA ── */}
-      <div style={s.barraAcciones}>
-        <input
-          style={s.search}
-          placeholder="🔍  Buscar inscrito..."
-          value={busquedaTabla}
-          onChange={e => setBusquedaTabla(e.target.value)}
-        />
-        <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '600' }}>
-          {inscritosFiltrados.length} inscritos
-        </span>
+      {/* ── BARRA BÚSQUEDA Y EXPORTACIONES ── */}
+      <div style={s.filtrosSecundarios}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+          <input
+            style={s.search}
+            placeholder="🔍  Buscar por nombre de alumno..."
+            value={busquedaTabla}
+            onChange={e => setBusquedaTabla(e.target.value)}
+          />
+        </div>
+        
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="mobile-hide">
+          <button style={s.btnExportExcel} onClick={exportarExcel} title="Exportar a Excel"
+            onMouseOver={e => handleHover(e, 'rgba(16, 185, 129, 0.5)')}
+            onMouseOut={e => handleOut(e, 'rgba(16, 185, 129, 0.3)')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            Excel
+          </button>
+          <button style={s.btnExportPdf} onClick={exportarPDF} title="Exportar a PDF"
+            onMouseOver={e => handleHover(e, 'rgba(239, 68, 68, 0.5)')}
+            onMouseOut={e => handleOut(e, 'rgba(239, 68, 68, 0.3)')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <path d="M16 13H8"></path>
+              <path d="M16 17H8"></path>
+              <path d="M10 9H8"></path>
+            </svg>
+            PDF
+          </button>
+        </div>
       </div>
 
       {/* ── TABLA ── */}
@@ -429,7 +782,10 @@ export default function EventoDetalle() {
                           </div>
                         </div>
                         <div>
-                          <div style={{ ...s.nombreNom, maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div 
+                            title={`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`}
+                            style={{ ...s.nombreNom, maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          >
                             {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
                           </div>
                           <div style={s.emailSub}>
@@ -483,11 +839,14 @@ export default function EventoDetalle() {
                     <td style={s.td}>
                       <button
                         onClick={() => actualizarAtributo(a.id, { pagado: !a.pagado })}
+                        disabled={actualizando[a.id]}
                         onMouseOver={e => {
+                          if (actualizando[a.id]) return;
                           e.currentTarget.style.transform = 'scale(1.05)';
                           e.currentTarget.style.filter = 'brightness(1.1)';
                         }}
                         onMouseOut={e => {
+                          if (actualizando[a.id]) return;
                           e.currentTarget.style.transform = 'scale(1)';
                           e.currentTarget.style.filter = 'brightness(1)';
                         }}
@@ -496,10 +855,12 @@ export default function EventoDetalle() {
                           background: a.pagado ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                           color: a.pagado ? '#22c55e' : '#ef4444',
                           borderColor: a.pagado ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+                          opacity: actualizando[a.id] ? 0.6 : 1,
+                          pointerEvents: actualizando[a.id] ? 'none' : 'auto'
                         }}
                       >
-                        <span style={{ fontSize: '10px' }}>{a.pagado ? '●' : '○'}</span>
-                        {a.pagado ? 'PAGADO' : 'PENDIENTE'}
+                        <span style={{ fontSize: '10px' }}>{actualizando[a.id] ? '○' : (a.pagado ? '●' : '○')}</span>
+                        {actualizando[a.id] ? 'ACTUALIZANDO...' : (a.pagado ? 'PAGADO' : 'PENDIENTE')}
                       </button>
                     </td>
 
@@ -507,10 +868,11 @@ export default function EventoDetalle() {
                     <td style={s.td}>
                       <div style={{ position: 'relative', display: 'inline-block' }}>
                         <select
+                          disabled={actualizando[a.id]}
                           style={{
                             ...s.selectCompact,
-                            color: (esExamen ? (a.examen_detalle?.resultado) : (a.torneo_detalle?.resultado)) === 'aprobado' || (esExamen ? (a.examen_detalle?.resultado) : (a.torneo_detalle?.resultado)) === 'oro' ? '#22c55e' : 
-                                   (esExamen ? (a.examen_detalle?.resultado) : (a.torneo_detalle?.resultado)) === 'reprobado' ? '#ef4444' : 'var(--text-primary)'
+                            color: obtenerColorResultado(esExamen ? (a.examen_detalle?.resultado) : (a.torneo_detalle?.resultado), esExamen),
+                            opacity: actualizando[a.id] ? 0.6 : 1
                           }}
                           value={esExamen ? (a.examen_detalle?.resultado || 'pendiente') : (a.torneo_detalle?.resultado || 'pendiente')}
                           onChange={e => actualizarAtributo(a.id, esExamen ? { resultado_examen: e.target.value } : { resultado_torneo: e.target.value })}
@@ -536,6 +898,17 @@ export default function EventoDetalle() {
                     {/* Acciones */}
                     <td style={s.td}>
                       <div style={s.acciones}>
+                        {a.pagado && (
+                          <button
+                            style={{ ...s.btnIcon, background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}
+                            onClick={() => generarRecibo(a)}
+                            onMouseOver={e => { e.currentTarget.style.background = '#3b82f6'; e.currentTarget.style.color = 'white'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(59, 130, 246, 0.3)'; }}
+                            onMouseOut={e => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'; e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                            title="Descargar Recibo"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                          </button>
+                        )}
                         <button
                           style={{ ...s.btnIcon, ...s.btnEditRow }}
                           onClick={() => abrirEditarInscrito(a)}
@@ -621,12 +994,34 @@ export default function EventoDetalle() {
                 />
                 {!editandoInscrito && alumnosFiltrados.length > 0 && (
                   <div style={s.dropdown}>
-                    {alumnosFiltrados.map(a => (
-                      <div key={a.id} style={s.dropItem} onMouseDown={() => seleccionarAlumno(a)}>
-                        <div style={{ fontWeight: 600, fontSize: '14px' }}>{a.nombre} {a.apellido_paterno} {a.apellido_materno}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {Number(a.id)}</div>
-                      </div>
-                    ))}
+                    {alumnosFiltrados.map(a => {
+                      const cintaActual = cintas.find(c => c.id === a.configuracion_cinta_id);
+                      return (
+                        <div 
+                          key={a.id} 
+                          style={{ ...s.dropItem, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} 
+                          onMouseDown={() => seleccionarAlumno(a)}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '14px' }}>{a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {Number(a.id)}</div>
+                          </div>
+                          {cintaActual && (
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              background: cintaActual.color_hex || 'var(--bg-tertiary)',
+                              color: cintaActual.color_texto || 'var(--text-primary)',
+                              border: '1px solid rgba(0,0,0,0.1)'
+                            }}>
+                              {cintaActual.nombre_nivel}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -768,13 +1163,24 @@ export default function EventoDetalle() {
                 />
               </div>
             </div>
-            <div style={s.campoGroup}>
-              <label style={s.label}>Lugar</label>
-              <input 
-                style={s.input} 
-                value={formEvento.lugar} 
-                onChange={e => setFormEvento({...formEvento, lugar: e.target.value})} 
-              />
+            <div style={s.grid2}>
+              <div>
+                <label style={s.label}>Lugar</label>
+                <input 
+                  style={s.input} 
+                  value={formEvento.lugar} 
+                  onChange={e => setFormEvento({...formEvento, lugar: e.target.value})} 
+                />
+              </div>
+              <div>
+                <label style={s.label}>Costo General ($)</label>
+                <input 
+                  style={s.input} 
+                  type="number"
+                  value={formEvento.costo} 
+                  onChange={e => setFormEvento({...formEvento, costo: e.target.value})} 
+                />
+              </div>
             </div>
             <div style={s.modalFooter}>
               <button 
@@ -825,10 +1231,16 @@ const s = {
   tabla:       { background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-md)', width: '100%', boxSizing: 'border-box' },
   tablaScroll: { width: '100%', overflowX: 'auto', overflowY: 'hidden' },
   table:       { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '1000px' },
-  th:          { padding: '10px 16px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: 'var(--bg-tertiary)' },
+  th:          { padding: '14px 16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: 'var(--bg-tertiary)' },
   tr:          { borderBottom: '1px solid var(--border)' },
-  td:          { padding: '10px 16px', fontSize: '14px', color: 'var(--text-secondary)', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden' },
+  td:          { padding: '14px 16px', fontSize: '14px', color: 'var(--text-secondary)', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden' },
   tdCenter:    { padding: '48px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' },
+  filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
+  btnExportExcel: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' },
+  btnExportPdf: { background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)' },
+  statBadge: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '12px 24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.3)', color: '#fff', minWidth: '140px' },
+  statLabel: { fontSize: '10px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  statValor: { fontSize: '22px', fontWeight: '900', color: '#fff', lineHeight: 1.2 },
   fotoBox:     { width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border)', flexShrink: 0, background: 'var(--bg-tertiary)', position: 'relative' },
   fotoImg:     { width: '100%', height: '100%', objectFit: 'cover' },
   fotoVacia:   { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: 'var(--accent-blue)', position: 'absolute', top: 0, left: 0 },
