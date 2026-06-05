@@ -10,6 +10,14 @@ class ConfiguracionCintaController extends Controller
 {
     public function index(Request $request)
     {
+        $tenant = auth()->user()->tenant;
+        if ($tenant) {
+            $config = $tenant->configuracion ?? [];
+            if (empty($config['setup_confirmado']['cintas'])) {
+                $config['setup_confirmado']['cintas'] = true;
+                $tenant->update(['configuracion' => $config]);
+            }
+        }
         return ConfiguracionCinta::orderBy('orden')->get();
     }
 
@@ -59,6 +67,26 @@ class ConfiguracionCintaController extends Controller
             return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al actualizar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function reorder(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'orden' => 'required|array',
+                'orden.*' => 'integer|exists:configuraciones_cintas,id',
+            ]);
+
+            foreach ($validated['orden'] as $index => $id) {
+                ConfiguracionCinta::where('id', $id)->update(['orden' => $index + 1]);
+            }
+
+            return response()->json(['message' => 'Orden actualizado correctamente']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al reordenar: ' . $e->getMessage()], 500);
         }
     }
 

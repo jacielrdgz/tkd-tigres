@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Módulo 2: Academias
         Route::get('/academias', [\App\Http\Controllers\AdminAcademiaController::class, 'index']);
         Route::get('/academias/{id}', [\App\Http\Controllers\AdminAcademiaController::class, 'show']);
+        Route::get('/academias/{id}/usuarios', [\App\Http\Controllers\AdminAcademiaController::class, 'usuarios']);
         Route::post('/academias/{id}/suspender', [\App\Http\Controllers\AdminAcademiaController::class, 'suspender']);
         Route::post('/academias/{id}/activar', [\App\Http\Controllers\AdminAcademiaController::class, 'activar']);
         Route::delete('/academias/{id}', [\App\Http\Controllers\AdminAcademiaController::class, 'destroy']);
@@ -70,6 +71,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/usuarios/{id}/reset-password', [\App\Http\Controllers\AdminUsuarioController::class, 'resetPassword']);
         Route::post('/usuarios/{id}/toggle-suspension', [\App\Http\Controllers\AdminUsuarioController::class, 'toggleSuspension']);
         Route::post('/usuarios/{id}/role', [\App\Http\Controllers\AdminUsuarioController::class, 'cambiarRol']);
+        Route::post('/usuarios/{id}/cambiar-escuela', [\App\Http\Controllers\AdminUsuarioController::class, 'cambiarEscuela']);
+        Route::delete('/usuarios/{id}', [\App\Http\Controllers\AdminUsuarioController::class, 'destroy']);
 
         // Módulo 6: Configuración Global
         Route::get('/configuracion', [\App\Http\Controllers\AdminConfiguracionController::class, 'show']);
@@ -129,6 +132,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('eventos/{evento}/modalidades/{modalidad}', [\App\Http\Controllers\TorneoController::class, 'eliminarModalidad']);
     Route::put('torneos/{torneoAlumnoId}/modalidades/{modalidad}/resultado', [\App\Http\Controllers\TorneoController::class, 'actualizarResultadoModalidad']);
     Route::post('torneos/{torneoAlumnoId}/modalidades', [\App\Http\Controllers\TorneoController::class, 'inscribirModalidad']);
+    Route::post('configuraciones-cintas/reorder', [ConfiguracionCintaController::class, 'reorder']);
     Route::apiResource('configuraciones-cintas', ConfiguracionCintaController::class);
     Route::apiResource('horarios', HorarioController::class);
     Route::apiResource('instructores', \App\Http\Controllers\InstructorController::class)->parameters([
@@ -138,6 +142,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('users/{id}/toggle-suspension', [\App\Http\Controllers\UserController::class, 'toggleSuspension'])->middleware('role:owner');
     
     // Configuración de la Escuela (Perfiles y Direcciones)
+    Route::get('/configuracion-escuela/status', [\App\Http\Controllers\EscuelaController::class, 'configStatus']);
+    Route::post('/configuracion-escuela/confirmar-paso', [\App\Http\Controllers\EscuelaController::class, 'confirmarPaso']);
     Route::get('/configuracion-escuela', [\App\Http\Controllers\EscuelaController::class, 'show']);
     Route::post('/configuracion-escuela', [\App\Http\Controllers\EscuelaController::class, 'update']);
 });

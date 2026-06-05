@@ -41,6 +41,17 @@ export default function InstructorManager() {
 
   useEffect(() => { fetchData() }, [])
 
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        setShowModal(false)
+        setShowCredencial(false)
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [])
+
   const handleOpenModal = (inst = null) => {
     if (inst) {
       setSelected(inst)
@@ -151,7 +162,18 @@ export default function InstructorManager() {
           <h3 style={s.tabTitle}>Nuestros Instructores</h3>
           <p style={s.tabSubtitle}>Gestiona el equipo docente de tu academia.</p>
         </div>
-        <button style={s.btnAdd} onClick={() => handleOpenModal()}>+ Nuevo Instructor</button>
+        <button 
+          style={s.btnAdd} 
+          onClick={() => handleOpenModal()}
+          onMouseOver={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+          }}
+        >+ Nuevo Instructor</button>
       </div>
 
       {loading ? <div style={s.loading}>Cargando equipo...</div> : (
@@ -172,9 +194,83 @@ export default function InstructorManager() {
                 </div>
               </div>
               <div style={s.instActions}>
-                <button style={s.btnIcon} onClick={() => openCredencial(inst)} title="Ver Credencial">🪪</button>
-                <button style={s.btnIcon} onClick={() => handleOpenModal(inst)} title="Editar">✏️</button>
-                <button style={{...s.btnIcon, color: 'var(--accent-red)'}} onClick={() => handleDelete(inst)} title="Eliminar">🗑️</button>
+                <button
+                  style={{
+                    ...s.btnIcon,
+                    background: 'rgba(168,85,247,0.1)',
+                    border: '1px solid rgba(168,85,247,0.3)',
+                    color: '#a855f7',
+                  }}
+                  onClick={() => openCredencial(inst)}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = '#a855f7';
+                    e.currentTarget.style.color = 'white';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(168,85,247,0.1)';
+                    e.currentTarget.style.color = '#a855f7';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  title="Ver Credencial"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2" ry="2"/>
+                    <line x1="7" y1="8" x2="17" y2="8"/>
+                    <line x1="7" y1="12" x2="17" y2="12"/>
+                    <line x1="7" y1="16" x2="13" y2="16"/>
+                  </svg>
+                </button>
+                <button
+                  style={{
+                    ...s.btnIcon,
+                    background: 'rgba(59,130,246,0.1)',
+                    border: '1px solid rgba(59,130,246,0.3)',
+                    color: '#3b82f6',
+                  }}
+                  onClick={() => handleOpenModal(inst)}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = '#3b82f6';
+                    e.currentTarget.style.color = 'white';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(59,130,246,0.1)';
+                    e.currentTarget.style.color = '#3b82f6';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  title="Editar"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button
+                  style={{
+                    ...s.btnIcon,
+                    background: 'rgba(239,68,68,0.1)',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    color: '#ef4444',
+                  }}
+                  onClick={() => handleDelete(inst)}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = '#ef4444';
+                    e.currentTarget.style.color = 'white';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+                    e.currentTarget.style.color = '#ef4444';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  title="Eliminar"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </button>
               </div>
             </div>
           ))}
@@ -188,7 +284,18 @@ export default function InstructorManager() {
           <div style={s.modal}>
             <div style={s.modalHeader}>
               <h4 style={s.modalTitle}>{selected ? 'Editar Instructor' : 'Nuevo Instructor'}</h4>
-              <button style={s.btnClose} onClick={() => setShowModal(false)}>×</button>
+              <button 
+                style={s.btnClose} 
+                onClick={() => setShowModal(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'scale(1.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >×</button>
             </div>
             
             <div style={s.modalBody}>
@@ -238,8 +345,33 @@ export default function InstructorManager() {
             </div>
 
             <div style={s.modalFooter}>
-              <button style={s.btnCancel} onClick={() => setShowModal(false)}>Cancelar</button>
-              <button style={s.btnSave} onClick={handleSave} disabled={saving}>{saving ? 'Guardando...' : 'Guardar Instructor'}</button>
+              <button 
+                style={s.btnCancel} 
+                onClick={() => setShowModal(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >Cancelar</button>
+              <button 
+                style={s.btnSave} 
+                onClick={handleSave} 
+                disabled={saving}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >{saving ? 'Guardando...' : 'Guardar Instructor'}</button>
             </div>
           </div>
         </div>
@@ -251,7 +383,18 @@ export default function InstructorManager() {
           <div style={s.credCard}>
             <div style={s.credHeader}>
               <h4 style={s.credTitle}>Credencial de Instructor</h4>
-              <button style={s.btnClose} onClick={() => setShowCredencial(false)}>×</button>
+              <button 
+                style={s.btnClose} 
+                onClick={() => setShowCredencial(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'scale(1.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >×</button>
             </div>
             <div style={s.credBody}>
               <div style={s.credPhotoBox}>
@@ -283,7 +426,18 @@ export default function InstructorManager() {
               </div>
             </div>
             <div style={s.credFooter}>
-              <button style={s.btnPrimary} onClick={() => window.print()}>Imprimir Credencial</button>
+              <button 
+                style={s.btnPrimary} 
+                onClick={() => window.print()}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >Imprimir Credencial</button>
             </div>
           </div>
         </div>
@@ -297,11 +451,11 @@ const s = {
   headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' },
   tabTitle: { fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 },
   tabSubtitle: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
-  btnAdd: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', fontSize: '14px', boxShadow: 'var(--shadow-md)' },
+  btnAdd: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', fontSize: '14px', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s' },
   loading: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
   empty: { gridColumn: '1 / -1', padding: '60px', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg-secondary)', borderRadius: '24px', border: '1px dashed var(--border)' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' },
-  instCard: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'center', gap: '20px', transition: 'transform 0.2s' },
+  instCard: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'center', gap: '20px', transition: 'all 0.2s' },
   instPhoto: { width: '70px', height: '70px', borderRadius: '18px', background: 'var(--bg-primary)', overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)' },
   photo: { width: '100%', height: '100%', objectFit: 'cover' },
   photoPlaceholder: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' },
@@ -309,13 +463,13 @@ const s = {
   instName: { fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   instBadge: { display: 'inline-block', padding: '4px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '900', color: '#fff', textTransform: 'uppercase' },
   instActions: { display: 'flex', gap: '8px' },
-  btnIcon: { background: 'var(--bg-tertiary)', border: 'none', borderRadius: '10px', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' },
+  btnIcon: { background: 'var(--bg-tertiary)', border: 'none', borderRadius: '10px', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'all 0.2s' },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
   modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '28px', width: '600px', maxWidth: '95vw', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' },
   modalHeader: { padding: '24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   modalTitle: { margin: 0, fontSize: '20px', fontWeight: '900' },
-  btnClose: { background: 'none', border: 'none', fontSize: '28px', color: 'var(--text-muted)', cursor: 'pointer' },
+  btnClose: { background: 'none', border: 'none', fontSize: '28px', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' },
   modalBody: { padding: '30px', display: 'flex', gap: '30px' },
   modalPhotoSection: { width: '160px' },
   modalPhotoFrame: { width: '160px', height: '200px', borderRadius: '24px', background: 'var(--bg-primary)', border: '2px dashed var(--border)', overflow: 'hidden', position: 'relative' },
@@ -328,8 +482,8 @@ const s = {
   label: { fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
   input: { width: '100%', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 14px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' },
   modalFooter: { padding: '24px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' },
-  btnCancel: { background: 'none', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' },
-  btnSave: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 30px', fontWeight: '800', cursor: 'pointer' },
+  btnCancel: { background: 'none', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
+  btnSave: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 30px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' },
 
   credCard: { background: 'var(--bg-secondary)', borderRadius: '30px', width: '400px', maxWidth: '95vw', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' },
   credHeader: { padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' },
@@ -345,5 +499,5 @@ const s = {
   credCinta: { display: 'inline-block', padding: '6px 20px', borderRadius: '10px', color: '#fff', fontSize: '13px', fontWeight: '900', marginBottom: '24px', textTransform: 'uppercase' },
   credGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '20px' },
   credFooter: { padding: '24px', borderTop: '1px solid var(--border)', textAlign: 'center' },
-  btnPrimary: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 40px', fontWeight: '800', cursor: 'pointer' }
+  btnPrimary: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 40px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }
 }

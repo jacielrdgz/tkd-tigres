@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react'
 import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -6,6 +7,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider, useTheme } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Sidebar from './components/Sidebar'
+import Topbar from './components/Topbar'
 import Dashboard from './pages/Dashboard'
 import Alumnos from './pages/Alumnos'
 import Pagos from './pages/Pagos'
@@ -26,15 +28,27 @@ import AdminConfiguracion from './pages/admin/AdminConfiguracion'
 import CintasSettings from './pages/ajustes/Cintas'
 import AjustesEscuela from './pages/ajustes/AjustesEscuela'
 import UsuariosSettings from './pages/ajustes/Usuarios'
+import SetupGuard from './components/SetupGuard'
 
 /**
  * Layout principal con Sidebar (solo cuando está autenticado).
  */
 function AppLayout() {
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 1024)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   return (
     <div className="app-layout">
-      <Sidebar />
-      <main className="app-main">
+      {isMobile && <Topbar onToggleSidebar={() => setMobileOpen(true)} />}
+      <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+      <main className="app-main" style={isMobile ? { paddingTop: '60px' } : {}}>
         <Outlet />
       </main>
     </div>
@@ -74,12 +88,12 @@ const router = createBrowserRouter([
           { path: "configuracion", element: <AdminConfiguracion /> },
         ]
       },
-      { path: "alumnos", element: <Alumnos /> },
-      { path: "pagos", element: <Pagos /> },
-      { path: "asistencias", element: <Asistencias /> },
-      { path: "asistencias-antiguo", element: <AsistenciasAntiguo /> },
-      { path: "eventos", element: <Eventos /> },
-      { path: "eventos/:id", element: <EventoDetalle /> },
+      { path: "alumnos", element: <SetupGuard><Alumnos /></SetupGuard> },
+      { path: "pagos", element: <SetupGuard><Pagos /></SetupGuard> },
+      { path: "asistencias", element: <SetupGuard><Asistencias /></SetupGuard> },
+      { path: "asistencias-antiguo", element: <SetupGuard><AsistenciasAntiguo /></SetupGuard> },
+      { path: "eventos", element: <SetupGuard><Eventos /></SetupGuard> },
+      { path: "eventos/:id", element: <SetupGuard><EventoDetalle /></SetupGuard> },
       {
         path: "ajustes",
         element: <Outlet />,

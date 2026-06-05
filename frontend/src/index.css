@@ -97,6 +97,7 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -504,3 +505,111 @@ body {
 .gap-sm { gap: 8px; }
 .gap-md { gap: 16px; }
 .gap-lg { gap: 24px; }
+
+/* ============================================================
+   Responsive Usability Overrides (Celular / Tablet)
+   ============================================================ */
+
+/* Botón flotante de acción principal (FAB) */
+.fab-button {
+  position: fixed;
+  bottom: 85px; /* Sobre la barra inferior (65px) + 20px margen */
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+  cursor: pointer;
+  z-index: 90;
+  font-size: 24px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.fab-button:active {
+  transform: scale(0.93);
+}
+
+@media (max-width: 640px) {
+  /* Prevenir zoom automático en inputs en iOS */
+  input, select, textarea, .input, .select, .textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Altura mínima de 44px para blancos táctiles */
+  button, select, input, .btn, .btn-action, .input, .select {
+    min-height: 44px;
+  }
+  
+  /* Sobrescribir modales inline para pantalla completa en móvil */
+  .mobile-fullscreen-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    position: fixed !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    padding: 24px 20px 80px 20px !important; /* Espacio extra abajo para no chocar con teclado */
+    overflow-y: auto !important;
+    background: var(--bg-secondary) !important;
+  }
+
+  .mobile-fullscreen-overlay {
+    background: var(--bg-secondary) !important;
+    padding: 0 !important;
+    inset: 0 !important;
+    z-index: 1050 !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Ocultar botones de exportar u otras acciones secundarias en el header del contenido */
+  .mobile-hide {
+    display: none !important;
+  }
+
+  /* Forzar grids de 2 columnas a 1 columna */
+  .mobile-grid-1 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ============================================================
+   Sidebar Navigation Links
+   ============================================================ */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.sidebar-link:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-link.active {
+  background: var(--accent-blue-bg);
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.sidebar-link.active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}

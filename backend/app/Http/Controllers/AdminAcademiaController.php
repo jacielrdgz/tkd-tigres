@@ -178,4 +178,27 @@ class AdminAcademiaController extends Controller
 
         return response()->json(['message' => 'Academia eliminada permanentemente.']);
     }
+
+    /**
+     * Listar los usuarios de una academia específica.
+     */
+    public function usuarios($id)
+    {
+        $tenant = Tenant::findOrFail($id);
+
+        $usuarios = User::where('tenant_id', $tenant->id)
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id'            => $u->id,
+                    'name'          => $u->name,
+                    'email'         => $u->email,
+                    'role'          => $u->role,
+                    'is_suspended'  => $u->is_suspended,
+                    'last_login_at' => $u->last_login_at,
+                ];
+            });
+
+        return response()->json($usuarios);
+    }
 }

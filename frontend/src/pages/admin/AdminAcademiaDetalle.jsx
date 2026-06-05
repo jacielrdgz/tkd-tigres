@@ -2,15 +2,18 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 export default function AdminAcademiaDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [usuarios, setUsuarios] = useState([]);
 
   useEffect(() => {
     fetchDetail();
+    fetchUsuarios();
   }, [id]);
 
   const fetchDetail = async () => {
@@ -24,6 +27,39 @@ export default function AdminAcademiaDetalle() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchUsuarios = async () => {
+    try {
+      const res = await api.get(`/admin/academias/${id}/usuarios`);
+      setUsuarios(res.data);
+    } catch {
+      console.error('Error al cargar usuarios de la academia');
+    }
+  };
+
+  const handleDeleteUser = (user) => {
+    Swal.fire({
+      title: '¿Eliminar usuario?',
+      html: `Se eliminará permanentemente a <strong>${user.name}</strong> (${user.email}).`,
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      confirmButtonColor: '#ef4444',
+      background: 'var(--bg-secondary)',
+      color: 'var(--text-primary)',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await api.delete(`/admin/usuarios/${user.id}`);
+          toast.success('Usuario eliminado');
+          fetchUsuarios();
+          fetchDetail();
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error al eliminar');
+        }
+      }
+    });
   };
 
   if (loading) {
@@ -47,7 +83,20 @@ export default function AdminAcademiaDetalle() {
 
   return (
     <div style={styles.container}>
-      <button style={styles.btnBack} onClick={() => navigate('/admin/academias')}>← Volver a academias</button>
+      <button 
+        style={styles.btnBack} 
+        onClick={() => navigate('/admin/academias')}
+        onMouseOver={e => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+          e.currentTarget.style.color = '#ffffff';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={e => {
+          e.currentTarget.style.background = 'var(--bg-secondary)';
+          e.currentTarget.style.color = 'var(--text-muted)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
+      >← Volver a academias</button>
 
       <div style={styles.header}>
         <div>
@@ -169,6 +218,95 @@ export default function AdminAcademiaDetalle() {
           </div>
         )}
       </div>
+
+      {/* Usuarios de la Academia */}
+      <div style={{ ...styles.sectionCard, marginTop: '30px' }}>
+        <h3 style={styles.sectionTitle}>Usuarios de esta Academia</h3>
+        {usuarios.length === 0 ? (
+          <p style={styles.emptyHistorial}>No hay usuarios registrados en esta academia.</p>
+        ) : (
+          <div style={styles.tableResponsive}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Nombre</th>
+                  <th style={styles.th}>Correo</th>
+                  <th style={styles.th}>Rol</th>
+                  <th style={styles.th}>Estado</th>
+                  <th style={styles.th}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map(u => (
+                  <tr key={u.id} style={styles.tr}>
+                    <td style={{ ...styles.td, fontWeight: 600 }}>{u.name}</td>
+                    <td style={styles.td}>{u.email}</td>
+                    <td style={styles.td}>
+                      <span style={{
+                        padding: '3px 10px',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        background: u.role === 'owner' ? 'rgba(59,130,246,0.1)' : u.role === 'instructor' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
+                        color: u.role === 'owner' ? '#3b82f6' : u.role === 'instructor' ? '#f59e0b' : '#10b981',
+                      }}>
+                        {u.role === 'owner' ? 'Administrador' : u.role === 'instructor' ? 'Instructor' : 'Secretario'}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        color: '#fff',
+                        background: u.is_suspended ? '#ef4444' : '#22c55e',
+                      }}>
+                        {u.is_suspended ? 'Suspendido' : 'Activo'}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <button
+                        onClick={() => handleDeleteUser(u)}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(239,68,68,0.3)',
+                          background: 'rgba(239,68,68,0.1)',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseOver={e => {
+                          e.currentTarget.style.background = '#ef4444';
+                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+                          e.currentTarget.style.color = '#ef4444';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title="Eliminar usuario"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -181,7 +319,7 @@ function floatVal(v) {
 const styles = {
   container: { padding: '32px 24px', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' },
   loading: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
-  btnBack: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginBottom: '24px' },
+  btnBack: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginBottom: '24px', transition: 'all 0.2s' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '36px', borderBottom: '1px solid var(--border)', paddingBottom: '24px' },
   idLabel: { fontSize: '11px', fontWeight: '800', color: 'var(--accent-blue)', background: 'var(--accent-blue-bg)', padding: '3px 8px', borderRadius: '6px', letterSpacing: '0.5px' },
   title: { fontSize: '32px', fontWeight: '900', marginTop: '8px' },

@@ -13,6 +13,9 @@ class EscuelaController extends Controller
     public function show()
     {
         $tenant = auth()->user()->tenant;
+        if (!$tenant) {
+            return response()->json(['message' => 'No tienes una escuela asignada aún. Contacta al administrador.'], 403);
+        }
         
         // Carga o crea la escuela asociada al tenant
         $escuela = Escuela::with('direccion')->firstOrCreate(
@@ -25,6 +28,15 @@ class EscuelaController extends Controller
         );
 
         $escuela->load('direccion');
+
+        // Marcar como confirmado si ya contiene datos y el usuario visita la página
+        if ($escuela->nombre && $escuela->titular) {
+            $config = $tenant->configuracion ?? [];
+            if (empty($config['setup_confirmado']['info_basica'])) {
+                $config['setup_confirmado']['info_basica'] = true;
+                $tenant->update(['configuracion' => $config]);
+            }
+        }
 
         // Adjuntar logo en base64 para evitar problemas de CORS en el PDF del frontend
         $logoBase64 = null;
@@ -42,7 +54,17 @@ class EscuelaController extends Controller
     public function update(Request $request)
     {
         $tenant = auth()->user()->tenant;
-        $escuela = $tenant->escuela()->firstOrCreate(['tenant_id' => $tenant->id]);
+        if (!$tenant) {
+            return response()->json(['message' => 'No tienes una escuela asignada aún. Contacta al administrador.'], 403);
+        }
+        $escuela = Escuela::firstOrCreate(
+            ['tenant_id' => $tenant->id],
+            [
+                'nombre' => $tenant->nombre,
+                'logo_url' => $tenant->logo,
+                'disciplina' => $tenant->disciplina ?? 'taekwondo'
+            ]
+        );
 
         $validated = $request->validate([
             'nombre'            => 'required|string|max:255',
@@ -93,6 +115,107 @@ class EscuelaController extends Controller
             ])
         );
 
+        // Al guardar cambios, se confirma automáticamente la información básica
+        $config = $tenant->configuracion ?? [];
+        $config['setup_confirmado']['info_basica'] = true;
+        $tenant->update(['configuracion' => $config]);
+
         return response()->json($escuela->load('direccion'));
+    }
+
+    /**
+     * Retorna el estado de configuración de la escuela.
+     */
+    public function configStatus()
+    {
+        $tenant = auth()->user()->tenant;
+        if (!$tenant) {
+            return response()->json([
+                'configurado' => false,
+                'pasos' => [
+                    'info_basica' => false,
+                    'cintas' => false,
+                    'horarios' => false,
+                ]
+            ]);
+        }
+
+        $escuela = Escuela::where('tenant_id', $tenant->id)->first();
+        
+        $config = $tenant->configuracion ?? [];
+        $infoConfirmada = isset($config['setup_confirmado']['info_basica']) && $config['setup_confirmado']['info_basica'];
+        $cintasConfirmadas = isset($config['setup_confirmado']['cintas']) && $config['setup_confirmado']['cintas'];
+        
+        $infoCompleta = $escuela && $escuela->nombre && $escuela->titular && $infoConfirmada;
+        
+        $tieneCintas = \App\Models\ConfiguracionCinta::withoutGlobalScopes()->where('tenant_id', $tenant->id)->exists();
+        $cintasCompleta = $tieneCintas && $cintasConfirmadas;
+        
+        $tieneHorarios = \App\Models\Horario::withoutGlobalScopes()->where('tenant_id', $tenant->id)->exists();
+
+        $configurado = $infoCompleta && $cintasCompleta && $tieneHorarios;
+
+        return response()->json([
+            'configurado' => (bool) $configurado,
+            'pasos' => [
+                'info_basica' => (bool) $infoCompleta,
+                'cintas' => (bool) $cintasCompleta,
+                'horarios' => (bool) $tieneHorarios,
+            ]
+        ]);
+    }
+
+    /**
+     * Confirma un paso preestablecido de configuración usando valores por defecto.
+     */
+    public function confirmarPaso(Request $request)
+    {
+        $request->validate([
+            'paso' => 'required|in:info_basica,cintas'
+        ]);
+
+        $tenant = auth()->user()->tenant;
+        if (!$tenant) {
+            return response()->json(['message' => 'No tienes una escuela asignada.'], 403);
+        }
+
+        $paso = $request->paso;
+        $config = $tenant->configuracion ?? [];
+
+        if ($paso === 'info_basica') {
+            $escuela = Escuela::firstOrCreate(
+                ['tenant_id' => $tenant->id],
+                [
+                    'nombre' => $tenant->nombre,
+                    'titular' => auth()->user()->name,
+                    'disciplina' => 'taekwondo',
+                    'email_contacto' => auth()->user()->email
+                ]
+            );
+
+            if (empty($escuela->nombre)) {
+                $escuela->nombre = $tenant->nombre;
+            }
+            if (empty($escuela->titular)) {
+                $escuela->titular = auth()->user()->name;
+            }
+            if (empty($escuela->disciplina)) {
+                $escuela->disciplina = 'taekwondo';
+            }
+            if (empty($escuela->email_contacto)) {
+                $escuela->email_contacto = auth()->user()->email;
+            }
+            $escuela->save();
+        } elseif ($paso === 'cintas') {
+            $tieneCintas = \App\Models\ConfiguracionCinta::withoutGlobalScopes()->where('tenant_id', $tenant->id)->exists();
+            if (!$tieneCintas) {
+                \App\Services\DefaultCintasService::crearCintasPorDefecto($tenant->id);
+            }
+        }
+
+        $config['setup_confirmado'][$paso] = true;
+        $tenant->update(['configuracion' => $config]);
+
+        return response()->json(['success' => true]);
     }
 }

@@ -85,6 +85,18 @@ export default function Alumnos() {
   const [cintasConfig, setCintasConfig] = useState([])
   const [searchParams, setSearchParams] = useSearchParams()
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
+  const [isTablet, setIsTablet] = useState(window.innerWidth > 640 && window.innerWidth <= 1024)
+
+  useEffect(() => {
+    const check = () => {
+      setIsMobile(window.innerWidth <= 640)
+      setIsTablet(window.innerWidth > 640 && window.innerWidth <= 1024)
+    }
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   // Estados de filtros — se inicializan desde la URL
   const [busqueda, setBusqueda] = useState(searchParams.get('busqueda') || '')
   const [busquedaInput, setBusquedaInput] = useState(searchParams.get('busqueda') || '')
@@ -559,6 +571,7 @@ export default function Alumnos() {
         {user?.role !== 'instructor' && (
           <button
             style={s.btnNuevoAlumno}
+            className="mobile-hide"
             onClick={abrirCrear}
             onMouseOver={e => handleHover(e, 'rgba(59, 130, 246, 0.6)')}
             onMouseOut={e => handleOut(e, 'rgba(59, 130, 246, 0.4)')}
@@ -627,9 +640,9 @@ export default function Alumnos() {
       </div>
 
       <div style={s.filtrosSecundarios}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
-            style={{ ...s.selectFiltro, width: '150px' }}
+            style={{ ...s.selectFiltro, width: isMobile ? '100%' : '150px' }}
             value={cintaFiltro}
             onChange={e => setCintaFiltro(e.target.value)}
           >
@@ -637,7 +650,7 @@ export default function Alumnos() {
             {cintasConfig.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
           </select>
 
-          <select style={{ ...s.selectFiltro, width: '150px' }} value={edadFiltro} onChange={e => setEdadFiltro(e.target.value)}>
+          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '150px' }} value={edadFiltro} onChange={e => setEdadFiltro(e.target.value)}>
             <option value="">Todas las edades</option>
             <option value="infantil">Infantil (3-11)</option>
             <option value="cadete">Cadete (12-14)</option>
@@ -645,14 +658,14 @@ export default function Alumnos() {
             <option value="adultos">Adultos (+18)</option>
           </select>
 
-          <select style={{ ...s.selectFiltro, width: '160px' }} value={horarioFiltro} onChange={e => setHorarioFiltro(e.target.value)}>
+          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '160px' }} value={horarioFiltro} onChange={e => setHorarioFiltro(e.target.value)}>
             <option value="">Todos los horarios</option>
             {horarios.map(h => (
               <option key={h.id} value={h.id}>{h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})</option>
             ))}
           </select>
 
-          <select style={{ ...s.selectFiltro, width: '160px' }} value={orden} onChange={e => setOrden(e.target.value)}>
+          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '160px' }} value={orden} onChange={e => setOrden(e.target.value)}>
             <option value="id">Ordenar por ID</option>
             <option value="cinta_desc">Cinta (Mayor a menor)</option>
             <option value="cinta_asc">Cinta (Menor a mayor)</option>
@@ -671,7 +684,7 @@ export default function Alumnos() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="mobile-hide">
           <button style={s.btnExportExcel} onClick={exportarExcel}
             onMouseOver={e => handleHover(e, 'rgba(16, 185, 129, 0.5)')}
             onMouseOut={e => handleOut(e, 'rgba(16, 185, 129, 0.3)')}>
@@ -695,227 +708,342 @@ export default function Alumnos() {
         }
       `}</style>
 
-      <div style={s.tabla}>
-        <div style={s.tablaScroll}>
-          <table style={{ ...s.table, tableLayout: 'fixed' }}>
-            <colgroup>
-              <col style={{ width: '65px' }} />  {/* Foto */}
-              <col style={{ width: '260px' }} /> {/* Alumno */}
-              <col style={{ width: '90px' }} /> {/* Edad */}
-              <col style={{ width: '150px' }} /> {/* Cinta */}
-              <col style={{ width: '130px' }} /> {/* Teléfono */}
-              <col style={{ width: '110px' }} /> {/* Estatus */}
-              <col style={{ width: '150px' }} /> {/* Acciones */}
-            </colgroup>
-            <thead>
-              {/* Reemplaza el <tr> de los títulos por este: */}
-              <tr>
-                {['Foto', 'Alumno', 'Edad', 'Cinta', 'Teléfono', 'Estatus', 'Acciones'].map(h => (
-                  <th
-                    key={h}
-                    style={{ ...s.th, textAlign: h === 'Alumno' ? 'left' : 'center' }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {cargando ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={i} style={{ ...s.tr, height: '61px' }}> {/* Altura exacta de fila real */}
-                    <td style={s.td}><SkeletonCircle size={40} /></td>
-                    <td style={{ ...s.td, textAlign: 'left' }}>
-                      <SkeletonBlock w="180px" h={14} />
-                      <div style={{ height: '4px' }} />
-                      <SkeletonBlock w="100px" h={11} />
-                    </td>
-                    <td style={s.td}><SkeletonBlock w="50px" h={14} /></td>
-                    <td style={s.td}><SkeletonBlock w="100px" h={24} /></td>
-                    <td style={s.td}><SkeletonBlock w="90px" h={14} /></td>
-                    <td style={s.td}><SkeletonBlock w="80px" h={24} /></td>
-                    <td style={s.td}>
-                      <div style={{ ...s.acciones, justifyContent: 'center', gap: '8px' }}>
-                        <SkeletonCircle size={32} />
-                        <SkeletonCircle size={32} />
-                        <SkeletonCircle size={32} />
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : alumnosMostrados.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ ...s.td, padding: '40px', color: '#64748b' }}>
-                    No hay alumnos registrados que coincidan con los filtros
-                  </td>
-                </tr>
-              ) : (
-                alumnosMostrados.map(a => (
-                  <tr
-                    key={a.id}
-                    style={{
-                      ...s.tr,
-                      background: rowHover === a.id ? 'var(--bg-tertiary)' : 'transparent',
-                      transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={() => setRowHover(a.id)}
-                    onMouseLeave={() => setRowHover(null)}
-                  >
-                    <td style={s.td}>
-                      <div style={{ position: 'relative', width: '36px', height: '36px', margin: '0 auto' }}>
+      {(isMobile || isTablet) ? (
+        <>
+          <div style={s.cardsGrid}>
+            {cargando ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={s.cardItemLoader}>
+                  <SkeletonCircle size={40} />
+                  <div style={{ flex: 1, textAlign: 'left', marginLeft: '12px' }}>
+                    <SkeletonBlock w="180px" h={14} />
+                    <div style={{ height: '6px' }} />
+                    <SkeletonBlock w="100px" h={11} />
+                  </div>
+                </div>
+              ))
+            ) : alumnosMostrados.length === 0 ? (
+              <div style={{ ...s.tdCenter, padding: '40px', color: '#64748b', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                No hay alumnos registrados que coincidan con los filtros
+              </div>
+            ) : (
+              alumnosMostrados.map(a => (
+                <div
+                  key={a.id}
+                  style={{
+                    ...s.cardItem,
+                    borderLeft: `4px solid ${a.cinta_config?.color_hex || 'var(--border)'}`,
+                    background: rowHover === a.id ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+                  }}
+                  onClick={() => abrirHistorial(a)}
+                  onMouseEnter={() => setRowHover(a.id)}
+                  onMouseLeave={() => setRowHover(null)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                      <div style={{ position: 'relative', width: '40px', height: '40px', flexShrink: 0 }}>
                         {tieneFoto(a.foto_url) ? (
                           <img
                             src={limpiarUrl(a.foto_url)}
                             alt="foto"
-                            style={s.fotoTabla}
+                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
                             onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
                           />
                         ) : null}
-                        <div style={{ ...s.fotoVacia, display: tieneFoto(a.foto_url) ? 'none' : 'flex' }}>
+                        <div style={{ ...s.fotoVacia, width: '100%', height: '100%', display: tieneFoto(a.foto_url) ? 'none' : 'flex', borderRadius: '50%', position: 'absolute', top: 0, left: 0 }}>
                           {obtenerIniciales(a.nombre, a.apellido_paterno)}
                         </div>
                       </div>
-                    </td>
 
-                    {/* ALUMNO: CLICKABLE PARA HISTORIAL */}
-                    <td style={{ ...s.td, textAlign: 'left' }}>
-                      <div
-                        style={{
-                          ...s.nombreNom,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          maxWidth: '240px',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => abrirHistorial(a)}
-                        title={`${a.nombre} ${a.apellido_paterno} (Clic para ver historial)`}
-                      >
-                        {a.nombre} {a.apellido_paterno} {a.apellido_materno}
+                      <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
+                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          ID: {parseInt(a.id)} · {a.edad} años
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' }}>
+                          <span style={{
+                            padding: '3px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
+                            background: a.cinta_config?.color_hex || 'var(--bg-tertiary)',
+                            color: a.cinta_config?.color_texto || 'var(--text-primary)'
+                          }}>
+                            {a.cinta_config?.nombre_nivel || 'Sin cinta'}
+                          </span>
+                          <span style={{
+                            padding: '3px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
+                            background: a.estatus === 'activo' ? s.statusActivoBg : s.statusInactivoBg,
+                            color: a.estatus === 'activo' ? s.statusActivoText : s.statusInactivoText
+                          }}>
+                            {capitalizar(a.estatus)}
+                          </span>
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          ...s.emailSub,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          maxWidth: '240px'
-                        }}
+                    </div>
+
+                    {/* Acciones */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                      <a
+                        href={'https://wa.me/52' + a.telefono_tutor?.replace(/\s+/g, '')}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ ...s.btnIcon, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', textDecoration: 'none', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}
+                        title="WhatsApp"
                       >
-                        {`ID: ${parseInt(a.id)}`} {a.email && a.email !== 'NULL' && a.email !== 'null' && (
-                          <span style={{ opacity: 0.5 }}> | {a.email}</span>
-                        )}
-                      </div>
-                    </td>
-
-                    <td style={s.td}>{a.edad} años</td>
-
-                    {/* CINTA: CENTRADA CON BADGE */}
-                    <td style={s.td}>
-                      <span style={{
-                        ...s.cinta,
-                        background: a.cinta_config?.color_hex || 'var(--bg-tertiary)',
-                        color: a.cinta_config?.color_texto || 'var(--text-primary)',
-                      }}>
-                        {a.cinta_config?.nombre_nivel || 'Sin cinta'}
-                      </span>
-                    </td>
-
-                    <td style={s.td}>{a.telefono_tutor || '-'}</td>
-
-                    <td style={s.td}>
-                      <span
-                        onClick={() => {
-                          if (user?.role !== 'instructor') {
-                            alternarEstatus(a)
-                          }
-                        }}
-                        style={{
-                          ...s.badge,
-                          background: a.estatus === 'activo' ? s.statusActivoBg : s.statusInactivoBg,
-                          color: a.estatus === 'activo' ? s.statusActivoText : s.statusInactivoText,
-                          cursor: user?.role !== 'instructor' ? 'pointer' : 'default',
-                          userSelect: 'none'
-                        }}
-                      >
-                        {capitalizar(a.estatus)}
-                      </span>
-                    </td>
-
-                    {/* ACCIONES: CENTRADAS */}
-                    <td style={s.td}>
-                      <div style={s.acciones}>
-                        <button //VER
-                          style={{ ...s.btnIcon, ...s.btnVer }}
-                          onClick={() => abrirVer(a)}
-                          onMouseOver={e => {
-                            e.currentTarget.style.background = '#94a3b8';
-                            e.currentTarget.style.color = 'white';
-                            e.currentTarget.style.transform = 'scale(1.1)';
-
-                          }}
-                          onMouseOut={e => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                            e.currentTarget.style.color = '#94a3b8';
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }}
-                          title="Ver"
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.185-.573c.948.517 2.011.808 3.146.809 3.181 0 5.767-2.584 5.768-5.764 0-3.18-2.586-5.763-5.768-5.763zm4.52 8.161c-.199.557-1.162 1.058-1.597 1.115-.41.054-.935.086-1.503-.099-.345-.113-.775-.262-1.328-.489-2.315-.953-3.82-3.308-3.936-3.461-.116-.155-.945-1.258-.945-2.399 0-1.141.594-1.701.806-1.933.211-.231.462-.29.616-.29.154 0 .308.001.442.008.14.007.33-.053.516.39.186.444.636 1.547.692 1.659.056.111.093.242.019.39-.074.148-.112.241-.223.37-.111.13-.233.29-.333.389-.111.111-.228.232-.098.455.13.223.577.95 1.24 1.54.853.759 1.567.994 1.79.1.223-.112.455-.228.678-.541.222-.314.185-.537.408-.65s.445-.074.743.074c.297.149 1.874.883 2.196 1.043.322.16.537.241.616.37.079.13.079.752-.12 1.309z" /></svg>
+                      </a>
+                      {user?.role !== 'instructor' && (
+                        <button
+                          style={s.btnEdit}
+                          onClick={() => abrirEditar(a)}
+                          title="Editar"
                         >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                         </button>
-
-                        {user?.role !== 'instructor' && (
-                          <button //EDITAR
-                            style={{ ...s.btnIcon, ...s.btnEdit }}
-                            onClick={() => abrirEditar(a)}
-                            onMouseOver={e => {
-                              e.currentTarget.style.background = '#3b82f6';
-                              e.currentTarget.style.color = 'white';
-                              e.currentTarget.style.transform = 'scale(1.1)';
-                            }}
-                            onMouseOut={e => {
-                              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                              e.currentTarget.style.color = '#3b82f6';
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }}
-                            title="Editar"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                          </button>
-                        )}
-
-                        {user?.role === 'owner' && (
-                          <button //BORRAR
-                            style={{ ...s.btnIcon, ...s.btnDel }}
-                            onClick={() => abrirEliminar(a)}
-                            onMouseOver={e => {
-                              e.currentTarget.style.background = '#ef4444';
-                              e.currentTarget.style.color = 'white';
-                              e.currentTarget.style.transform = 'scale(1.1)';
-                            }}
-                            onMouseOut={e => {
-                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                              e.currentTarget.style.color = '#ef4444';
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }}
-                            title="Borrar"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                          </button>
-                        )}
-                      </div>
+                      )}
+                      {user?.role === 'owner' && (
+                        <button
+                          style={s.btnDel}
+                          onClick={() => abrirEliminar(a)}
+                          title="Borrar"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {user?.role !== 'instructor' && (
+            <button className="fab-button" onClick={abrirCrear} title="Nuevo alumno">
+              +
+            </button>
+          )}
+        </>
+      ) : (
+        <div style={s.tabla}>
+          <div style={s.tablaScroll}>
+            <table style={{ ...s.table, tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '65px' }} />  {/* Foto */}
+                <col style={{ width: '260px' }} /> {/* Alumno */}
+                <col style={{ width: '90px' }} /> {/* Edad */}
+                <col style={{ width: '150px' }} /> {/* Cinta */}
+                <col style={{ width: '130px' }} /> {/* Teléfono */}
+                <col style={{ width: '110px' }} /> {/* Estatus */}
+                <col style={{ width: '150px' }} /> {/* Acciones */}
+              </colgroup>
+              <thead>
+                <tr>
+                  {['Foto', 'Alumno', 'Edad', 'Cinta', 'Teléfono', 'Estatus', 'Acciones'].map(h => (
+                    <th
+                      key={h}
+                      style={{ ...s.th, textAlign: h === 'Alumno' ? 'left' : 'center' }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {cargando ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} style={{ ...s.tr, height: '61px' }}> {/* Altura exacta de fila real */}
+                      <td style={s.td}><SkeletonCircle size={40} /></td>
+                      <td style={{ ...s.td, textAlign: 'left' }}>
+                        <SkeletonBlock w="180px" h={14} />
+                        <div style={{ height: '4px' }} />
+                        <SkeletonBlock w="100px" h={11} />
+                      </td>
+                      <td style={s.td}><SkeletonBlock w="50px" h={14} /></td>
+                      <td style={s.td}><SkeletonBlock w="100px" h={24} /></td>
+                      <td style={s.td}><SkeletonBlock w="90px" h={14} /></td>
+                      <td style={s.td}><SkeletonBlock w="80px" h={24} /></td>
+                      <td style={s.td}>
+                        <div style={{ ...s.acciones, justifyContent: 'center', gap: '8px' }}>
+                          <SkeletonCircle size={32} />
+                          <SkeletonCircle size={32} />
+                          <SkeletonCircle size={32} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : alumnosMostrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ ...s.td, padding: '40px', color: '#64748b' }}>
+                      No hay alumnos registrados que coincidan con los filtros
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  alumnosMostrados.map(a => (
+                    <tr
+                      key={a.id}
+                      style={{
+                        ...s.tr,
+                        background: rowHover === a.id ? 'var(--bg-tertiary)' : 'transparent',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={() => setRowHover(a.id)}
+                      onMouseLeave={() => setRowHover(null)}
+                    >
+                      <td style={s.td}>
+                        <div style={{ position: 'relative', width: '36px', height: '36px', margin: '0 auto' }}>
+                          {tieneFoto(a.foto_url) ? (
+                            <img
+                              src={limpiarUrl(a.foto_url)}
+                              alt="foto"
+                              style={s.fotoTabla}
+                              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+                            />
+                          ) : null}
+                          <div style={{ ...s.fotoVacia, display: tieneFoto(a.foto_url) ? 'none' : 'flex' }}>
+                            {obtenerIniciales(a.nombre, a.apellido_paterno)}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* ALUMNO: CLICKABLE PARA HISTORIAL */}
+                      <td style={{ ...s.td, textAlign: 'left' }}>
+                        <div
+                          style={{
+                            ...s.nombreNom,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '240px',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => abrirHistorial(a)}
+                          title={`${a.nombre} ${a.apellido_paterno} (Clic para ver historial)`}
+                        >
+                          {a.nombre} {a.apellido_paterno} {a.apellido_materno}
+                        </div>
+                        <div
+                          style={{
+                            ...s.emailSub,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '240px'
+                          }}
+                        >
+                          {`ID: ${parseInt(a.id)}`} {a.email && a.email !== 'NULL' && a.email !== 'null' && (
+                            <span style={{ opacity: 0.5 }}> | {a.email}</span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td style={s.td}>{a.edad} años</td>
+
+                      {/* CINTA: CENTRADA CON BADGE */}
+                      <td style={s.td}>
+                        <span style={{
+                          ...s.cinta,
+                          background: a.cinta_config?.color_hex || 'var(--bg-tertiary)',
+                          color: a.cinta_config?.color_texto || 'var(--text-primary)',
+                        }}>
+                          {a.cinta_config?.nombre_nivel || 'Sin cinta'}
+                        </span>
+                      </td>
+
+                      <td style={s.td}>{a.telefono_tutor || '-'}</td>
+
+                      <td style={s.td}>
+                        <span
+                          onClick={() => {
+                            if (user?.role !== 'instructor') {
+                              alternarEstatus(a)
+                            }
+                          }}
+                          style={{
+                            ...s.badge,
+                            background: a.estatus === 'activo' ? s.statusActivoBg : s.statusInactivoBg,
+                            color: a.estatus === 'activo' ? s.statusActivoText : s.statusInactivoText,
+                            cursor: user?.role !== 'instructor' ? 'pointer' : 'default',
+                            userSelect: 'none'
+                          }}
+                        >
+                          {capitalizar(a.estatus)}
+                        </span>
+                      </td>
+
+                      {/* ACCIONES: CENTRADAS */}
+                      <td style={s.td}>
+                        <div style={s.acciones}>
+                          <button //VER
+                            style={{ ...s.btnIcon, ...s.btnVer }}
+                            onClick={() => abrirVer(a)}
+                            onMouseOver={e => {
+                              e.currentTarget.style.background = '#94a3b8';
+                              e.currentTarget.style.color = 'white';
+                              e.currentTarget.style.transform = 'scale(1.1)';
+
+                            }}
+                            onMouseOut={e => {
+                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                              e.currentTarget.style.color = '#94a3b8';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                            title="Ver"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                          </button>
+
+                          {user?.role !== 'instructor' && (
+                            <button //EDITAR
+                              style={{ ...s.btnIcon, ...s.btnEdit }}
+                              onClick={() => abrirEditar(a)}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#3b82f6';
+                                e.currentTarget.style.color = 'white';
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                                e.currentTarget.style.color = '#3b82f6';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                              title="Editar"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                            </button>
+                          )}
+
+                          {user?.role === 'owner' && (
+                            <button //BORRAR
+                              style={{ ...s.btnIcon, ...s.btnDel }}
+                              onClick={() => abrirEliminar(a)}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#ef4444';
+                                e.currentTarget.style.color = 'white';
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                                e.currentTarget.style.color = '#ef4444';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                              title="Borrar"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {modalVer && alumnoVer && (
-        <div style={s.overlay}>
-          <div style={s.modalCard}>
+        <div style={s.overlay} className="mobile-fullscreen-overlay">
+          <div style={s.modalCard} className="mobile-fullscreen-modal">
             <div style={s.cardHeader}>
               <h3 style={s.cardTitle}>
                 {alumnoVer.nombre} {alumnoVer.apellido_paterno} {alumnoVer.apellido_materno}
@@ -972,8 +1100,8 @@ export default function Alumnos() {
 
       {/* ── MODAL DE HISTORIAL DE GRADOS ── */}
       {historialAlumno && (
-        <div style={s.overlay} onClick={() => setHistorialAlumno(null)}>
-          <div style={s.modalHistorial} onClick={e => e.stopPropagation()}>
+        <div style={s.overlay} className="mobile-fullscreen-overlay" onClick={() => setHistorialAlumno(null)}>
+          <div style={s.modalHistorial} className="mobile-fullscreen-modal" onClick={e => e.stopPropagation()}>
             <div style={s.modalHistorialHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={s.avatarSm}>
@@ -1057,8 +1185,8 @@ export default function Alumnos() {
 
       {/* ── MODAL CARGA MANUAL DE GRADO ── */}
       {modalManual && (
-        <div style={{ ...s.overlay, zIndex: 1100 }}>
-          <div style={{ ...s.modalCard, width: '450px' }}>
+        <div style={{ ...s.overlay, zIndex: 1100 }} className="mobile-fullscreen-overlay">
+          <div style={{ ...s.modalCard, width: '450px' }} className="mobile-fullscreen-modal">
             <div style={s.cardHeader}>
               <h3 style={s.cardTitle}>Registro de Grado Manual</h3>
               <button style={s.btnCerrarWhite} onClick={() => setModalManual(false)}>✕</button>
@@ -1100,8 +1228,8 @@ export default function Alumnos() {
       {/* Deletion modal replaced by Swal.fire */}
 
       {modal && (
-        <div style={s.overlay}>
-          <div style={s.modal}>
+        <div style={s.overlay} className="mobile-fullscreen-overlay">
+          <div style={s.modal} className="mobile-fullscreen-modal">
             <div style={s.modalHeader}>
               <h3 style={s.modalTitulo}>{editando ? 'Editar alumno' : 'Nuevo alumno'}</h3>
               <button style={s.btnCerrar} onClick={cerrar}>X</button>
@@ -1153,7 +1281,7 @@ export default function Alumnos() {
               )}
             </div>
 
-            <div style={s.grid2}>
+            <div style={s.grid2} className="mobile-grid-1">
               <Campo label="Nombre(s)" value={form.nombre} error={errors.nombre?.[0]} required onChange={v => { setForm({ ...form, nombre: v }); if (errors.nombre) setErrors(prev => ({ ...prev, nombre: undefined })) }} />
               <Campo label="Apellido paterno" value={form.apellido_paterno} error={errors.apellido_paterno?.[0]} required onChange={v => { setForm({ ...form, apellido_paterno: v }); if (errors.apellido_paterno) setErrors(prev => ({ ...prev, apellido_paterno: undefined })) }} />
               <Campo label="Apellido materno" value={form.apellido_materno} error={errors.apellido_materno?.[0]} required onChange={v => { setForm({ ...form, apellido_materno: v }); if (errors.apellido_materno) setErrors(prev => ({ ...prev, apellido_materno: undefined })) }} />
@@ -1327,7 +1455,7 @@ const s = {
   btnLimpiarHover: { background: 'var(--border)', borderColor: 'var(--border-hover)' },
   btnExportExcel: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)', },
   btnExportPdf: { background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)', },
-  tabla: { background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', minHeight: '400px', boxShadow: 'var(--shadow-md)' },
+  tabla: { background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', minHeight: 'auto', boxShadow: 'var(--shadow-md)' },
   tablaScroll: { width: '100%', overflowX: 'auto', overflowY: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '1000px' },
   th: { padding: '10px 16px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', },
@@ -1413,4 +1541,7 @@ const s = {
     transition: 'all 0.2s',
     background: 'var(--bg-tertiary)',
   },
+  cardsGrid: { display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '20px' },
+  cardItem: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', cursor: 'pointer', transition: 'all 0.15s ease' },
+  cardItemLoader: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' },
 }

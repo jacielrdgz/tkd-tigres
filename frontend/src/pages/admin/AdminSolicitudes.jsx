@@ -24,6 +24,14 @@ export default function AdminSolicitudes() {
     fetchTenants();
   }, []);
 
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setShowModal(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
+
   const fetchSolicitudes = async () => {
     try {
       const res = await api.get('/admin/solicitudes');

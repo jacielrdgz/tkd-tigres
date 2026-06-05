@@ -100,4 +100,53 @@ class AdminUsuarioController extends Controller
             'role'    => $user->role
         ]);
     }
+
+    /**
+     * Cambiar la escuela (tenant) de un usuario.
+     */
+    public function cambiarEscuela(Request $request, $id)
+    {
+        $request->validate([
+            'tenant_id' => 'required|exists:tenants,id',
+        ]);
+
+        $user = User::findOrFail($id);
+
+        if ($user->is_superadmin) {
+            return response()->json(['message' => 'No puedes cambiar la escuela de un SuperAdmin.'], 400);
+        }
+
+        $user->tenant_id = $request->tenant_id;
+        $user->save();
+
+        $tenant = \App\Models\Tenant::find($request->tenant_id);
+
+        return response()->json([
+            'message' => "Usuario reasignado a '{$tenant->nombre}' correctamente.",
+            'tenant_id' => $user->tenant_id,
+            'escuela_nombre' => $tenant->nombre,
+        ]);
+    }
+
+    /**
+     * Eliminar un usuario permanentemente.
+     */
+    public function destroy($id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->id === auth()->id()) {
+            return response()->json(['message' => 'No puedes eliminar tu propia cuenta.'], 400);
+        }
+
+        if ($user->is_superadmin) {
+            return response()->json(['message' => 'No puedes eliminar a un SuperAdmin.'], 400);
+        }
+
+        // Revocar todos los tokens del usuario
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json(['message' => 'Usuario eliminado permanentemente.']);
+    }
 }

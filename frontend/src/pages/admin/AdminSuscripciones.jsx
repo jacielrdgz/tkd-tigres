@@ -22,6 +22,17 @@ export default function AdminSuscripciones() {
     fetchSuscripciones();
   }, [filterEstado, filterMes]);
 
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        setShowRenovarModal(false);
+        setShowPlanModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
+
   const fetchSuscripciones = async () => {
     setLoading(true);
     try {

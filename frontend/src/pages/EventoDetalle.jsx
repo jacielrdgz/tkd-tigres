@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import Swal from 'sweetalert2'
 
 const tieneFoto = (foto) => {
   if (!foto || foto === 'null' || foto === 'NULL' || foto === '') return false
@@ -63,6 +64,17 @@ export default function EventoDetalle() {
 
   useEffect(() => { cargar() }, [id])
 
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        setModalInscripcion(false)
+        setModalEvento(false)
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [])
+
   const cargar = async () => {
     setCargando(true)
     try {
@@ -118,7 +130,7 @@ export default function EventoDetalle() {
   const abrirEditarInscrito = (inscrito) => {
     setForm({
       alumno_id: inscrito.id,
-      nombre_alumno: `${inscrito.nombre} ${inscrito.apellido_paterno}`,
+      nombre_alumno: `${inscrito.nombre} ${inscrito.apellido_paterno} ${inscrito.apellido_materno || ''}`.trim(),
       pagado: inscrito.pagado,
       grado_actual_id: inscrito.examen_detalle?.grado_actual_id || '',
       grado_siguiente_id: inscrito.examen_detalle?.grado_siguiente_id || inscrito.torneo_detalle?.grado_siguiente_id || '',
@@ -194,9 +206,30 @@ export default function EventoDetalle() {
   }
 
   const eliminarInscrito = async (alumnoId) => {
-    if (!confirm('¿Eliminar inscripción?')) return
-    await api.delete(`/eventos/${id}/alumnos/${alumnoId}`)
-    recargarInscritos()
+    Swal.fire({
+      title: '¿Confirmar borrado?',
+      text: 'El alumno será desinscrito del evento.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, desinscribir',
+      confirmButtonColor: 'var(--accent-red)',
+      background: 'var(--bg-secondary)', color: 'var(--text-primary)'
+    }).then(async r => {
+      if (r.isConfirmed) {
+        try {
+          await api.delete(`/eventos/${id}/alumnos/${alumnoId}`)
+          recargarInscritos()
+        } catch (err) {
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo eliminar la inscripción.',
+            icon: 'error',
+            confirmButtonColor: 'var(--accent-blue)',
+            background: 'var(--bg-secondary)', color: 'var(--text-primary)'
+          })
+        }
+      }
+    })
   }
 
   const alumnosFiltrados = useMemo(() => {
@@ -210,7 +243,7 @@ export default function EventoDetalle() {
     let list = [...inscritos]
     if (busquedaTabla) {
       list = list.filter(a =>
-        `${a.nombre} ${a.apellido_paterno}`.toLowerCase().includes(busquedaTabla.toLowerCase())
+        `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.toLowerCase().includes(busquedaTabla.toLowerCase())
       )
     }
     // Ordenar por cintas de menor a mayor
@@ -250,23 +283,70 @@ export default function EventoDetalle() {
       {/* ── HEADER ── */}
       <div style={s.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <button style={s.btnBack} onClick={() => navigate('/eventos')}>← Volver</button>
+          <button 
+            style={s.btnBack} 
+            onClick={() => navigate('/eventos')}
+            onMouseOver={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+              e.currentTarget.style.color = '#ffffff';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = 'var(--bg-secondary)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >← Volver</button>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <h2 style={s.titulo}>{evento.nombre}</h2>
               <span style={{ ...s.badge, background: c.bg, color: c.color }}>{evento.tipo.toUpperCase()}</span>
               <button 
-                style={{ ...s.btnEditMini, marginLeft: '8px' }} 
+                style={{ 
+                  ...s.btnEditMini, 
+                  marginLeft: '8px',
+                  background: 'rgba(59,130,246,0.1)',
+                  border: '1px solid rgba(59,130,246,0.3)',
+                  color: '#3b82f6',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }} 
                 onClick={() => setModalEvento(true)}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = '#3b82f6';
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'rgba(59,130,246,0.1)';
+                  e.currentTarget.style.color = '#3b82f6';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
                 title="Editar evento"
               >
-                ✏️
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
               </button>
             </div>
             <p style={s.sub}>📅 {formatFechaNatural(evento.fecha)}{evento.lugar ? ` · 📍 ${evento.lugar}` : ''}</p>
           </div>
         </div>
-        <button style={s.btnNuevo} onClick={abrirInscripcion}>+ Inscribir Alumno</button>
+        <button 
+          style={s.btnNuevo} 
+          onClick={abrirInscripcion}
+          onMouseOver={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+          }}
+        >+ Inscribir Alumno</button>
       </div>
 
       {/* ── BARRA BÚSQUEDA ── */}
@@ -350,7 +430,7 @@ export default function EventoDetalle() {
                         </div>
                         <div>
                           <div style={{ ...s.nombreNom, maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {a.nombre} {a.apellido_paterno}
+                            {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
                           </div>
                           <div style={s.emailSub}>
                             {`ID: ${parseInt(a.id)}`}
@@ -509,7 +589,18 @@ export default function EventoDetalle() {
                 <h3 style={s.modalTitulo}>{editandoInscrito ? 'Editar Inscripción' : 'Inscribir Alumno'}</h3>
                 <p style={s.modalSub}>Selecciona al alumno y asigna los detalles</p>
               </div>
-              <button style={s.btnCerrar} onClick={() => setModalInscripcion(false)}>✕</button>
+              <button 
+                style={s.btnCerrar} 
+                onClick={() => setModalInscripcion(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'scale(1.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >✕</button>
             </div>
 
             <div style={s.grid2}>
@@ -589,8 +680,33 @@ export default function EventoDetalle() {
             </div>
 
             <div style={s.modalFooter}>
-              <button style={s.btnSecondary} onClick={() => setModalInscripcion(false)}>Cancelar</button>
-              <button style={s.btnPrimaryModal} onClick={guardarInscripcion} disabled={!form.alumno_id || guardando}>
+              <button 
+                style={s.btnSecondary} 
+                onClick={() => setModalInscripcion(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >Cancelar</button>
+              <button 
+                style={s.btnPrimaryModal} 
+                onClick={guardarInscripcion} 
+                disabled={!form.alumno_id || guardando}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.4)';
+                }}
+              >
                 {guardando ? 'Guardando...' : (editandoInscrito ? 'Guardar Cambios' : 'Inscribir Ahora')}
               </button>
             </div>
@@ -607,7 +723,18 @@ export default function EventoDetalle() {
                 <h3 style={s.modalTitulo}>Editar Detalles del Evento</h3>
                 <p style={s.modalSub}>Completa los detalles para tu actividad</p>
               </div>
-              <button style={s.btnCerrar} onClick={() => setModalEvento(false)}>✕</button>
+              <button 
+                style={s.btnCerrar} 
+                onClick={() => setModalEvento(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'scale(1.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >✕</button>
             </div>
             <div style={s.campoGroup}>
               <label style={s.label}>Nombre del Evento</label>
@@ -650,8 +777,32 @@ export default function EventoDetalle() {
               />
             </div>
             <div style={s.modalFooter}>
-              <button style={s.btnSecondary} onClick={() => setModalEvento(false)}>Cancelar</button>
-              <button style={s.btnPrimaryModal} onClick={guardarEvento}>Guardar Cambios</button>
+              <button 
+                style={s.btnSecondary} 
+                onClick={() => setModalEvento(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >Cancelar</button>
+              <button 
+                style={s.btnPrimaryModal} 
+                onClick={guardarEvento}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.4)';
+                }}
+              >Guardar Cambios</button>
             </div>
           </div>
         </div>
@@ -684,7 +835,7 @@ const s = {
   nombreNom:   { fontWeight: '600', color: 'var(--text-primary)', fontSize: '14px' },
   emailSub:    { fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' },
   cinta:       { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', textAlign: 'center', minWidth: '110px', verticalAlign: 'middle' },
-  btnEditMini: { background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px' },
+  btnEditMini: { background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px', transition: 'all 0.2s' },
   paymentBadge: { 
     display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', 
     fontSize: '11px', fontWeight: '800', cursor: 'pointer', border: '1px solid transparent', 
@@ -711,7 +862,7 @@ const s = {
   modalHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
   modalTitulo:     { fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
   modalSub:        { fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' },
-  btnCerrar:       { background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' },
+  btnCerrar:       { background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' },
   
   campoGroup:      { marginBottom: '16px' },
   label:           { display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' },
@@ -720,8 +871,8 @@ const s = {
   grid2:           { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' },
   
   modalFooter:     { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid var(--border)' },
-  btnPrimaryModal: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)' },
-  btnSecondary:    { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 20px', fontWeight: '600', cursor: 'pointer' },
+  btnPrimaryModal: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)', transition: 'all 0.2s' },
+  btnSecondary:    { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 20px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' },
   dropdown:    { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', zIndex: 100, maxHeight: '220px', overflowY: 'auto' },
   dropItem:    { padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', transition: 'background 0.15s' },
 }

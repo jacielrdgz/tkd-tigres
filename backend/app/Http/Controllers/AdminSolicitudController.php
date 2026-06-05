@@ -11,6 +11,7 @@ use App\Mail\CuentaAprobadaMail;
 use App\Mail\SolicitudRechazadaMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Services\DefaultCintasService;
 
 class AdminSolicitudController extends Controller
 {
@@ -70,6 +71,9 @@ class AdminSolicitudController extends Controller
                 'email_contacto' => $user->email,
                 'disciplina'     => 'taekwondo',
             ]);
+
+            // Crear cintas por defecto para la nueva escuela
+            DefaultCintasService::crearCintasPorDefecto($tenant->id);
 
             $user->tenant_id = $tenant->id;
             $tenantName = $tenant->nombre;

@@ -41,6 +41,14 @@ export default function Usuarios() {
     }
   }, [currentUser])
 
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setShowModal(false)
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [])
+
   const handleOpenModal = (user = null) => {
     if (user) {
       setSelected(user)

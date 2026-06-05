@@ -163,7 +163,17 @@ function CardMiPerfil() {
 
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: '700', fontSize: '16px', color: 'var(--text-primary)' }}>{user?.name}</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'capitalize' }}>{user?.role}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              {user?.is_superadmin 
+                ? 'SuperAdmin' 
+                : user?.role === 'owner' 
+                  ? 'Administrador' 
+                  : user?.role === 'instructor' 
+                    ? 'Instructor' 
+                    : user?.role === 'secretario' 
+                      ? 'Secretario' 
+                      : user?.role || 'Rol'}
+            </div>
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {/* Botón seleccionar foto */}

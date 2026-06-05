@@ -23,11 +23,25 @@ export default function AdminUsuarios() {
   const [newPassword, setNewPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState('secretario');
   const [procesando, setProcesando] = useState(false);
+  const [showEscuelaModal, setShowEscuelaModal] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState('');
 
   useEffect(() => {
     fetchAcademias();
     fetchUsuarios();
   }, [roleFilter, tenantFilter, statusFilter]);
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        setShowPasswordModal(false);
+        setShowRoleModal(false);
+        setShowEscuelaModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   const fetchAcademias = async () => {
     try {
@@ -125,6 +139,57 @@ export default function AdminUsuarios() {
       fetchUsuarios();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al cambiar el rol');
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const handleDeleteUser = (user) => {
+    Swal.fire({
+      title: '¿Eliminar usuario permanentemente?',
+      html: `<p>Se eliminará la cuenta de <strong>${user.name}</strong> (${user.email}).</p><p style="color:#ef4444;font-weight:bold;">Esta acción no se puede deshacer.</p>`,
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#ef4444',
+      background: 'var(--bg-secondary)',
+      color: 'var(--text-primary)',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await api.delete(`/admin/usuarios/${user.id}`);
+          toast.success(res.data.message || 'Usuario eliminado');
+          fetchUsuarios();
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error al eliminar usuario');
+        }
+      }
+    });
+  };
+
+  const handleOpenEscuelaModal = (user) => {
+    setSelectedUser(user);
+    setSelectedTenantId(user.tenant_id || '');
+    setShowEscuelaModal(true);
+  };
+
+  const handleEscuelaSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedTenantId) {
+      toast.error('Selecciona una academia');
+      return;
+    }
+    setProcesando(true);
+    try {
+      const res = await api.post(`/admin/usuarios/${selectedUser.id}/cambiar-escuela`, {
+        tenant_id: selectedTenantId
+      });
+      toast.success(res.data.message || 'Escuela actualizada');
+      setShowEscuelaModal(false);
+      fetchUsuarios();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al cambiar escuela');
     } finally {
       setProcesando(false);
     }
@@ -266,23 +331,116 @@ export default function AdminUsuarios() {
                             <button
                               onClick={() => handleOpenRoleModal(u)}
                               style={styles.btnRole}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#a855f7';
+                                e.currentTarget.style.color = 'white';
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(168,85,247,0.1)';
+                                e.currentTarget.style.color = '#a855f7';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
                               title="Cambiar Rol"
                             >
-                              🛡️ Rol
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                              </svg>
                             </button>
                             <button
                               onClick={() => handleOpenPasswordModal(u)}
                               style={styles.btnPassword}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#f59e0b';
+                                e.currentTarget.style.color = 'white';
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(245,158,11,0.1)';
+                                e.currentTarget.style.color = '#f59e0b';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
                               title="Restablecer Contraseña"
                             >
-                              🔑 Contraseña
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                              </svg>
                             </button>
                             <button
                               onClick={() => handleToggleSuspension(u)}
                               style={u.is_suspended ? styles.btnActivar : styles.btnSuspender}
+                              onMouseOver={e => {
+                                if (u.is_suspended) {
+                                  e.currentTarget.style.background = '#22c55e';
+                                  e.currentTarget.style.color = 'white';
+                                } else {
+                                  e.currentTarget.style.background = '#f97316';
+                                  e.currentTarget.style.color = 'white';
+                                }
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                              }}
+                              onMouseOut={e => {
+                                if (u.is_suspended) {
+                                  e.currentTarget.style.background = 'rgba(34,197,94,0.1)';
+                                  e.currentTarget.style.color = '#22c55e';
+                                } else {
+                                  e.currentTarget.style.background = 'rgba(249,115,22,0.1)';
+                                  e.currentTarget.style.color = '#f97316';
+                                }
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
                               title={u.is_suspended ? 'Activar cuenta' : 'Suspender cuenta'}
                             >
-                              {u.is_suspended ? '✔️ Activar' : '🚫 Suspender'}
+                              {u.is_suspended ? (
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                              ) : (
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="10"/>
+                                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleOpenEscuelaModal(u)}
+                              style={styles.btnEscuela}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#3b82f6';
+                                e.currentTarget.style.color = 'white';
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(59,130,246,0.1)';
+                                e.currentTarget.style.color = '#3b82f6';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                              title="Cambiar Escuela"
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9 22 9 12 15 12 15 22"/>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u)}
+                              style={styles.btnEliminar}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#ef4444';
+                                e.currentTarget.style.color = 'white';
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+                                e.currentTarget.style.color = '#ef4444';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                              title="Eliminar usuario"
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                              </svg>
                             </button>
                           </div>
                         ) : (
@@ -307,7 +465,18 @@ export default function AdminUsuarios() {
                 <h3 style={styles.modalTitle}>Restablecer Contraseña</h3>
                 <p style={styles.modalSubtitle}>Modificando credenciales para: <strong>{selectedUser?.name}</strong></p>
               </div>
-              <button style={styles.btnClose} onClick={() => setShowPasswordModal(false)}>×</button>
+              <button 
+                style={styles.btnClose} 
+                onClick={() => setShowPasswordModal(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'scale(1.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >×</button>
             </div>
             <form onSubmit={handlePasswordSubmit}>
               <div style={styles.modalBody}>
@@ -325,8 +494,34 @@ export default function AdminUsuarios() {
                 </div>
               </div>
               <div style={styles.modalFooter}>
-                <button type="button" style={styles.btnCancel} onClick={() => setShowPasswordModal(false)}>Cancelar</button>
-                <button type="submit" style={styles.btnSubmit} disabled={procesando}>
+                <button 
+                  type="button" 
+                  style={styles.btnCancel} 
+                  onClick={() => setShowPasswordModal(false)}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.color = '#ffffff';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >Cancelar</button>
+                <button 
+                  type="submit" 
+                  style={styles.btnSubmit} 
+                  disabled={procesando}
+                  onMouseOver={e => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
                   {procesando ? 'Procesando...' : 'Guardar Nueva Contraseña'}
                 </button>
               </div>
@@ -344,7 +539,18 @@ export default function AdminUsuarios() {
                 <h3 style={styles.modalTitle}>Cambiar Rol de Usuario</h3>
                 <p style={styles.modalSubtitle}>Asigna una nueva jerarquía para: <strong>{selectedUser?.name}</strong></p>
               </div>
-              <button style={styles.btnClose} onClick={() => setShowRoleModal(false)}>×</button>
+              <button 
+                style={styles.btnClose} 
+                onClick={() => setShowRoleModal(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'scale(1.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >×</button>
             </div>
             <form onSubmit={handleRoleSubmit}>
               <div style={styles.modalBody}>
@@ -363,9 +569,116 @@ export default function AdminUsuarios() {
                 </div>
               </div>
               <div style={styles.modalFooter}>
-                <button type="button" style={styles.btnCancel} onClick={() => setShowRoleModal(false)}>Cancelar</button>
-                <button type="submit" style={styles.btnSubmit} disabled={procesando}>
+                <button 
+                  type="button" 
+                  style={styles.btnCancel} 
+                  onClick={() => setShowRoleModal(false)}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.color = '#ffffff';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >Cancelar</button>
+                <button 
+                  type="submit" 
+                  style={styles.btnSubmit} 
+                  disabled={procesando}
+                  onMouseOver={e => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
                   {procesando ? 'Procesando...' : 'Actualizar Rol'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SCHOOL CHANGE MODAL */}
+      {showEscuelaModal && (
+        <div style={styles.overlay}>
+          <div style={styles.modal}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={styles.modalTitle}>Cambiar Escuela / Academia</h3>
+                <p style={styles.modalSubtitle}>Reasignando a: <strong>{selectedUser?.name}</strong></p>
+              </div>
+              <button 
+                style={styles.btnClose} 
+                onClick={() => setShowEscuelaModal(false)}
+                onMouseOver={e => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'scale(1.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >×</button>
+            </div>
+            <form onSubmit={handleEscuelaSubmit}>
+              <div style={styles.modalBody}>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Selecciona la Academia</label>
+                  <select
+                    style={styles.input}
+                    value={selectedTenantId}
+                    onChange={e => setSelectedTenantId(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Seleccionar --</option>
+                    {academias.map(a => (
+                      <option key={a.id} value={a.id}>{a.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedUser?.tenant_id && (
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                    Escuela actual: <strong>{selectedUser.escuela_nombre}</strong>
+                  </p>
+                )}
+              </div>
+              <div style={styles.modalFooter}>
+                <button 
+                  type="button" 
+                  style={styles.btnCancel} 
+                  onClick={() => setShowEscuelaModal(false)}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.color = '#ffffff';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >Cancelar</button>
+                <button 
+                  type="submit" 
+                  style={styles.btnSubmit} 
+                  disabled={procesando}
+                  onMouseOver={e => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  {procesando ? 'Procesando...' : 'Guardar Cambio'}
                 </button>
               </div>
             </form>
@@ -411,23 +724,25 @@ const styles = {
   badge: { display: 'inline-block', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px' },
   statusIndicator: { display: 'inline-block', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#fff' },
   
-  actions: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
-  btnRole: { padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' },
-  btnPassword: { padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' },
-  btnActivar: { padding: '6px 12px', borderRadius: '8px', border: 'none', background: 'rgba(34,197,94,0.1)', color: '#22c55e', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
-  btnSuspender: { padding: '6px 12px', borderRadius: '8px', border: 'none', background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
+  actions: { display: 'flex', gap: '6px', flexWrap: 'nowrap' },
+  btnRole: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.1)', color: '#a855f7', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
+  btnPassword: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
+  btnActivar: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)', color: '#22c55e', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
+  btnSuspender: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(249,115,22,0.3)', background: 'rgba(249,115,22,0.1)', color: '#f97316', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
+  btnEscuela: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
+  btnEliminar: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)' },
   modal: { background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '24px', width: '450px', maxWidth: '90vw', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', overflow: 'hidden' },
   modalHeader: { padding: '24px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   modalTitle: { fontSize: '18px', fontWeight: '800', color: '#fff', margin: 0 },
   modalSubtitle: { fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' },
-  btnClose: { background: 'none', border: 'none', fontSize: '24px', color: 'var(--text-muted)', cursor: 'pointer' },
+  btnClose: { background: 'none', border: 'none', fontSize: '24px', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' },
   modalBody: { padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
   label: { fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' },
   input: { width: '100%', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px 14px', color: '#fff', fontSize: '14px', outline: 'none' },
   modalFooter: { padding: '20px 24px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'flex-end', gap: '12px' },
-  btnCancel: { background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '12px', padding: '12px 20px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' },
-  btnSubmit: { background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer' }
+  btnCancel: { background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '12px', padding: '12px 20px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
+  btnSubmit: { background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }
 };

@@ -24,14 +24,17 @@ const menuSuperAdmin = [
   { path: '/admin/configuracion', label: 'Configuración Global', icon: '⚙️' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: propSetMobileOpen }) {
   const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [localMobileOpen, setLocalMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [avatarHover, setAvatarHover] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef(null);
+
+  const mobileOpen = propMobileOpen !== undefined ? propMobileOpen : localMobileOpen;
+  const setMobileOpen = propSetMobileOpen !== undefined ? propSetMobileOpen : setLocalMobileOpen;
 
   // Si es superadmin, mostramos el menú global
   const isSuperAdmin = user?.is_superadmin;
@@ -82,19 +85,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile hamburger button */}
-      {isMobile && (
-        <button
-          style={styles.hamburger}
-          onClick={() => setMobileOpen(true)}
-          aria-label="Abrir menú"
-        >
-          <span style={styles.hamburgerLine} />
-          <span style={styles.hamburgerLine} />
-          <span style={styles.hamburgerLine} />
-        </button>
-      )}
-
       {/* Mobile overlay */}
       {isMobile && mobileOpen && (
         <div style={styles.overlay} onClick={() => setMobileOpen(false)} />
@@ -136,10 +126,7 @@ export default function Sidebar() {
               to={item.path}
               end={item.path === '/'}
               onClick={closeMobile}
-              style={({ isActive }) => ({
-                ...styles.link,
-                ...(isActive ? styles.linkActive : {}),
-              })}
+              className="sidebar-link"
             >
               <span style={styles.icon}>{item.icon}</span>
               <span style={{ flex: 1 }}>{item.label}</span>
@@ -172,11 +159,8 @@ export default function Sidebar() {
           <NavLink
             to="/ajustes"
             onClick={closeMobile}
-            style={({ isActive }) => ({
-              ...styles.link,
-              ...(isActive ? styles.linkActive : {}),
-              marginBottom: '4px',
-            })}
+            className="sidebar-link"
+            style={{ marginBottom: '4px' }}
           >
             <span style={styles.icon}>{menuAjustes.icon}</span>
             <span style={{ flex: 1 }}>{menuAjustes.label}</span>
@@ -238,7 +222,22 @@ export default function Sidebar() {
               </div>
             </div>
           </div>
-          <button onClick={handleLogout} style={styles.logoutBtn}>
+          <button
+            onClick={handleLogout}
+            style={styles.logoutBtn}
+            onMouseOver={e => {
+              e.currentTarget.style.background = '#ef4444';
+              e.currentTarget.style.color = '#ffffff';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+              e.currentTarget.style.color = '#ef4444';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
             Cerrar sesión
           </button>
         </div>
@@ -247,7 +246,7 @@ export default function Sidebar() {
       {/* Mobile bottom navigation */}
       {isMobile && !mobileOpen && (
         <nav style={styles.bottomNav}>
-          {[...filteredMenu, menuAjustes].map(item => (
+          {filteredMenu.map(item => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -434,15 +433,15 @@ const styles = {
   logoutBtn: {
     width: '100%',
     padding: '8px',
-    background: 'var(--bg-tertiary)',
-    border: '1px solid var(--border)',
+    background: 'rgba(239, 68, 68, 0.1)',
+    border: '1px solid rgba(239, 68, 68, 0.2)',
     borderRadius: '8px',
-    color: 'var(--text-secondary)',
+    color: '#ef4444',
     fontSize: '12px',
-    fontWeight: '600',
+    fontWeight: '700',
     cursor: 'pointer',
     fontFamily: 'Inter, sans-serif',
-    transition: 'all 0.15s',
+    transition: 'all 0.2s ease',
   },
   bottomNav: {
     position: 'fixed',

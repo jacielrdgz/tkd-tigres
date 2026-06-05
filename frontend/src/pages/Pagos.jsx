@@ -59,6 +59,17 @@ const hoy = new Date().toLocaleDateString('sv-SE')
 export default function Pagos() {
   const { user } = useAuth()
   const [alumnos, setAlumnos] = useState([])
+  const [tabHover, setTabHover] = useState(null)
+
+  const handleHover = (e, color) => {
+    e.currentTarget.style.transform = 'translateY(-2px)';
+    e.currentTarget.style.boxShadow = `0 6px 20px ${color}`;
+  };
+
+  const handleOut = (e, color) => {
+    e.currentTarget.style.transform = 'translateY(0)';
+    e.currentTarget.style.boxShadow = `0 4px 15px ${color}`;
+  };
   const [pagosActivos, setPagosActivos] = useState([]) // pagos del período actual de cada alumno
   const [cargando, setCargando] = useState(true)
   const [escuelaInfo, setEscuelaInfo] = useState(null)
@@ -67,6 +78,18 @@ export default function Pagos() {
   const [submodulo, setSubmodulo] = useState('mensualidades') // mensualidades | inscripciones
   const [mostrarTodosInscripciones, setMostrarTodosInscripciones] = useState(false) // Toggle para mostrar históricos en inscripciones
   const [busquedaInput, setBusquedaInput] = useState('') // valor inmediato del input
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
+  const [isTablet, setIsTablet] = useState(window.innerWidth > 640 && window.innerWidth <= 1024)
+
+  useEffect(() => {
+    const check = () => {
+      setIsMobile(window.innerWidth <= 640)
+      setIsTablet(window.innerWidth > 640 && window.innerWidth <= 1024)
+    }
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // Modal de pago rápido
   const [modalPago, setModalPago] = useState(null) // alumno al que se va a registrar pago
@@ -160,11 +183,11 @@ export default function Pagos() {
 
         if (filtroMes) {
           // Con filtro de mes: buscar si pagó el período correspondiente a ese mes
-          // Usamos fecha_inicio (mes del período) en lugar de fecha_pago (día que pagó)
+          const [y, m] = filtroMes.split('-').map(Number)
+          periodoActual = calcularPeriodo(a.dia_pago || 1, new Date(y, m - 1, 1, 12, 0, 0))
           pagoActivo = pagosAlumno.find(p =>
-            p.tipo === 'mensualidad' && p.fecha_inicio && p.fecha_inicio.startsWith(filtroMes)
+            p.tipo === 'mensualidad' && p.fecha_inicio === periodoActual.fechaInicio
           )
-          periodoActual = calcularPeriodo(a.dia_pago || 1)
         } else {
           periodoActual = calcularPeriodo(a.dia_pago || 1)
           pagoActivo = pagosAlumno.find(p =>
@@ -173,7 +196,8 @@ export default function Pagos() {
         }
 
         // Detección de deuda anterior (siempre sobre el período actual real)
-        const fechaPrevia = new Date(periodoActual.fechaInicio + 'T12:00:00')
+        const periodoActualReal = calcularPeriodo(a.dia_pago || 1)
+        const fechaPrevia = new Date(periodoActualReal.fechaInicio + 'T12:00:00')
         fechaPrevia.setMonth(fechaPrevia.getMonth() - 1)
         const periodoPrevio = calcularPeriodo(a.dia_pago || 1, fechaPrevia)
 
@@ -296,7 +320,7 @@ export default function Pagos() {
         const horario = horarios.find(h => String(h.id) === String(a.horario_id))
         return [
           i + 1,
-          `${a.nombre} ${a.apellido_paterno}`,
+          `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`,
           cintas.find(c => String(c.id) === String(a.configuracion_cinta_id))?.nombre_nivel || '-',
           horario ? horario.nombre : '-',
           a.pagoActivo ? 'PAGADO' : 'PENDIENTE',
@@ -734,13 +758,13 @@ export default function Pagos() {
 
   function SkeletonPagos() {
     return (
-      <div style={{ ...s.card, opacity: 0.6 }}>
-        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-tertiary)', animation: 'pulse 1.5s infinite' }} />
-        <div style={{ flex: 1 }}>
+      <div style={{ ...s.card, opacity: 0.6, height: '82px', padding: isMobile ? '10px 14px' : '14px 18px', gap: isMobile ? '10px' : '16px', boxSizing: 'border-box' }}>
+        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-tertiary)', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ width: '60%', height: 14, background: 'var(--bg-tertiary)', borderRadius: 4, marginBottom: 8, animation: 'pulse 1.5s infinite' }} />
           <div style={{ width: '40%', height: 10, background: 'var(--bg-tertiary)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} />
         </div>
-        <div style={{ width: 60, height: 28, background: 'var(--bg-tertiary)', borderRadius: 20, animation: 'pulse 1.5s infinite' }} />
+        <div style={{ width: isMobile ? '200px' : '260px', height: 28, background: 'var(--bg-tertiary)', borderRadius: 20, animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
       </div>
     )
   }
@@ -772,12 +796,32 @@ export default function Pagos() {
         <button
           style={submodulo === 'mensualidades' ? s.subnavBtnActive : s.subnavBtn}
           onClick={() => setSubmodulo('mensualidades')}
+          onMouseOver={e => {
+            if (submodulo !== 'mensualidades') {
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+            }
+          }}
+          onMouseOut={e => {
+            if (submodulo !== 'mensualidades') {
+              e.currentTarget.style.background = 'none';
+            }
+          }}
         >
           Mensualidades
         </button>
         <button
           style={submodulo === 'inscripciones' ? s.subnavBtnActive : s.subnavBtn}
           onClick={() => setSubmodulo('inscripciones')}
+          onMouseOver={e => {
+            if (submodulo !== 'inscripciones') {
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+            }
+          }}
+          onMouseOut={e => {
+            if (submodulo !== 'inscripciones') {
+              e.currentTarget.style.background = 'none';
+            }
+          }}
         >
           Inscripciones
         </button>
@@ -793,20 +837,26 @@ export default function Pagos() {
 
         <div style={s.tabs}>
           <button
-            style={filtro === 'todos' ? s.tabActiveAzul : s.tab}
+            style={filtro === 'todos' ? s.tabActiveAzul : (tabHover === 'todos' ? s.tabHover : s.tab)}
             onClick={() => setFiltro('todos')}
+            onMouseEnter={() => setTabHover('todos')}
+            onMouseLeave={() => setTabHover(null)}
           >
             Todos ({alumnos.length})
           </button>
           <button
-            style={filtro === 'pagado' ? s.tabActiveVerde : s.tab}
+            style={filtro === 'pagado' ? s.tabActiveVerde : (tabHover === 'pagado' ? s.tabHover : s.tab)}
             onClick={() => setFiltro('pagado')}
+            onMouseEnter={() => setTabHover('pagado')}
+            onMouseLeave={() => setTabHover(null)}
           >
             Pagado ({totalPagados})
           </button>
           <button
-            style={filtro === 'pendiente' ? s.tabActiveRojo : s.tab}
+            style={filtro === 'pendiente' ? s.tabActiveRojo : (tabHover === 'pendiente' ? s.tabHover : s.tab)}
             onClick={() => setFiltro('pendiente')}
+            onMouseEnter={() => setTabHover('pendiente')}
+            onMouseLeave={() => setTabHover(null)}
           >
             Pendientes ({totalPendientes})
           </button>
@@ -814,13 +864,13 @@ export default function Pagos() {
       </div>
 
       <div style={s.filtrosSecundarios}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select style={s.selectFiltro} value={filtroCinta} onChange={e => setFiltroCinta(e.target.value)}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', width: isMobile ? '100%' : 'auto' }}>
+          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '150px' }} value={filtroCinta} onChange={e => setFiltroCinta(e.target.value)}>
             <option value="">Todas las cintas</option>
             {cintas.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
           </select>
 
-          <select style={s.selectFiltro} value={filtroHorario} onChange={e => setFiltroHorario(e.target.value)}>
+          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '150px' }} value={filtroHorario} onChange={e => setFiltroHorario(e.target.value)}>
             <option value="">Todos los horarios</option>
             {horarios.map(h => <option key={h.id} value={h.id}>{h.nombre}</option>)}
           </select>
@@ -828,20 +878,20 @@ export default function Pagos() {
           {/* Filtro por mes */}
           <input
             type="month"
-            style={{ ...s.selectFiltro, paddingRight: 14 }}
+            style={{ ...s.selectFiltro, paddingRight: 14, width: isMobile ? '100%' : '150px' }}
             value={filtroMes}
             onChange={e => setFiltroMes(e.target.value)}
           />
 
           <input
             type="date"
-            style={{ ...s.selectFiltro, paddingRight: 14 }}
+            style={{ ...s.selectFiltro, paddingRight: 14, width: isMobile ? '100%' : '150px' }}
             value={filtroFechaPago}
             onChange={e => setFiltroFechaPago(e.target.value)}
           />
 
           {submodulo === 'inscripciones' && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', padding: '6px 12px', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', padding: '6px 12px', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', width: isMobile ? '100%' : 'auto' }}>
               <input
                 type="checkbox"
                 checked={mostrarTodosInscripciones}
@@ -853,8 +903,10 @@ export default function Pagos() {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button style={s.btnExportExcel} onClick={exportarExcel} title="Exportar a Excel">
+        <div style={{ display: 'flex', gap: '8px' }} className="mobile-hide">
+          <button style={s.btnExportExcel} onClick={exportarExcel} title="Exportar a Excel"
+            onMouseOver={e => handleHover(e, 'rgba(16, 185, 129, 0.5)')}
+            onMouseOut={e => handleOut(e, 'rgba(16, 185, 129, 0.3)')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
@@ -864,7 +916,9 @@ export default function Pagos() {
             </svg>
             Excel
           </button>
-          <button style={s.btnExportPDF} onClick={exportarPDF} title="Exportar a PDF">
+          <button style={s.btnExportPDF} onClick={exportarPDF} title="Exportar a PDF"
+            onMouseOver={e => handleHover(e, 'rgba(239, 68, 68, 0.5)')}
+            onMouseOut={e => handleOut(e, 'rgba(239, 68, 68, 0.3)')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
@@ -889,7 +943,7 @@ export default function Pagos() {
           {alumnosFiltrados.map(a => {
             const pagado = !!a.pagoActivo
             return (
-              <div key={a.id} style={{ ...s.card, borderLeft: `4px solid ${pagado ? 'var(--accent-green)' : 'var(--accent-red)'}`, position: 'relative' }}
+              <div key={a.id} style={{ ...s.card, borderLeft: `4px solid ${pagado ? 'var(--accent-green)' : 'var(--accent-red)'}`, position: 'relative', height: '82px', padding: isMobile ? '10px 14px' : '14px 18px', gap: isMobile ? '10px' : '16px', boxSizing: 'border-box' }}
                 onClick={() => abrirHistorial(a)}>
 
 
@@ -904,7 +958,7 @@ export default function Pagos() {
                 {/* Info */}
                 <div style={s.info}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={s.nombre}>{a.nombre} {a.apellido_paterno}</div>
+                    <div style={s.nombre}>{a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}</div>
                     {submodulo === 'mensualidades' && a.tieneDeudaAntigua && !pagado && (
                       <span style={s.badgeDeuda} title="Debe periodos anteriores">DEUDA CRÍTICA</span>
                     )}
@@ -913,10 +967,22 @@ export default function Pagos() {
                 </div>
 
                 {/* Estado y acción */}
-                <div style={s.derecha}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ ...s.derecha, width: isMobile ? '200px' : '260px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px' }}>
                     {!pagado && submodulo === 'mensualidades' && (
-                      <button style={s.btnWhatsApp} onClick={(e) => { e.stopPropagation(); enviarWhatsApp(a); }} title="Recordar por WhatsApp">
+                      <button style={{ ...s.btnWhatsApp, transition: 'all 0.2s' }} onClick={(e) => { e.stopPropagation(); enviarWhatsApp(a); }} title="Recordar por WhatsApp"
+                        onMouseOver={e => {
+                          e.currentTarget.style.background = '#22c55e';
+                          e.currentTarget.style.color = '#fff';
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 4px 10px rgba(34, 197, 94, 0.3)';
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                          e.currentTarget.style.color = '#22c55e';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z" />
                         </svg>
@@ -927,9 +993,21 @@ export default function Pagos() {
                         <span style={submodulo === 'mensualidades' ? s.badgePagado : s.badgeInscrito}>✓ {submodulo === 'mensualidades' ? 'PAGADO' : 'INSCRITO'}</span>
                         {user?.role === 'owner' && (
                           <button
-                            style={s.btnIconTrash}
+                            style={{ ...s.btnIconTrash, transition: 'all 0.2s' }}
                             onClick={(e) => eliminarPago(a.pagoActivo.id, e)}
                             title="Quitar registro"
+                            onMouseOver={e => {
+                              e.currentTarget.style.background = '#ef4444';
+                              e.currentTarget.style.color = '#fff';
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 4px 10px rgba(239, 68, 68, 0.3)';
+                            }}
+                            onMouseOut={e => {
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                              e.currentTarget.style.color = 'var(--accent-red)';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
@@ -939,9 +1017,21 @@ export default function Pagos() {
 
                         {/* Botones de recibo rápido */}
                         <button
-                          style={s.btnIconBlueSmall}
+                          style={{ ...s.btnIconBlueSmall, transition: 'all 0.2s' }}
                           onClick={(e) => { e.stopPropagation(); generarRecibo(a.pagoActivo, a); }}
                           title="Descargar Recibo"
+                          onMouseOver={e => {
+                            e.currentTarget.style.background = 'var(--accent-blue)';
+                            e.currentTarget.style.color = '#fff';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 4px 10px rgba(59, 130, 246, 0.3)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                            e.currentTarget.style.color = 'var(--accent-blue)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -950,9 +1040,21 @@ export default function Pagos() {
                           </svg>
                         </button>
                         <button
-                          style={s.btnIconGreenSmall}
+                          style={{ ...s.btnIconGreenSmall, transition: 'all 0.2s' }}
                           onClick={(e) => { e.stopPropagation(); enviarComprobanteWhatsApp(a.pagoActivo, a); }}
                           title="Enviar por WhatsApp"
+                          onMouseOver={e => {
+                            e.currentTarget.style.background = '#22c55e';
+                            e.currentTarget.style.color = '#fff';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 4px 10px rgba(34, 197, 94, 0.3)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                            e.currentTarget.style.color = '#22c55e';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/>
@@ -961,7 +1063,15 @@ export default function Pagos() {
                       </div>
                     )}
 
-                    <button style={s.btnPagarSmall} onClick={(e) => abrirModalPago(a, e)} title={pagado ? "Registrar otro pago" : "Registrar pago"}>
+                    <button style={{ ...s.btnPagarSmall, transition: 'all 0.2s' }} onClick={(e) => abrirModalPago(a, e)} title={pagado ? "Registrar otro pago" : "Registrar pago"}
+                      onMouseOver={e => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 15px rgba(59, 130, 246, 0.6)';
+                      }}
+                      onMouseOut={e => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -969,13 +1079,15 @@ export default function Pagos() {
                     </button>
                   </div>
 
-                  {pagado && (
+                  {pagado ? (
                     <div style={s.montoInfo}>
                       ${parseFloat(a.pagoActivo.monto).toFixed(2)} · {a.pagoActivo.metodo_pago}
                       {a.pagoActivo.fecha_pago && (
                         <span style={{ marginLeft: '6px', opacity: 0.75 }}>· {fmtFecha(a.pagoActivo.fecha_pago)}</span>
                       )}
                     </div>
+                  ) : (
+                    <div style={{ height: '18px' }} />
                   )}
                 </div>
               </div>
@@ -986,17 +1098,25 @@ export default function Pagos() {
 
       {/* ── MODAL RÁPIDO DE PAGO ── */}
       {modalPago && (
-        <div style={s.overlayModal} onClick={() => { setModalPago(null); setPagoAEditar(null); }}>
-          <div style={s.modal} onClick={e => e.stopPropagation()}>
+        <div style={s.overlayModal} className="mobile-fullscreen-overlay" onClick={() => { setModalPago(null); setPagoAEditar(null); }}>
+          <div style={s.modal} className="mobile-fullscreen-modal" onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <div>
                 <h3 style={s.modalTitulo}>{pagoAEditar ? 'Editar Pago' : 'Registrar Pago'}</h3>
                 <p style={s.modalSub}>{modalPago.nombre} {modalPago.apellido_paterno} {modalPago.apellido_materno}</p>
               </div>
-              <button style={s.btnCerrar} onClick={() => setModalPago(null)}>✕</button>
+              <button style={{ ...s.btnCerrar, transition: 'all 0.2s' }} onClick={() => setModalPago(null)}
+                onMouseOver={e => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'scale(1.2)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}>✕</button>
             </div>
 
-            <div style={s.grid2}>
+            <div style={s.grid2} className="mobile-grid-1">
               {formPago.tipo === 'mensualidad' && (
                 <div style={{ gridColumn: '1/-1' }}>
                   <label style={s.label}>Mes del periodo (Inicio)</label>
@@ -1041,8 +1161,26 @@ export default function Pagos() {
             </div>
 
             <div style={s.modalFooter}>
-              <button style={s.btnSecondary} onClick={() => { setModalPago(null); setPagoAEditar(null); }}>Cancelar</button>
-              <button style={s.btnConfirmar} onClick={confirmarPago}>
+              <button style={{ ...s.btnSecondary, transition: 'all 0.2s' }} onClick={() => { setModalPago(null); setPagoAEditar(null); }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>Cancelar</button>
+              <button style={{ ...s.btnConfirmar, transition: 'all 0.2s' }} onClick={confirmarPago}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 15px rgba(16, 185, 129, 0.4)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}>
                 {pagoAEditar ? '✓ Guardar Cambios' : '✓ Confirmar Pago'}
               </button>
             </div>
@@ -1070,8 +1208,8 @@ export default function Pagos() {
         const totalGeneral = mensualidades.filter(p => p.estado === 'pagado').reduce((sum, p) => sum + parseFloat(p.monto), 0)
 
         return (
-          <div style={s.overlay} onClick={cerrarHistorial}>
-            <div style={{ ...s.drawer, width: 600, maxWidth: '96vw' }} onClick={e => e.stopPropagation()}>
+          <div style={s.overlay} className="mobile-fullscreen-overlay" onClick={cerrarHistorial}>
+            <div style={{ ...s.drawer, width: 600, maxWidth: '96vw' }} className="mobile-fullscreen-modal" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div style={s.drawerHeader}>
                 <div style={s.drawerTituloRow}>
@@ -1086,7 +1224,15 @@ export default function Pagos() {
                     <div style={s.drawerSub}>Día de corte: <strong>{String(historialAlumno.dia_pago || 1).padStart(2, '0')}</strong> de cada mes</div>
                   </div>
                 </div>
-                <button style={s.btnCerrar} onClick={cerrarHistorial}>✕</button>
+                <button style={{ ...s.btnCerrar, transition: 'all 0.2s' }} onClick={cerrarHistorial}
+                  onMouseOver={e => {
+                    e.currentTarget.style.color = '#ffffff';
+                    e.currentTarget.style.transform = 'scale(1.2)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.color = 'var(--text-muted)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}>✕</button>
               </div>
 
               <div style={s.drawerContent}>
@@ -1114,14 +1260,40 @@ export default function Pagos() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Año {anioHistorial}</span>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => setAnioHistorial(y => y - 1)} style={s.btnNavAnio}>‹ {anioHistorial - 1}</button>
-                        <button onClick={() => setAnioHistorial(new Date().getFullYear())} style={{ ...s.btnNavAnio, background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontWeight: 700 }}>Hoy</button>
-                        <button onClick={() => setAnioHistorial(y => y + 1)} style={s.btnNavAnio}>{anioHistorial + 1} ›</button>
+                        <button onClick={() => setAnioHistorial(y => y - 1)} style={{ ...s.btnNavAnio, transition: 'all 0.2s' }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.background = 'var(--border)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.background = 'var(--bg-tertiary)';
+                          }}>‹ {anioHistorial - 1}</button>
+                        <button onClick={() => setAnioHistorial(new Date().getFullYear())} style={{ ...s.btnNavAnio, background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontWeight: 700, transition: 'all 0.2s' }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.background = 'var(--accent-blue)';
+                            e.currentTarget.style.color = '#ffffff';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.background = 'var(--accent-blue-bg)';
+                            e.currentTarget.style.color = 'var(--accent-blue)';
+                          }}>Hoy</button>
+                        <button onClick={() => setAnioHistorial(y => y + 1)} style={{ ...s.btnNavAnio, transition: 'all 0.2s' }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.background = 'var(--border)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.background = 'var(--bg-tertiary)';
+                          }}>{anioHistorial + 1} ›</button>
                       </div>
                     </div>
 
                     {/* Grilla de 12 meses */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
                       {MESES.map((mes, idx) => {
                         const mesKey = `${anioHistorial}-${String(idx + 1).padStart(2, '0')}`
                         const pago = pagosPorMes[mesKey]
@@ -1152,31 +1324,71 @@ export default function Pagos() {
                                 <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{pago.metodo_pago} · {fmtFecha(pago.fecha_pago)}</div>
                                 <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
                                   <button
-                                    style={s.btnIconEdit}
+                                    style={{ ...s.btnIconEdit, transition: 'all 0.2s' }}
                                     onClick={() => abrirModalEdicion(pago)}
                                     title="Editar"
+                                    onMouseOver={e => {
+                                      e.currentTarget.style.background = 'var(--accent-blue)';
+                                      e.currentTarget.style.color = '#fff';
+                                      e.currentTarget.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseOut={e => {
+                                      e.currentTarget.style.background = 'rgba(96, 165, 250, 0.1)';
+                                      e.currentTarget.style.color = 'var(--accent-blue)';
+                                      e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
                                   >
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                   </button>
                                   <button
-                                    style={s.btnIconBlueSmall}
+                                    style={{ ...s.btnIconBlueSmall, transition: 'all 0.2s' }}
                                     onClick={() => generarRecibo(pago, historialAlumno)}
                                     title="Recibo PDF"
+                                    onMouseOver={e => {
+                                      e.currentTarget.style.background = 'var(--accent-blue)';
+                                      e.currentTarget.style.color = '#fff';
+                                      e.currentTarget.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseOut={e => {
+                                      e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                                      e.currentTarget.style.color = 'var(--accent-blue)';
+                                      e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
                                   >
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                   </button>
                                   <button
-                                    style={s.btnIconGreenSmall}
+                                    style={{ ...s.btnIconGreenSmall, transition: 'all 0.2s' }}
                                     onClick={() => enviarComprobanteWhatsApp(pago, historialAlumno)}
                                     title="WhatsApp"
+                                    onMouseOver={e => {
+                                      e.currentTarget.style.background = '#22c55e';
+                                      e.currentTarget.style.color = '#fff';
+                                      e.currentTarget.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseOut={e => {
+                                      e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                                      e.currentTarget.style.color = '#22c55e';
+                                      e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
                                   >
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
                                   </button>
                                   {user?.role === 'owner' && (
                                     <button
-                                      style={s.btnIconTrash}
+                                      style={{ ...s.btnIconTrash, transition: 'all 0.2s' }}
                                       onClick={(e) => eliminarPago(pago.id, e)}
                                       title="Eliminar"
+                                      onMouseOver={e => {
+                                        e.currentTarget.style.background = '#ef4444';
+                                        e.currentTarget.style.color = '#fff';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                      }}
+                                      onMouseOut={e => {
+                                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                                        e.currentTarget.style.color = 'var(--accent-red)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                      }}
                                     >
                                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                                     </button>
@@ -1206,14 +1418,44 @@ export default function Pagos() {
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>${parseFloat(p.monto).toFixed(2)}</span>
-                                <button style={s.btnIconEdit} onClick={() => abrirModalEdicion(p)} title="Editar">
+                                <button style={{ ...s.btnIconEdit, transition: 'all 0.2s' }} onClick={() => abrirModalEdicion(p)} title="Editar"
+                                  onMouseOver={e => {
+                                    e.currentTarget.style.background = 'var(--accent-blue)';
+                                    e.currentTarget.style.color = '#fff';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                  }}
+                                  onMouseOut={e => {
+                                    e.currentTarget.style.background = 'rgba(96, 165, 250, 0.1)';
+                                    e.currentTarget.style.color = 'var(--accent-blue)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                  }}>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
-                                <button style={s.btnIconBlueSmall} onClick={() => generarRecibo(p, historialAlumno)} title="Recibo PDF">
+                                <button style={{ ...s.btnIconBlueSmall, transition: 'all 0.2s' }} onClick={() => generarRecibo(p, historialAlumno)} title="Recibo PDF"
+                                  onMouseOver={e => {
+                                    e.currentTarget.style.background = 'var(--accent-blue)';
+                                    e.currentTarget.style.color = '#fff';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                  }}
+                                  onMouseOut={e => {
+                                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                                    e.currentTarget.style.color = 'var(--accent-blue)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                  }}>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 </button>
                                 {user?.role === 'owner' && (
-                                  <button style={s.btnIconTrash} onClick={(e) => eliminarPago(p.id, e)} title="Eliminar">
+                                  <button style={{ ...s.btnIconTrash, transition: 'all 0.2s' }} onClick={(e) => eliminarPago(p.id, e)} title="Eliminar"
+                                    onMouseOver={e => {
+                                      e.currentTarget.style.background = '#ef4444';
+                                      e.currentTarget.style.color = '#fff';
+                                      e.currentTarget.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseOut={e => {
+                                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                                      e.currentTarget.style.color = 'var(--accent-red)';
+                                      e.currentTarget.style.transform = 'translateY(0)';
+                                    }}>
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                                   </button>
                                 )}
@@ -1226,8 +1468,16 @@ export default function Pagos() {
 
                     {/* Registrar pago */}
                     <button
-                      style={{ ...s.btnConfirmar, width: '100%', justifyContent: 'center', display: 'flex', gap: 8 }}
+                      style={{ ...s.btnConfirmar, width: '100%', justifyContent: 'center', display: 'flex', gap: 8, transition: 'all 0.2s' }}
                       onClick={(e) => { cerrarHistorial(); setTimeout(() => abrirModalPago(historialAlumno, e), 100) }}
+                      onMouseOver={e => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 15px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={e => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     >
                       + Registrar nuevo pago
                     </button>
@@ -1243,7 +1493,7 @@ export default function Pagos() {
 }
 
 const s = {
-  page: { padding: '' },
+  page: { padding: '', scrollbarGutter: 'stable' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' },
   titulo: { fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
   sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
@@ -1251,6 +1501,7 @@ const s = {
   search: { flex: 1, maxWidth: '395px', padding: '10px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '80px', color: 'var(--text-primary)', outline: 'none', transition: 'all 0.3s ease' },
   tabs: { display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', flexShrink: 0 },
   tab: { padding: '8px 16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
+  tabHover: { padding: '8px 16px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
   tabActiveVerde: { padding: '8px 20px', background: 'var(--accent-green)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-green)', transition: 'all 0.2s' },
   tabActiveRojo: { padding: '8px 20px', background: 'var(--accent-red)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-red)', transition: 'all 0.2s' },
   tabActiveAzul: { padding: '8px 20px', background: 'var(--accent-blue)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-blue)', transition: 'all 0.2s' },
@@ -1273,12 +1524,12 @@ const s = {
   avatarImg: { width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover' },
   avatarInicial: { width: '44px', height: '44px', borderRadius: '50%', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px' },
   info: { flex: 1, minWidth: 0 },
-  nombre: { fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px' },
-  periodo: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' },
+  nombre: { fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  periodo: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   derecha: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 },
   badgePagado: { background: 'var(--accent-green-bg)', color: 'var(--accent-green)', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' },
   badgeInscrito: { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' },
-  montoInfo: { fontSize: '12px', color: 'var(--text-muted)' },
+  montoInfo: { fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' },
   btnPagarSmall: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-glow-blue)', padding: 0 },
   btnIconTrash: { background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', border: 'none', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', padding: 0 },
   btnIconEdit: { background: 'rgba(96, 165, 250, 0.1)', color: 'var(--accent-blue)', border: 'none', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', padding: 0 },

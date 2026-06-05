@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import Swal from 'sweetalert2'
 
 const VACIO = { nombre: '', tipo: 'examen', fecha: '', lugar: '', descripcion: '', costo: '' }
 
@@ -29,6 +30,14 @@ export default function Eventos() {
   const [editando, setEditando]       = useState(null)
 
   useEffect(() => { cargarDatosBasicos() }, [])
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setModalEvento(false)
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [])
 
   const cargarDatosBasicos = async () => {
     setCargando(true)
@@ -69,9 +78,30 @@ export default function Eventos() {
   }
   const eliminarEvento = async (id, ev) => {
     ev.stopPropagation()
-    if (!confirm('¿Eliminar evento?')) return
-    await api.delete(`/eventos/${id}`)
-    cargarDatosBasicos()
+    Swal.fire({
+      title: '¿Confirmar borrado?',
+      text: 'El evento se eliminará permanentemente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, borrar',
+      confirmButtonColor: 'var(--accent-red)',
+      background: 'var(--bg-secondary)', color: 'var(--text-primary)'
+    }).then(async r => {
+      if (r.isConfirmed) {
+        try {
+          await api.delete(`/eventos/${id}`)
+          cargarDatosBasicos()
+        } catch (err) {
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo eliminar el evento.',
+            icon: 'error',
+            confirmButtonColor: 'var(--accent-blue)',
+            background: 'var(--bg-secondary)', color: 'var(--text-primary)'
+          })
+        }
+      }
+    })
   }
 
   const hoy = new Date()
@@ -148,9 +178,60 @@ export default function Eventos() {
       </div>
 
       <div style={s.subnav}>
-        <button style={submodulo === 'examenes' ? s.subnavBtnActive : s.subnavBtn} onClick={() => setSubmodulo('examenes')}>Exámenes</button>
-        <button style={submodulo === 'torneos'  ? s.subnavBtnActive : s.subnavBtn} onClick={() => setSubmodulo('torneos')}>Torneos</button>
-        <button style={submodulo === 'otros'    ? s.subnavBtnActive : s.subnavBtn} onClick={() => setSubmodulo('otros')}>Otros</button>
+        <button
+          style={submodulo === 'examenes' ? s.subnavBtnActive : s.subnavBtn}
+          onClick={() => setSubmodulo('examenes')}
+          onMouseOver={e => {
+            if (submodulo !== 'examenes') {
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }
+          }}
+          onMouseOut={e => {
+            if (submodulo !== 'examenes') {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }
+          }}
+        >
+          Exámenes
+        </button>
+        <button
+          style={submodulo === 'torneos' ? s.subnavBtnActive : s.subnavBtn}
+          onClick={() => setSubmodulo('torneos')}
+          onMouseOver={e => {
+            if (submodulo !== 'torneos') {
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }
+          }}
+          onMouseOut={e => {
+            if (submodulo !== 'torneos') {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }
+          }}
+        >
+          Torneos
+        </button>
+        <button
+          style={submodulo === 'otros' ? s.subnavBtnActive : s.subnavBtn}
+          onClick={() => setSubmodulo('otros')}
+          onMouseOver={e => {
+            if (submodulo !== 'otros') {
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }
+          }}
+          onMouseOut={e => {
+            if (submodulo !== 'otros') {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }
+          }}
+        >
+          Otros
+        </button>
       </div>
 
       <div style={s.barraAcciones}>
@@ -181,7 +262,20 @@ export default function Eventos() {
             <button style={{ background:'none', border:'none', color:'var(--accent-red)', cursor:'pointer', padding:'0 4px' }} onClick={() => setFiltroMes('')}>✕</button>
           )}
 
-          <button style={s.btnNuevo} onClick={abrirCrear}>+ Nuevo Evento</button>
+          <button
+            style={{ ...s.btnNuevo, transition: 'all 0.2s' }}
+            onClick={abrirCrear}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+            }}
+          >
+            + Nuevo Evento
+          </button>
         </div>
       </div>
 
@@ -231,10 +325,42 @@ export default function Eventos() {
               <div style={s.cardFooter}>
                 <span style={s.footerLink}>Ver detalles e inscritos →</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={s.btnIconEdit} onClick={(ev) => abrirEditar(e, ev)} title="Editar">
+                  <button
+                    style={{ ...s.btnIconEdit, transition: 'all 0.2s' }}
+                    onClick={(ev) => abrirEditar(e, ev)}
+                    onMouseOver={ev => {
+                      ev.currentTarget.style.background = 'var(--accent-blue)';
+                      ev.currentTarget.style.color = '#ffffff';
+                      ev.currentTarget.style.transform = 'translateY(-2px)';
+                      ev.currentTarget.style.boxShadow = '0 4px 10px rgba(59, 130, 246, 0.3)';
+                    }}
+                    onMouseOut={ev => {
+                      ev.currentTarget.style.background = 'rgba(96, 165, 250, 0.1)';
+                      ev.currentTarget.style.color = 'var(--accent-blue)';
+                      ev.currentTarget.style.transform = 'translateY(0)';
+                      ev.currentTarget.style.boxShadow = 'none';
+                    }}
+                    title="Editar"
+                  >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   </button>
-                  <button style={s.btnIconTrash} onClick={(ev) => eliminarEvento(e.id, ev)} title="Eliminar">
+                  <button
+                    style={{ ...s.btnIconTrash, transition: 'all 0.2s' }}
+                    onClick={(ev) => eliminarEvento(e.id, ev)}
+                    onMouseOver={ev => {
+                      ev.currentTarget.style.background = 'var(--accent-red)';
+                      ev.currentTarget.style.color = '#ffffff';
+                      ev.currentTarget.style.transform = 'translateY(-2px)';
+                      ev.currentTarget.style.boxShadow = '0 4px 10px rgba(239, 68, 68, 0.3)';
+                    }}
+                    onMouseOut={ev => {
+                      ev.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                      ev.currentTarget.style.color = 'var(--accent-red)';
+                      ev.currentTarget.style.transform = 'translateY(0)';
+                      ev.currentTarget.style.boxShadow = 'none';
+                    }}
+                    title="Eliminar"
+                  >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                   </button>
                 </div>
