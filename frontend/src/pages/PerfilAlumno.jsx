@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../api/axios'
 import './PerfilAlumno.css'
 import Swal from 'sweetalert2'
@@ -44,6 +44,24 @@ const formatHora = (hora) => {
   return `${h12}:${m} ${ampm}`
 }
 
+function Campo({ label, value, onChange, type = 'text', full, error, required }) {
+  return (
+    <div style={full ? { gridColumn: '1 / -1' } : {}} className="perfil-edit-campo-group">
+      <label className="perfil-edit-label">
+        {label} {required && <span style={{ color: 'var(--accent-red)' }}>*</span>}
+      </label>
+      <input
+        type={type}
+        value={value || ''}
+        className="perfil-edit-input"
+        style={{ borderColor: error ? 'var(--accent-red)' : 'var(--border)' }}
+        onChange={e => onChange(e.target.value)}
+      />
+      {error && <div className="perfil-edit-input-error">{error}</div>}
+    </div>
+  )
+}
+
 export default function PerfilAlumno() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -52,6 +70,17 @@ export default function PerfilAlumno() {
   const [error, setError] = useState(null)
   const [verFotoModal, setVerFotoModal] = useState(false)
   const [showCredencialModal, setShowCredencialModal] = useState(false)
+
+  // Edit Modal States & Ref
+  const [horarios, setHorarios] = useState([])
+  const [form, setForm] = useState({})
+  const [errors, setErrors] = useState({})
+  const [fotoFile, setFotoFile] = useState(null)
+  const [fotoPreview, setFotoPreview] = useState(null)
+  const [eliminarFoto, setEliminarFoto] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [modalEditar, setModalEditar] = useState(false)
+  const fileRef = useRef(null)
 
   useEffect(() => {
     cargarPerfil()
@@ -62,6 +91,7 @@ export default function PerfilAlumno() {
       if (e.key === 'Escape') {
         setVerFotoModal(false)
         setShowCredencialModal(false)
+        setModalEditar(false)
       }
     }
     window.addEventListener('keydown', handleEsc)
@@ -74,11 +104,134 @@ export default function PerfilAlumno() {
     try {
       const res = await api.get(`/alumnos/${id}/perfil`)
       setData(res.data)
+      const horRes = await api.get('/horarios')
+      setHorarios(horRes.data)
     } catch (err) {
       console.error(err)
       setError('No se pudo cargar la información del alumno. Por favor, intente de nuevo.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const abrirEditar = () => {
+    setErrors({})
+    setFotoFile(null)
+    setFotoPreview(alumno.foto_url && tieneFoto(alumno.foto) ? alumno.foto_url : null)
+    setEliminarFoto(false)
+    setForm({
+      ...alumno,
+      nombre: alumno.nombre || '',
+      apellido_paterno: alumno.apellido_paterno || '',
+      apellido_materno: alumno.apellido_materno || '',
+      nombre_tutor: alumno.nombre_tutor || '',
+      telefono_tutor: alumno.telefono_tutor || '',
+      email: alumno.email || '',
+      fecha_nacimiento: alumno.fecha_nacimiento || '',
+      configuracion_cinta_id: alumno.configuracion_cinta_id || '',
+      horario_id: alumno.horario_id || '',
+      estatus: alumno.estatus || 'activo',
+      dia_pago: alumno.dia_pago || 1,
+    })
+    setModalEditar(true)
+  }
+
+  const handleFoto = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setFotoFile(file)
+    setFotoPreview(URL.createObjectURL(file))
+    setEliminarFoto(false)
+  }
+
+  const validar = () => {
+    const e = {}
+    if (!form.nombre?.trim()) e.nombre = ['El nombre es obligatorio.']
+    if (!form.apellido_paterno?.trim()) e.apellido_paterno = ['El apellido paterno es obligatorio.']
+    if (!form.apellido_materno?.trim()) e.apellido_materno = ['El apellido materno es obligatorio.']
+    if (!form.nombre_tutor?.trim()) e.nombre_tutor = ['El nombre del tutor es obligatorio.']
+    if (!form.telefono_tutor?.trim()) e.telefono_tutor = ['El teléfono del tutor es obligatorio.']
+    if (!form.fecha_nacimiento) e.fecha_nacimiento = ['La fecha de nacimiento es obligatoria.']
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = ['Correo inválido.']
+    return e
+  }
+
+  const guardar = async () => {
+    try {
+      const e = validar()
+      setErrors(e)
+      if (Object.keys(e).length > 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de validación',
+          text: Object.values(e)[0][0],
+          background: '#13151f',
+          color: '#fff',
+          customClass: { popup: 'swal-custom-premium' }
+        })
+        return
+      }
+
+      setGuardando(true)
+      const formData = new FormData()
+
+      const EXCLUIR = ['foto_url', 'foto', 'id', 'edad', 'cinta_config', 'ultimo_pago', 'estatus_pago', 'racha_faltas', 'created_at', 'updated_at']
+      Object.entries(form).forEach(([k, v]) => {
+        if (!EXCLUIR.includes(k) && v !== null && v !== undefined) {
+          formData.append(k, v)
+        }
+      })
+      if (eliminarFoto) {
+        formData.append('eliminar_foto', '1')
+      }
+      if (fotoFile && fotoFile instanceof File) {
+        formData.append('foto', fotoFile)
+      }
+
+      formData.append('_method', 'PUT')
+      await api.post(`/alumnos/${alumno.id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Éxito!',
+        text: 'Alumno actualizado correctamente.',
+        background: '#13151f',
+        color: '#fff',
+        timer: 2000,
+        showConfirmButton: false,
+        customClass: { popup: 'swal-custom-premium' }
+      })
+
+      setModalEditar(false)
+      cargarPerfil()
+    } catch (err) {
+      console.error('Detalles del error:', err.response?.data)
+      if (err.response?.data?.errors) {
+        const errores = err.response.data.errors
+        setErrors(errores)
+        const primerError = Object.values(errores)[0][0]
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al guardar',
+          text: primerError,
+          background: '#13151f',
+          color: '#fff',
+          customClass: { popup: 'swal-custom-premium' }
+        })
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al guardar.',
+          background: '#13151f',
+          color: '#fff',
+          customClass: { popup: 'swal-custom-premium' }
+        })
+      }
+    } finally {
+      setGuardando(false)
     }
   }
 
@@ -175,7 +328,7 @@ export default function PerfilAlumno() {
           </button>
           <button 
             className="perfil-btn-editar"
-            onClick={() => navigate(`/alumnos?edit=${alumno.id}`)}
+            onClick={abrirEditar}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
             Editar perfil
@@ -737,6 +890,149 @@ export default function PerfilAlumno() {
                 WHATSAPP
               </a>
               <button className="perfil-cred-btn-cerrar" onClick={() => setShowCredencialModal(false)}>CERRAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Alumno */}
+      {modalEditar && (
+        <div className="perfil-lightbox-overlay" onClick={() => setModalEditar(false)}>
+          <div className="perfil-edit-modal" onClick={e => e.stopPropagation()}>
+            <div className="perfil-edit-header">
+              <h3 className="perfil-edit-titulo">Editar alumno</h3>
+              <button className="perfil-edit-btn-cerrar" onClick={() => setModalEditar(false)}>✕</button>
+            </div>
+
+            <div className="perfil-edit-foto-area">
+              <div className="perfil-edit-foto-preview-box" onClick={() => fileRef.current.click()}>
+                {fotoPreview ? (
+                  <img src={fotoPreview} alt="preview" className="perfil-edit-foto-preview-img" />
+                ) : (
+                  <div className="perfil-edit-foto-placeholder">
+                    <svg
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#3b82f6"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span style={{ fontSize: '25px', color: '#3b82f6', fontWeight: '700' }}>
+                      {form.nombre || form.apellido_paterno
+                        ? obtenerIniciales(form.nombre, form.apellido_paterno)
+                        : '+'
+                      }
+                    </span>
+                    <span style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
+                      {form.nombre ? 'Agregar foto' : 'Foto'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleFoto}
+              />
+              {fotoPreview && (
+                <button
+                  className="perfil-edit-btn-quitar-foto"
+                  onClick={() => { setFotoFile(null); setFotoPreview(null); setEliminarFoto(true) }}
+                >
+                  Quitar foto
+                </button>
+              )}
+            </div>
+
+            <div className="perfil-edit-grid">
+              <Campo label="Nombre(s)" value={form.nombre} error={errors.nombre?.[0]} required onChange={v => { setForm({ ...form, nombre: v }); if (errors.nombre) setErrors(prev => ({ ...prev, nombre: undefined })) }} />
+              <Campo label="Apellido paterno" value={form.apellido_paterno} error={errors.apellido_paterno?.[0]} required onChange={v => { setForm({ ...form, apellido_paterno: v }); if (errors.apellido_paterno) setErrors(prev => ({ ...prev, apellido_paterno: undefined })) }} />
+              <Campo label="Apellido materno" value={form.apellido_materno} error={errors.apellido_materno?.[0]} required onChange={v => { setForm({ ...form, apellido_materno: v }); if (errors.apellido_materno) setErrors(prev => ({ ...prev, apellido_materno: undefined })) }} />
+              <Campo label="Fecha de nacimiento" value={form.fecha_nacimiento} error={errors.fecha_nacimiento?.[0]} required onChange={v => { setForm({ ...form, fecha_nacimiento: v }); if (errors.fecha_nacimiento) setErrors(prev => ({ ...prev, fecha_nacimiento: undefined })) }} type="date" />
+              <Campo label="Nombre del tutor" value={form.nombre_tutor} error={errors.nombre_tutor?.[0]} required onChange={v => { setForm({ ...form, nombre_tutor: v }); if (errors.nombre_tutor) setErrors(prev => ({ ...prev, nombre_tutor: undefined })) }} />
+              <Campo label="Teléfono del tutor" value={form.telefono_tutor} error={errors.telefono_tutor?.[0]} required onChange={v => { setForm({ ...form, telefono_tutor: v }); if (errors.telefono_tutor) setErrors(prev => ({ ...prev, telefono_tutor: undefined })) }} />
+              <Campo label="Correo electrónico" value={form.email} error={errors.email?.[0]} onChange={v => { setForm({ ...form, email: v }); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })) }} type="email" full />
+
+              <div className="perfil-edit-campo-group">
+                <label className="perfil-edit-label">Horario Asignado</label>
+                <select
+                  className="perfil-edit-select"
+                  value={form.horario_id || ''}
+                  onChange={e => setForm({ ...form, horario_id: e.target.value })}
+                >
+                  <option value="">Seleccionar horario...</option>
+                  {horarios.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="perfil-edit-campo-group">
+                <label className="perfil-edit-label">Cinta</label>
+                <select 
+                  className="perfil-edit-select" 
+                  value={form.configuracion_cinta_id || ''} 
+                  onChange={e => setForm({ ...form, configuracion_cinta_id: e.target.value })}
+                >
+                  <option value="">Seleccionar cinta...</option>
+                  {cintas_config?.map(c => (
+                    <option key={c.id} value={c.id}>{c.nombre_nivel}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="perfil-edit-campo-group">
+                <label className="perfil-edit-label">Estatus</label>
+                <select 
+                  className="perfil-edit-select" 
+                  value={form.estatus || 'activo'} 
+                  onChange={e => setForm({ ...form, estatus: e.target.value })}
+                >
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                </select>
+              </div>
+
+              <div className="perfil-edit-campo-group">
+                <label className="perfil-edit-label">Día de pago mensual (1-31)</label>
+                <input
+                  className="perfil-edit-input"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={form.dia_pago || ''}
+                  placeholder="Ej. 1"
+                  onChange={e => {
+                    let val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    if (val !== '' && val > 31) val = 31;
+                    if (val !== '' && val < 1) val = 1;
+                    setForm({ ...form, dia_pago: val });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="perfil-edit-footer">
+              <button className="perfil-edit-btn-cancelar" onClick={() => setModalEditar(false)} disabled={guardando}>Cancelar</button>
+              <button
+                className="perfil-edit-btn-guardar"
+                style={{ opacity: guardando ? 0.75 : 1, cursor: guardando ? 'not-allowed' : 'pointer' }}
+                onClick={guardar}
+                disabled={guardando}
+              >
+                {guardando ? 'Guardando...' : 'Guardar cambios'}
+              </button>
             </div>
           </div>
         </div>
