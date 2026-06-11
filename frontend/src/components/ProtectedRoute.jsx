@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
  * Si el usuario no está autenticado, redirige a /login.
  * Muestra un spinner mientras verifica el token.
  */
-export default function ProtectedRoute({ children, allowedRoles }) {
+export default function ProtectedRoute({ children, allowedRoles, requireSuperAdmin, requireTenant }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -20,6 +20,16 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Si requiere ser superadmin y no lo es, redirige al home
+  if (requireSuperAdmin && !user.is_superadmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Si requiere ser tenant (usuario de escuela) y es superadmin, redirige al panel global
+  if (requireTenant && user.is_superadmin) {
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role) && !user.is_superadmin) {

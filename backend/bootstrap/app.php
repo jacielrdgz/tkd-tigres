@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role'       => \App\Http\Middleware\CheckRole::class,
             'superadmin' => \App\Http\Middleware\CheckSuperAdmin::class,
+            'tenant'     => \App\Http\Middleware\RequireTenant::class,
         ]);
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,

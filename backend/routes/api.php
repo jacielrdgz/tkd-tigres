@@ -79,71 +79,73 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/configuracion', [\App\Http\Controllers\AdminConfiguracionController::class, 'update']);
     });
 
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index']);
+    // Rutas específicas de Escuela/Tenant (bloqueadas para SuperAdmin, filtradas por tenant_id)
+    Route::middleware(['tenant'])->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    // Alumnos
-    Route::get('alumnos/{alumno}/predecir-grado', [EventoAlumnoController::class, 'predecirGrado']);
-    Route::patch('alumnos/{alumno}/toggle-estatus', [AlumnoController::class, 'toggleEstatus']);
-    Route::apiResource('alumnos', AlumnoController::class);
-    Route::patch('alumnos/{alumno}/quitar-foto', [AlumnoController::class, 'quitarFoto']);
-    Route::post('alumnos/{alumno}/historial-manual', [AlumnoController::class, 'addHistorialManual']);
+        // Alumnos
+        Route::get('alumnos/{alumno}/predecir-grado', [EventoAlumnoController::class, 'predecirGrado']);
+        Route::patch('alumnos/{alumno}/toggle-estatus', [AlumnoController::class, 'toggleEstatus']);
+        Route::get('alumnos/{alumno}/perfil', [AlumnoController::class, 'perfil']);
+        Route::apiResource('alumnos', AlumnoController::class);
+        Route::patch('alumnos/{alumno}/quitar-foto', [AlumnoController::class, 'quitarFoto']);
+        Route::post('alumnos/{alumno}/historial-manual', [AlumnoController::class, 'addHistorialManual']);
 
-    // Pagos (accesibles para owner, secretario e instructor — el Policy controla cada acción)
-    Route::get('pagos/alumno/{alumno}', [PagoController::class, 'porAlumno']);
-    Route::get('pagos', [PagoController::class, 'index']);
-    Route::get('pagos/{pago}', [PagoController::class, 'show']);
-    Route::post('pagos', [PagoController::class, 'store'])->middleware('role:owner,secretario');
-    Route::put('pagos/{pago}', [PagoController::class, 'update'])->middleware('role:owner,secretario');
-    Route::patch('pagos/{pago}', [PagoController::class, 'update'])->middleware('role:owner,secretario');
-    Route::delete('pagos/{pago}', [PagoController::class, 'destroy'])->middleware('role:owner');
+        // Pagos (accesibles para owner, secretario e instructor — el Policy controla cada acción)
+        Route::get('pagos/alumno/{alumno}', [PagoController::class, 'porAlumno']);
+        Route::get('pagos', [PagoController::class, 'index']);
+        Route::get('pagos/{pago}', [PagoController::class, 'show']);
+        Route::post('pagos', [PagoController::class, 'store'])->middleware('role:owner,secretario');
+        Route::put('pagos/{pago}', [PagoController::class, 'update'])->middleware('role:owner,secretario');
+        Route::patch('pagos/{pago}', [PagoController::class, 'update'])->middleware('role:owner,secretario');
+        Route::delete('pagos/{pago}', [PagoController::class, 'destroy'])->middleware('role:owner');
 
-    // Asistencias — rutas fijas primero (antes de las paramétricas)
-    Route::get('asistencias/resumen', [AsistenciaController::class, 'resumen']);
-    Route::get('asistencias/por-alumno', [AsistenciaController::class, 'porAlumno']);
-    Route::get('asistencias/por-fecha', [AsistenciaController::class, 'porFecha']);
-    Route::post('asistencias/registrar-dia', [AsistenciaController::class, 'registrarDia']);
-    // Asistencias — rutas paramétricas
-    Route::get('asistencias/dia/{fecha}', [AsistenciaController::class, 'dia']);
-    Route::get('asistencias/alumno-legacy/{alumno}', [AsistenciaController::class, 'alumnoHistorialLegacy']);
-    Route::get('asistencias/alumno/{alumno}', [AsistenciaController::class, 'alumno']);
-    Route::get('asistencias', [AsistenciaController::class, 'index']);
+        // Asistencias — rutas fijas primero (antes de las paramétricas)
+        Route::get('asistencias/resumen', [AsistenciaController::class, 'resumen']);
+        Route::get('asistencias/por-alumno', [AsistenciaController::class, 'porAlumno']);
+        Route::get('asistencias/por-fecha', [AsistenciaController::class, 'porFecha']);
+        Route::post('asistencias/registrar-dia', [AsistenciaController::class, 'registrarDia']);
+        // Asistencias — rutas paramétricas
+        Route::get('asistencias/dia/{fecha}', [AsistenciaController::class, 'dia']);
+        Route::get('asistencias/alumno-legacy/{alumno}', [AsistenciaController::class, 'alumnoHistorialLegacy']);
+        Route::get('asistencias/alumno/{alumno}', [AsistenciaController::class, 'alumno']);
+        Route::get('asistencias', [AsistenciaController::class, 'index']);
 
-    // Eventos - CRUD
-    Route::apiResource('eventos', EventoController::class);
+        // Eventos - CRUD
+        Route::apiResource('eventos', EventoController::class);
 
-    // Eventos - Inscripciones (base)
-    Route::get('eventos/{evento}/inscritos',       [\App\Http\Controllers\EventoAlumnoController::class, 'getInscritos']);
-    Route::post('eventos/{evento}/inscribir',      [\App\Http\Controllers\EventoAlumnoController::class, 'inscribir']);
-    Route::put('eventos/{evento}/alumnos/{alumno}', [\App\Http\Controllers\EventoAlumnoController::class, 'actualizarInscripcion']);
-    Route::delete('eventos/{evento}/alumnos/{alumno}', [\App\Http\Controllers\EventoAlumnoController::class, 'eliminarInscripcion']);
+        // Eventos - Inscripciones (base)
+        Route::get('eventos/{evento}/inscritos',       [\App\Http\Controllers\EventoAlumnoController::class, 'getInscritos']);
+        Route::post('eventos/{evento}/inscribir',      [\App\Http\Controllers\EventoAlumnoController::class, 'inscribir']);
+        Route::put('eventos/{evento}/alumnos/{alumno}', [\App\Http\Controllers\EventoAlumnoController::class, 'actualizarInscripcion']);
+        Route::delete('eventos/{evento}/alumnos/{alumno}', [\App\Http\Controllers\EventoAlumnoController::class, 'eliminarInscripcion']);
 
-    // Exámenes - Promover aprobados
-    Route::post('eventos/{evento}/promover-aprobados', [\App\Http\Controllers\EventoAlumnoController::class, 'promoverAprobados']);
+        // Exámenes - Promover aprobados
+        Route::post('eventos/{evento}/promover-aprobados', [\App\Http\Controllers\EventoAlumnoController::class, 'promoverAprobados']);
 
+        // Alertas de pagos pendientes
+        Route::get('eventos/alertas/pagos-pendientes', [\App\Http\Controllers\EventoAlumnoController::class, 'alertasPagosPendientes']);
 
-
-    // Alertas de pagos pendientes
-    Route::get('eventos/alertas/pagos-pendientes', [\App\Http\Controllers\EventoAlumnoController::class, 'alertasPagosPendientes']);
-
-    // Torneos - Modalidades
-    Route::get('eventos/{evento}/modalidades',        [\App\Http\Controllers\TorneoController::class, 'getModalidades']);
-    Route::post('eventos/{evento}/modalidades',       [\App\Http\Controllers\TorneoController::class, 'crearModalidad']);
-    Route::delete('eventos/{evento}/modalidades/{modalidad}', [\App\Http\Controllers\TorneoController::class, 'eliminarModalidad']);
-    Route::put('torneos/{torneoAlumnoId}/modalidades/{modalidad}/resultado', [\App\Http\Controllers\TorneoController::class, 'actualizarResultadoModalidad']);
-    Route::post('torneos/{torneoAlumnoId}/modalidades', [\App\Http\Controllers\TorneoController::class, 'inscribirModalidad']);
-    Route::post('configuraciones-cintas/reorder', [ConfiguracionCintaController::class, 'reorder']);
-    Route::apiResource('configuraciones-cintas', ConfiguracionCintaController::class);
-    Route::apiResource('horarios', HorarioController::class);
-    Route::apiResource('instructores', \App\Http\Controllers\InstructorController::class)->parameters([
-        'instructores' => 'instructor'
-    ]);
-    Route::apiResource('users', \App\Http\Controllers\UserController::class)->middleware('role:owner');
-    Route::post('users/{id}/toggle-suspension', [\App\Http\Controllers\UserController::class, 'toggleSuspension'])->middleware('role:owner');
-    
-    // Configuración de la Escuela (Perfiles y Direcciones)
-    Route::get('/configuracion-escuela/status', [\App\Http\Controllers\EscuelaController::class, 'configStatus']);
-    Route::post('/configuracion-escuela/confirmar-paso', [\App\Http\Controllers\EscuelaController::class, 'confirmarPaso']);
-    Route::get('/configuracion-escuela', [\App\Http\Controllers\EscuelaController::class, 'show']);
-    Route::post('/configuracion-escuela', [\App\Http\Controllers\EscuelaController::class, 'update']);
+        // Torneos - Modalidades
+        Route::get('eventos/{evento}/modalidades',        [\App\Http\Controllers\TorneoController::class, 'getModalidades']);
+        Route::post('eventos/{evento}/modalidades',       [\App\Http\Controllers\TorneoController::class, 'crearModalidad']);
+        Route::delete('eventos/{evento}/modalidades/{modalidad}', [\App\Http\Controllers\TorneoController::class, 'eliminarModalidad']);
+        Route::put('torneos/{torneoAlumnoId}/modalidades/{modalidad}/resultado', [\App\Http\Controllers\TorneoController::class, 'actualizarResultadoModalidad']);
+        Route::post('torneos/{torneoAlumnoId}/modalidades', [\App\Http\Controllers\TorneoController::class, 'inscribirModalidad']);
+        Route::post('configuraciones-cintas/reorder', [ConfiguracionCintaController::class, 'reorder']);
+        Route::apiResource('configuraciones-cintas', ConfiguracionCintaController::class);
+        Route::apiResource('horarios', HorarioController::class);
+        Route::apiResource('instructores', \App\Http\Controllers\InstructorController::class)->parameters([
+            'instructores' => 'instructor'
+        ]);
+        Route::apiResource('users', \App\Http\Controllers\UserController::class)->middleware('role:owner');
+        Route::post('users/{id}/toggle-suspension', [\App\Http\Controllers\UserController::class, 'toggleSuspension'])->middleware('role:owner');
+        
+        // Configuración de la Escuela (Perfiles y Direcciones)
+        Route::get('/configuracion-escuela/status', [\App\Http\Controllers\EscuelaController::class, 'configStatus']);
+        Route::post('/configuracion-escuela/confirmar-paso', [\App\Http\Controllers\EscuelaController::class, 'confirmarPaso']);
+        Route::get('/configuracion-escuela', [\App\Http\Controllers\EscuelaController::class, 'show']);
+        Route::post('/configuracion-escuela', [\App\Http\Controllers\EscuelaController::class, 'update']);
+    });
 });

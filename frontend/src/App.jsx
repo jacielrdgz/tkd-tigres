@@ -29,6 +29,7 @@ import CintasSettings from './pages/ajustes/Cintas'
 import AjustesEscuela from './pages/ajustes/AjustesEscuela'
 import UsuariosSettings from './pages/ajustes/Usuarios'
 import SetupGuard from './components/SetupGuard'
+import PerfilAlumno from './pages/PerfilAlumno'
 
 /**
  * Layout principal con Sidebar (solo cuando está autenticado).
@@ -75,9 +76,14 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <Dashboard /> },
+      // Sub-árbol de SuperAdmin (protegido globalmente)
       {
         path: "admin",
+        element: (
+          <ProtectedRoute requireSuperAdmin={true}>
+            <Outlet />
+          </ProtectedRoute>
+        ),
         children: [
           { path: "dashboard", element: <AdminDashboard /> },
           { path: "academias", element: <AdminAcademias /> },
@@ -88,42 +94,54 @@ const router = createBrowserRouter([
           { path: "configuracion", element: <AdminConfiguracion /> },
         ]
       },
-      { path: "alumnos", element: <SetupGuard><Alumnos /></SetupGuard> },
-      { path: "pagos", element: <SetupGuard><Pagos /></SetupGuard> },
-      { path: "asistencias", element: <SetupGuard><Asistencias /></SetupGuard> },
-      { path: "asistencias-antiguo", element: <SetupGuard><AsistenciasAntiguo /></SetupGuard> },
-      { path: "eventos", element: <SetupGuard><Eventos /></SetupGuard> },
-      { path: "eventos/:id", element: <SetupGuard><EventoDetalle /></SetupGuard> },
+      // Sub-árbol de Tenant / Escuela (protegido globalmente para que el superadmin no entre)
       {
-        path: "ajustes",
-        element: <Outlet />,
+        element: (
+          <ProtectedRoute requireTenant={true}>
+            <Outlet />
+          </ProtectedRoute>
+        ),
         children: [
-          { index: true, element: <Ajustes /> },
+          { index: true, element: <Dashboard /> },
+          { path: "alumnos", element: <SetupGuard><Alumnos /></SetupGuard> },
+          { path: "alumnos/:id", element: <SetupGuard><PerfilAlumno /></SetupGuard> },
+          { path: "pagos", element: <SetupGuard><Pagos /></SetupGuard> },
+          { path: "asistencias", element: <SetupGuard><Asistencias /></SetupGuard> },
+          { path: "asistencias-antiguo", element: <SetupGuard><AsistenciasAntiguo /></SetupGuard> },
+          { path: "eventos", element: <SetupGuard><Eventos /></SetupGuard> },
+          { path: "eventos/:id", element: <SetupGuard><EventoDetalle /></SetupGuard> },
           {
-            path: "configuracion",
-            element: (
-              <ProtectedRoute allowedRoles={['owner', 'secretario']}>
-                <AjustesEscuela />
-              </ProtectedRoute>
-            ),
+            path: "ajustes",
+            element: <Outlet />,
             children: [
-              { index: true, element: <Navigate to="general" replace /> },
-              { path: "general", element: <DojoInfo /> },
-              { path: "instructores", element: <InstructorManager /> },
-              { path: "horarios", element: <HorarioManager /> },
-              { path: "cintas", element: <CintasSettings isEmbedded /> },
+              { index: true, element: <Ajustes /> },
+              {
+                path: "configuracion",
+                element: (
+                  <ProtectedRoute allowedRoles={['owner', 'secretario']}>
+                    <AjustesEscuela />
+                  </ProtectedRoute>
+                ),
+                children: [
+                  { index: true, element: <Navigate to="general" replace /> },
+                  { path: "general", element: <DojoInfo /> },
+                  { path: "instructores", element: <InstructorManager /> },
+                  { path: "horarios", element: <HorarioManager /> },
+                  { path: "cintas", element: <CintasSettings isEmbedded /> },
+                ]
+              },
+              { 
+                path: "usuarios", 
+                element: (
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <UsuariosSettings />
+                  </ProtectedRoute>
+                ) 
+              },
             ]
           },
-          { 
-            path: "usuarios", 
-            element: (
-              <ProtectedRoute allowedRoles={['owner']}>
-                <UsuariosSettings />
-              </ProtectedRoute>
-            ) 
-          },
         ]
-      },
+      }
     ]
   },
   { path: "*", element: <Navigate to="/" replace /> }

@@ -1,0 +1,621 @@
+/* PerfilAlumno.css — DojoCloud Design System Extension */
+
+/* Animación de entrada */
+@keyframes profileFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes profileGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+}
+
+.perfil-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px;
+  animation: profileFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Header del Perfil Premium */
+.perfil-header-card {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.perfil-header-accent-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+}
+
+.perfil-header-flex {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.perfil-avatar-container {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  border: 3px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s;
+}
+
+.perfil-avatar-container:hover {
+  transform: scale(1.05);
+}
+
+.perfil-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.perfil-header-info {
+  flex: 1;
+  min-width: 250px;
+}
+
+.perfil-header-title-flex {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.perfil-nombre {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.perfil-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.perfil-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Alerta de Pago Pendiente */
+.perfil-alerta-pago {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  color: var(--text-primary);
+  flex-wrap: wrap;
+  gap: 16px;
+  animation: profileFadeIn 0.4s ease-out;
+}
+
+.perfil-alerta-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.perfil-alerta-icon {
+  font-size: 20px;
+  color: var(--accent-yellow);
+}
+
+/* Cards de Stats */
+.perfil-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.perfil-stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.perfil-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover);
+}
+
+.perfil-stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.perfil-stat-info {
+  flex: 1;
+}
+
+.perfil-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.perfil-stat-val {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.perfil-stat-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Progresión de Cinta */
+.perfil-progresion-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.perfil-progresion-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 20px 0;
+}
+
+.perfil-cintas-timeline-container {
+  overflow-x: auto;
+  padding: 20px 10px;
+  margin-bottom: 16px;
+}
+
+.perfil-cintas-timeline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 800px;
+  position: relative;
+}
+
+.perfil-cintas-linea-detras {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--bg-tertiary);
+  z-index: 1;
+}
+
+.perfil-cintas-linea-progreso {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  height: 4px;
+  background: var(--accent-green);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.perfil-cinta-nodo {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+}
+
+.perfil-cinta-circulo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #fff;
+  border: 3px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.perfil-cinta-circulo:hover {
+  transform: scale(1.1);
+}
+
+.perfil-cinta-circulo.completada {
+  background: var(--accent-green) !important;
+  border-color: var(--accent-green);
+}
+
+.perfil-cinta-circulo.actual {
+  animation: profileGlow 2s infinite;
+  border-color: var(--accent-blue);
+  transform: scale(1.08);
+}
+
+.perfil-cinta-circulo.pendiente {
+  opacity: 0.6;
+}
+
+.perfil-cinta-nombre {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.perfil-cinta-nombre.actual {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* Racha de Asistencia */
+.perfil-racha-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.perfil-racha-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.perfil-racha-flama {
+  font-size: 28px;
+  background: rgba(239, 68, 68, 0.1);
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.perfil-racha-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.perfil-racha-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.perfil-calendario-puntos {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.perfil-punto-clase {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+
+.perfil-punto-clase:hover {
+  transform: scale(1.4);
+}
+
+.perfil-punto-clase.asistio {
+  background: var(--accent-green);
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
+}
+
+.perfil-punto-clase.falto {
+  background: var(--accent-red);
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.4);
+}
+
+/* Grid Layouts para Información e Historiales */
+.perfil-double-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.perfil-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.perfil-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Items de Información */
+.perfil-info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 14px;
+}
+
+.perfil-info-item:last-child {
+  border-bottom: none;
+}
+
+.perfil-info-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.perfil-info-val {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Timeline/Listas para Historiales */
+.perfil-list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  max-height: 360px;
+  padding-right: 4px;
+}
+
+.perfil-list-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+.perfil-list-items::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.perfil-list-items::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.perfil-list-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.perfil-list-item:hover {
+  transform: translateX(2px);
+  border-color: var(--border-hover);
+}
+
+.perfil-list-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.perfil-list-icon {
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.perfil-list-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.perfil-list-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.perfil-list-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.perfil-list-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.perfil-list-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Grados/Cintas miniaturas en historial */
+.perfil-badge-grado-cambio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.perfil-cinta-mini {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+/* Topbar */
+.perfil-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.perfil-btn-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.2s;
+}
+
+.perfil-btn-volver:hover {
+  color: var(--text-primary);
+}
+
+.perfil-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 1024px) {
+  .perfil-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .perfil-double-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .perfil-container {
+    padding: 16px;
+  }
+  .perfil-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .perfil-header-flex {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .perfil-avatar-container {
+    width: 72px;
+    height: 72px;
+    font-size: 26px;
+  }
+  .perfil-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .perfil-topbar-actions {
+    width: 100%;
+  }
+  .perfil-topbar-actions button {
+    flex: 1;
+  }
+  .perfil-alerta-pago {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .perfil-alerta-pago button {
+    width: 100%;
+  }
+}

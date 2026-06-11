@@ -5,7 +5,7 @@ import Swal from 'sweetalert2'
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 
@@ -81,6 +81,7 @@ const VACIO = {
 
 export default function Alumnos() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [alumnos, setAlumnos] = useState([])
   const [cintasConfig, setCintasConfig] = useState([])
   const [searchParams, setSearchParams] = useSearchParams()
@@ -222,6 +223,19 @@ export default function Alumnos() {
     window.addEventListener('keydown', handleEsc)
     return () => { window.removeEventListener('keydown', handleEsc) }
   }, [])
+
+  const editId = searchParams.get('edit')
+  useEffect(() => {
+    if (editId && todosLosAlumnos.length > 0) {
+      const student = todosLosAlumnos.find(a => String(a.id) === String(editId))
+      if (student) {
+        abrirEditar(student)
+        const newParams = Object.fromEntries(searchParams.entries())
+        delete newParams.edit
+        setSearchParams(newParams, { replace: true })
+      }
+    }
+  }, [editId, todosLosAlumnos])
 
   const abrirCrear = () => {
     setForm(VACIO)
@@ -735,7 +749,7 @@ export default function Alumnos() {
                     borderLeft: `4px solid ${a.cinta_config?.color_hex || 'var(--border)'}`,
                     background: rowHover === a.id ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
                   }}
-                  onClick={() => abrirHistorial(a)}
+                  onClick={() => navigate(`/alumnos/${a.id}`)}
                   onMouseEnter={() => setRowHover(a.id)}
                   onMouseLeave={() => setRowHover(null)}
                 >
@@ -915,8 +929,8 @@ export default function Alumnos() {
                             maxWidth: '240px',
                             cursor: 'pointer'
                           }}
-                          onClick={() => abrirHistorial(a)}
-                          title={`${a.nombre} ${a.apellido_paterno} (Clic para ver historial)`}
+                          onClick={() => navigate(`/alumnos/${a.id}`)}
+                          title={`${a.nombre} ${a.apellido_paterno} (Clic para ver perfil)`}
                         >
                           {a.nombre} {a.apellido_paterno} {a.apellido_materno}
                         </div>
@@ -974,7 +988,7 @@ export default function Alumnos() {
                         <div style={s.acciones}>
                           <button //VER
                             style={{ ...s.btnIcon, ...s.btnVer }}
-                            onClick={() => abrirVer(a)}
+                            onClick={() => navigate(`/alumnos/${a.id}`)}
                             onMouseOver={e => {
                               e.currentTarget.style.background = '#94a3b8';
                               e.currentTarget.style.color = 'white';
