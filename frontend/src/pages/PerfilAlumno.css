@@ -24,7 +24,7 @@
 .perfil-container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 0px 24px 24px 24px;
   animation: profileFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -87,6 +87,9 @@
 .perfil-header-info {
   flex: 1;
   min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .perfil-header-title-flex {
@@ -110,6 +113,16 @@
   gap: 8px 16px;
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+.perfil-meta-flex {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 8px;
 }
 
 .perfil-meta-item {
@@ -225,8 +238,8 @@
 
 .perfil-cintas-timeline-container {
   overflow-x: auto;
-  padding: 20px 10px;
-  margin-bottom: 16px;
+  padding: 10px 8px;
+  margin-bottom: 8px;
 }
 
 .perfil-cintas-timeline {
@@ -239,19 +252,19 @@
 
 .perfil-cintas-linea-detras {
   position: absolute;
-  top: 24px;
+  top: 18px;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 3px;
   background: var(--bg-tertiary);
   z-index: 1;
 }
 
 .perfil-cintas-linea-progreso {
   position: absolute;
-  top: 24px;
+  top: 18px;
   left: 0;
-  height: 4px;
+  height: 3px;
   background: var(--accent-green);
   z-index: 2;
   transition: width 0.5s ease-in-out;
@@ -263,19 +276,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 60px;
+  width: 75px;
 }
 
 .perfil-cinta-circulo {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   color: #fff;
-  border: 3px solid var(--border);
+  border: 2.5px solid var(--border);
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: var(--shadow-sm);
@@ -301,12 +314,14 @@
 }
 
 .perfil-cinta-nombre {
-  margin-top: 10px;
+  margin-top: 6px;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 75px;
+  line-height: 1.2;
 }
 
 .perfil-cinta-nombre.actual {
@@ -546,7 +561,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+  padding-top: 0px;
 }
 
 .perfil-btn-volver {
@@ -559,7 +575,7 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 8px 0;
+  padding: 0;
   transition: color 0.2s;
 }
 
@@ -617,5 +633,214 @@
   }
   .perfil-alerta-pago button {
     width: 100%;
+  }
+}
+
+/* Lightbox Modal de Foto de Perfil */
+.perfil-lightbox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: profileFadeIn 0.2s ease-out;
+}
+
+.perfil-lightbox-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+.perfil-lightbox-img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  background: var(--bg-secondary);
+}
+
+.perfil-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+  z-index: 10;
+}
+
+.perfil-lightbox-close:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
+}
+
+/* Estilos para Credencial de Alumno (Original Modal Style) */
+.perfil-cred-card {
+  background: var(--bg-secondary);
+  border-radius: 11px;
+  width: 650px;
+  max-width: 95vw;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  animation: profileFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.perfil-cred-header {
+  background: var(--bg-tertiary);
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.perfil-cred-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.perfil-cred-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+.perfil-cred-close:hover {
+  color: var(--text-primary);
+}
+.perfil-cred-body {
+  padding: 30px;
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.perfil-cred-photo-box {
+  width: 180px;
+  height: 220px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-radius: 8px;
+}
+.perfil-cred-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.perfil-cred-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.perfil-cred-info-item {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+.perfil-cred-info-label {
+  width: 100px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 15px;
+  text-align: right;
+  margin-right: 20px;
+}
+.perfil-cred-info-value {
+  color: var(--text-primary);
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.perfil-cred-footer {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  background: var(--bg-tertiary);
+}
+.perfil-cred-btn-cerrar {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px 30px;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.perfil-cred-btn-cerrar:hover {
+  background: var(--border);
+}
+.perfil-cred-btn-whatsapp {
+  border: 1px solid var(--accent-green);
+  color: #ffffff;
+  background: var(--accent-green);
+  padding: 8px 30px;
+  border-radius: 5px;
+  font-weight: 700;
+  font-size: 12px;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+.perfil-cred-btn-whatsapp:hover {
+  opacity: 0.9;
+}
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .perfil-lightbox-overlay, .perfil-lightbox-overlay * {
+    visibility: visible;
+  }
+  .perfil-lightbox-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: none !important;
+    backdrop-filter: none !important;
+  }
+  .perfil-cred-card {
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 auto;
+  }
+  .perfil-cred-header, .perfil-cred-footer {
+    display: none !important;
   }
 }

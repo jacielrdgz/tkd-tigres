@@ -370,6 +370,11 @@ class AlumnoController extends Controller
         // 9. Cintas config de la escuela
         $cintas_config = \App\Models\ConfiguracionCinta::orderBy('orden')->get();
 
+        $escuela = \App\Models\Escuela::where('tenant_id', $alumno->tenant_id)->first();
+        $academia = $escuela ? $escuela->nombre : '-';
+        $fecha_registro = $alumno->created_at ? $alumno->created_at->toDateString() : null;
+        $dias_asistencia = $alumno->horarioConfig?->dias ?? '-';
+
         return response()->json([
             'alumno'             => $alumno,
             'stats'              => $stats,
@@ -381,6 +386,9 @@ class AlumnoController extends Controller
             'ultima_falta'       => $ultima_falta ? $ultima_falta->fecha : null,
             'ultimas_30_clases'  => $ultimas_30_clases,
             'cintas_config'      => $cintas_config,
+            'academia'           => $academia,
+            'fecha_registro'     => $fecha_registro,
+            'dias_asistencia'    => $dias_asistencia,
         ]);
     }
 }
