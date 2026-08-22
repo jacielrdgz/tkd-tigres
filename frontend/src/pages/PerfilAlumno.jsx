@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import api from '../api/axios'
 import './PerfilAlumno.css'
 import Swal from 'sweetalert2'
+import ModalAlumno from '../components/Asistencias/ModalAlumno'
 
 // Helper para limpiar strings nulos/vacíos
 const limpiarDato = (val) => {
@@ -44,20 +45,68 @@ const formatHora = (hora) => {
   return `${h12}:${m} ${ampm}`
 }
 
+const editModalStyles = {
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
+  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px', width: '580px', maxHeight: '90vh', overflowY: 'auto' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
+  modalTitulo: { color: 'var(--text-primary)', fontSize: '18px', fontWeight: '700', margin: 0 },
+  btnCerrar: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
+  fotoUploadArea: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px', gap: '8px' },
+  fotoPreviewBox: { width: '100px', height: '100px', borderRadius: '50%', border: '2px dashed var(--border)', cursor: 'pointer', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  fotoPreviewImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  fotoPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '12px', cursor: 'pointer' },
+  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
+  campoGroup: { marginTop: '1px' },
+  label: { display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600' },
+  input: { width: '100%', fontSize: '14px', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
+  inputError: { marginTop: '6px', fontSize: '12px', color: 'var(--accent-red)', lineHeight: 1.2 },
+  select: { width: '100%', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
+  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' },
+  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
+  btnPrimary: { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s' },
+}
+
 function Campo({ label, value, onChange, type = 'text', full, error, required }) {
   return (
-    <div style={full ? { gridColumn: '1 / -1' } : {}} className="perfil-edit-campo-group">
-      <label className="perfil-edit-label">
-        {label} {required && <span style={{ color: 'var(--accent-red)' }}>*</span>}
-      </label>
+    <div style={full ? { gridColumn: '1 / -1' } : {}}>
+      <label style={editModalStyles.label}>{label} {required && <span style={{ color: 'var(--accent-red)' }}>*</span>}</label>
       <input
         type={type}
         value={value || ''}
-        className="perfil-edit-input"
-        style={{ borderColor: error ? 'var(--accent-red)' : 'var(--border)' }}
+        style={{ ...editModalStyles.input, borderColor: error ? 'var(--accent-red)' : 'var(--border)' }}
         onChange={e => onChange(e.target.value)}
       />
-      {error && <div className="perfil-edit-input-error">{error}</div>}
+      {error && <div style={editModalStyles.inputError}>{error}</div>}
+    </div>
+  )
+}
+
+const modalStyles = {
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
+  modalCard: { background: 'var(--bg-secondary)', borderRadius: '16px', width: '580px', maxWidth: '95vw', border: '1px solid var(--border)' },
+  cardHeader: { background: 'var(--bg-tertiary)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
+  cardTitle: { fontSize: '18px', fontWeight: '600', textTransform: 'uppercase', color: 'var(--text-primary)', margin: 0 },
+  btnCerrarWhite: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
+  cardBody: { padding: '30px', display: 'flex', gap: '18px', alignItems: 'flex-start', textAlign: 'left' },
+  avatarBox: { width: '180px', height: '220px', flexShrink: 0, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: '8px' },
+  avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  avatarInicialesBox: { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  avatarIniciales: { fontSize: '56px', fontWeight: '700', color: 'var(--accent-blue)' },
+  cardInfo: { flex: 1, display: 'flex', flexDirection: 'column', gap: '15px' },
+  infoItem: { display: 'flex', borderBottom: '1px solid var(--border)', paddingBottom: '6px' },
+  infoLabel: { width: '100px', fontWeight: '700', color: 'var(--text-muted)', fontSize: '15px', textAlign: 'right', marginRight: '20px' },
+  infoValue: { color: 'var(--text-primary)', fontSize: '14.5px', fontWeight: '500' },
+  cardFooter: { padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '15px', background: 'var(--bg-tertiary)' },
+  btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '8px 30px', borderRadius: '5px', fontWeight: '600', cursor: 'pointer' },
+  btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center' },
+}
+
+function InfoItem({ label, value }) {
+  return (
+    <div style={modalStyles.infoItem}>
+      <span style={modalStyles.infoLabel}>{label}:</span>
+      <span style={modalStyles.infoValue}>{value}</span>
     </div>
   )
 }
@@ -70,6 +119,7 @@ export default function PerfilAlumno() {
   const [error, setError] = useState(null)
   const [verFotoModal, setVerFotoModal] = useState(false)
   const [showCredencialModal, setShowCredencialModal] = useState(false)
+  const [showAsistenciasModal, setShowAsistenciasModal] = useState(false)
 
   // Edit Modal States & Ref
   const [horarios, setHorarios] = useState([])
@@ -92,6 +142,7 @@ export default function PerfilAlumno() {
         setVerFotoModal(false)
         setShowCredencialModal(false)
         setModalEditar(false)
+        setShowAsistenciasModal(false)
       }
     }
     window.addEventListener('keydown', handleEsc)
@@ -584,7 +635,19 @@ export default function PerfilAlumno() {
           </div>
           <div>
             <div className="perfil-racha-num">{racha_asistencia} clases</div>
-            <div className="perfil-racha-label">Racha de asistencia consecutiva</div>
+            <div className="perfil-racha-label" style={{ marginBottom: '6px' }}>Racha de asistencia consecutiva</div>
+            <button
+              className="perfil-btn-ver-asistencia"
+              onClick={() => setShowAsistenciasModal(true)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              Ver asistencia
+            </button>
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
@@ -811,105 +874,85 @@ export default function PerfilAlumno() {
 
       {/* Modal Credencial de Alumno */}
       {showCredencialModal && (
-        <div className="perfil-lightbox-overlay" onClick={() => setShowCredencialModal(false)}>
-          <div className="perfil-cred-card" onClick={e => e.stopPropagation()}>
-            <div className="perfil-cred-header">
-              <h4 className="perfil-cred-title">
+        <div style={modalStyles.overlay} onClick={() => setShowCredencialModal(false)}>
+          <div style={modalStyles.modalCard} onClick={e => e.stopPropagation()}>
+            <div style={modalStyles.cardHeader}>
+              <h3 style={modalStyles.cardTitle}>
                 {alumno.nombre} {alumno.apellido_paterno} {alumno.apellido_materno || ''}
-              </h4>
-              <button 
-                className="perfil-cred-close" 
-                onClick={() => setShowCredencialModal(false)}
-              >×</button>
+              </h3>
+              <button style={modalStyles.btnCerrarWhite} onClick={() => setShowCredencialModal(false)}>X</button>
             </div>
-            <div className="perfil-cred-body">
-              <div className="perfil-cred-photo-box">
+            <div style={modalStyles.cardBody}>
+              <div style={modalStyles.avatarBox}>
                 {tieneFoto(alumno.foto) ? (
-                  <img src={alumno.foto_url} className="perfil-cred-photo" alt="Foto" />
+                  <img 
+                    src={alumno.foto_url} 
+                    alt="foto" 
+                    style={modalStyles.avatarImg}
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+                  />
                 ) : null}
                 <div style={{
-                  display: tieneFoto(alumno.foto) ? 'none' : 'flex',
-                  width: '100%',
-                  height: '100%',
-                  background: 'var(--accent-blue-bg)',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  ...modalStyles.avatarInicialesBox,
+                  display: tieneFoto(alumno.foto) ? 'none' : 'flex'
                 }}>
-                  <span style={{ fontSize: '56px', fontWeight: '700', color: 'var(--accent-blue)' }}>
+                  <span style={modalStyles.avatarIniciales}>
                     {obtenerIniciales(alumno.nombre, alumno.apellido_paterno)}
                   </span>
                 </div>
               </div>
-              <div className="perfil-cred-info">
-                <div className="perfil-cred-info-item">
-                  <span className="perfil-cred-info-label">ID:</span>
-                  <span className="perfil-cred-info-value">{alumno.id}</span>
-                </div>
-                <div className="perfil-cred-info-item">
-                  <span className="perfil-cred-info-label">F. Nac.:</span>
-                  <span className="perfil-cred-info-value">{alumno.fecha_nacimiento}</span>
-                </div>
-                <div className="perfil-cred-info-item">
-                  <span className="perfil-cred-info-label">Edad:</span>
-                  <span className="perfil-cred-info-value">{alumno.edad} años</span>
-                </div>
-                <div className="perfil-cred-info-item">
-                  <span className="perfil-cred-info-label">Cinta:</span>
-                  <span className="perfil-cred-info-value">{alumno.cinta_config?.nombre_nivel || 'Sin cinta'}</span>
-                </div>
-                <div className="perfil-cred-info-item">
-                  <span className="perfil-cred-info-label">Tutor:</span>
-                  <span className="perfil-cred-info-value">{limpiarDato(alumno.nombre_tutor)}</span>
-                </div>
-                <div className="perfil-cred-info-item">
-                  <span className="perfil-cred-info-label">Teléfono:</span>
-                  <span className="perfil-cred-info-value">{limpiarDato(alumno.telefono_tutor)}</span>
-                </div>
-                <div className="perfil-cred-info-item">
-                  <span className="perfil-cred-info-label">Correo:</span>
-                  <span className="perfil-cred-info-value">
-                    {(alumno.email && alumno.email !== 'NULL' && alumno.email !== 'null') ? alumno.email : 'N/A'}
-                  </span>
-                </div>
-                <div className="perfil-cred-info-item">
-                  <span className="perfil-cred-info-label">Status:</span>
-                  <span className="perfil-cred-info-value">{capitalizar(alumno.estatus)}</span>
-                </div>
+              <div style={modalStyles.cardInfo}>
+                <InfoItem label="ID" value={alumno.id} />
+                <InfoItem label="F. Nac." value={alumno.fecha_nacimiento} />
+                <InfoItem label="Edad" value={alumno.edad + ' años'} />
+                <InfoItem label="Cinta" value={alumno.cinta_config?.nombre_nivel || 'Sin cinta'} />
+                <InfoItem label="Tutor" value={limpiarDato(alumno.nombre_tutor)} />
+                <InfoItem label="Teléfono" value={limpiarDato(alumno.telefono_tutor)} />
+                <InfoItem label="Correo" value={(alumno.email && alumno.email !== 'NULL' && alumno.email !== 'null') ? alumno.email : 'N/A'} />
+                <InfoItem label="Status" value={capitalizar(alumno.estatus)} />
               </div>
             </div>
-            <div className="perfil-cred-footer">
+            <div style={modalStyles.cardFooter}>
               <a
                 href={'https://wa.me/52' + alumno.telefono_tutor?.replace(/\s+/g, '')}
                 target="_blank"
                 rel="noreferrer"
-                className="perfil-cred-btn-whatsapp"
+                style={modalStyles.btnWhatsapp}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '6px' }}>
                   <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.185-.573c.948.517 2.011.808 3.146.809 3.181 0 5.767-2.584 5.768-5.764 0-3.18-2.586-5.763-5.768-5.763zm4.52 8.161c-.199.557-1.162 1.058-1.597 1.115-.41.054-.935.086-1.503-.099-.345-.113-.775-.262-1.328-.489-2.315-.953-3.82-3.308-3.936-3.461-.116-.155-.945-1.258-.945-2.399 0-1.141.594-1.701.806-1.933.211-.231.462-.29.616-.29.154 0 .308.001.442.008.14.007.33-.053.516.39.186.444.636 1.547.692 1.659.056.111.093.242.019.39-.074.148-.112.241-.223.37-.111.13-.233.29-.333.389-.111.111-.228.232-.098.455.13.223.577.95 1.24 1.54.853.759 1.567.994 1.79.1.223-.112.455-.228.678-.541.222-.314.185-.537.408-.65s.445-.074.743.074c.297.149 1.874.883 2.196 1.043.322.16.537.241.616.37.079.13.079.752-.12 1.309z" />
                 </svg>
                 WHATSAPP
               </a>
-              <button className="perfil-cred-btn-cerrar" onClick={() => setShowCredencialModal(false)}>CERRAR</button>
+              <button style={modalStyles.btnAceptar} onClick={() => setShowCredencialModal(false)}>CERRAR</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Modal de Asistencias por Alumno */}
+      {showAsistenciasModal && (
+        <ModalAlumno
+          alumno={alumno}
+          onCerrar={() => setShowAsistenciasModal(false)}
+        />
+      )}
+
       {/* Modal Editar Alumno */}
       {modalEditar && (
-        <div className="perfil-lightbox-overlay" onClick={() => setModalEditar(false)}>
-          <div className="perfil-edit-modal" onClick={e => e.stopPropagation()}>
-            <div className="perfil-edit-header">
-              <h3 className="perfil-edit-titulo">Editar alumno</h3>
-              <button className="perfil-edit-btn-cerrar" onClick={() => setModalEditar(false)}>✕</button>
+        <div style={editModalStyles.overlay} className="mobile-fullscreen-overlay" onClick={() => setModalEditar(false)}>
+          <div style={editModalStyles.modal} className="mobile-fullscreen-modal" onClick={e => e.stopPropagation()}>
+            <div style={editModalStyles.modalHeader}>
+              <h3 style={editModalStyles.modalTitulo}>Editar alumno</h3>
+              <button style={editModalStyles.btnCerrar} onClick={() => setModalEditar(false)}>X</button>
             </div>
 
-            <div className="perfil-edit-foto-area">
-              <div className="perfil-edit-foto-preview-box" onClick={() => fileRef.current.click()}>
+            <div style={editModalStyles.fotoUploadArea}>
+              <div style={editModalStyles.fotoPreviewBox} onClick={() => fileRef.current.click()}>
                 {fotoPreview ? (
-                  <img src={fotoPreview} alt="preview" className="perfil-edit-foto-preview-img" />
+                  <img src={fotoPreview} alt="preview" style={editModalStyles.fotoPreviewImg} />
                 ) : (
-                  <div className="perfil-edit-foto-placeholder">
+                  <div style={editModalStyles.fotoPlaceholder}>
                     <svg
                       width="32"
                       height="32"
@@ -919,11 +962,7 @@ export default function PerfilAlumno() {
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                    >
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
+                    ></svg>
                     <span style={{ fontSize: '25px', color: '#3b82f6', fontWeight: '700' }}>
                       {form.nombre || form.apellido_paterno
                         ? obtenerIniciales(form.nombre, form.apellido_paterno)
@@ -945,7 +984,7 @@ export default function PerfilAlumno() {
               />
               {fotoPreview && (
                 <button
-                  className="perfil-edit-btn-quitar-foto"
+                  style={editModalStyles.btnQuitarFoto}
                   onClick={() => { setFotoFile(null); setFotoPreview(null); setEliminarFoto(true) }}
                 >
                   Quitar foto
@@ -953,7 +992,7 @@ export default function PerfilAlumno() {
               )}
             </div>
 
-            <div className="perfil-edit-grid">
+            <div style={editModalStyles.grid2} className="mobile-grid-1">
               <Campo label="Nombre(s)" value={form.nombre} error={errors.nombre?.[0]} required onChange={v => { setForm({ ...form, nombre: v }); if (errors.nombre) setErrors(prev => ({ ...prev, nombre: undefined })) }} />
               <Campo label="Apellido paterno" value={form.apellido_paterno} error={errors.apellido_paterno?.[0]} required onChange={v => { setForm({ ...form, apellido_paterno: v }); if (errors.apellido_paterno) setErrors(prev => ({ ...prev, apellido_paterno: undefined })) }} />
               <Campo label="Apellido materno" value={form.apellido_materno} error={errors.apellido_materno?.[0]} required onChange={v => { setForm({ ...form, apellido_materno: v }); if (errors.apellido_materno) setErrors(prev => ({ ...prev, apellido_materno: undefined })) }} />
@@ -962,10 +1001,10 @@ export default function PerfilAlumno() {
               <Campo label="Teléfono del tutor" value={form.telefono_tutor} error={errors.telefono_tutor?.[0]} required onChange={v => { setForm({ ...form, telefono_tutor: v }); if (errors.telefono_tutor) setErrors(prev => ({ ...prev, telefono_tutor: undefined })) }} />
               <Campo label="Correo electrónico" value={form.email} error={errors.email?.[0]} onChange={v => { setForm({ ...form, email: v }); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })) }} type="email" full />
 
-              <div className="perfil-edit-campo-group">
-                <label className="perfil-edit-label">Horario Asignado</label>
+              <div style={editModalStyles.campoGroup}>
+                <label style={editModalStyles.label}>Horario Asignado</label>
                 <select
-                  className="perfil-edit-select"
+                  style={editModalStyles.select}
                   value={form.horario_id || ''}
                   onChange={e => setForm({ ...form, horario_id: e.target.value })}
                 >
@@ -978,10 +1017,10 @@ export default function PerfilAlumno() {
                 </select>
               </div>
 
-              <div className="perfil-edit-campo-group">
-                <label className="perfil-edit-label">Cinta</label>
+              <div style={editModalStyles.campoGroup}>
+                <label style={editModalStyles.label}>Cinta</label>
                 <select 
-                  className="perfil-edit-select" 
+                  style={editModalStyles.select} 
                   value={form.configuracion_cinta_id || ''} 
                   onChange={e => setForm({ ...form, configuracion_cinta_id: e.target.value })}
                 >
@@ -992,10 +1031,10 @@ export default function PerfilAlumno() {
                 </select>
               </div>
 
-              <div className="perfil-edit-campo-group">
-                <label className="perfil-edit-label">Estatus</label>
+              <div style={editModalStyles.campoGroup}>
+                <label style={editModalStyles.label}>Estatus</label>
                 <select 
-                  className="perfil-edit-select" 
+                  style={editModalStyles.select} 
                   value={form.estatus || 'activo'} 
                   onChange={e => setForm({ ...form, estatus: e.target.value })}
                 >
@@ -1004,10 +1043,10 @@ export default function PerfilAlumno() {
                 </select>
               </div>
 
-              <div className="perfil-edit-campo-group">
-                <label className="perfil-edit-label">Día de pago mensual (1-31)</label>
+              <div style={editModalStyles.campoGroup}>
+                <label style={editModalStyles.label}>Día de pago mensual (1-31)</label>
                 <input
-                  className="perfil-edit-input"
+                  style={editModalStyles.input}
                   type="number"
                   min="1"
                   max="31"
@@ -1023,11 +1062,10 @@ export default function PerfilAlumno() {
               </div>
             </div>
 
-            <div className="perfil-edit-footer">
-              <button className="perfil-edit-btn-cancelar" onClick={() => setModalEditar(false)} disabled={guardando}>Cancelar</button>
+            <div style={editModalStyles.modalFooter}>
+              <button style={editModalStyles.btnSecondary} onClick={() => setModalEditar(false)} disabled={guardando}>Cancelar</button>
               <button
-                className="perfil-edit-btn-guardar"
-                style={{ opacity: guardando ? 0.75 : 1, cursor: guardando ? 'not-allowed' : 'pointer' }}
+                style={{ ...editModalStyles.btnPrimary, opacity: guardando ? 0.75 : 1, cursor: guardando ? 'not-allowed' : 'pointer' }}
                 onClick={guardar}
                 disabled={guardando}
               >

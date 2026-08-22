@@ -12,6 +12,7 @@ import TabPorFecha from '../components/Asistencias/TabPorFecha'
 import ModalAlumno from '../components/Asistencias/ModalAlumno'
 import ModalDia from '../components/Asistencias/ModalDia'
 import ModalRegistrar from '../components/Asistencias/ModalRegistrar'
+import Swal from 'sweetalert2'
 
 function mesActual() {
   const hoy = new Date()
@@ -44,6 +45,8 @@ export default function Asistencias() {
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState(null)
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null)
   const [modalRegistrar, setModalRegistrar] = useState(false)
+  const [haGuardadoEnModal, setHaGuardadoEnModal] = useState(false)
+  const [fechaRegistroGuardada, setFechaRegistroGuardada] = useState('')
 
   // ── Cargar resumen (común a ambos tabs) ──────────────────────────────────
   const cargarResumen = useCallback(async () => {
@@ -333,8 +336,30 @@ export default function Asistencias() {
 
       {modalRegistrar && (
         <ModalRegistrar
-          onCerrar={() => setModalRegistrar(false)}
-          onGuardado={() => {
+          onCerrar={() => {
+            setModalRegistrar(false)
+            if (haGuardadoEnModal) {
+              const fechaFormateada = fechaRegistroGuardada
+                ? new Date(fechaRegistroGuardada + 'T12:00:00')
+                    .toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
+                : ''
+
+              Swal.fire({
+                icon: 'success',
+                title: '¡Asistencia Guardada!',
+                html: `Asistencias registradas correctamente para el día:<br/><br/><strong>${fechaFormateada}</strong>`,
+                timer: 2000,
+                showConfirmButton: false,
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                iconColor: 'var(--accent-green)',
+              })
+              setHaGuardadoEnModal(false)
+            }
+          }}
+          onGuardado={(fechaReg) => {
+            setHaGuardadoEnModal(true)
+            setFechaRegistroGuardada(fechaReg)
             cargarResumen()
             if (tab === 'alumno') cargarPorAlumno()
             else cargarPorFecha()

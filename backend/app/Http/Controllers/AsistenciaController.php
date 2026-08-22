@@ -315,11 +315,52 @@ class AsistenciaController extends Controller
             'asistencias.*.presente'      => 'required|boolean',
         ]);
 
+        $fechaCarbon = Carbon::parse($request->fecha);
+        $diaSemana = $fechaCarbon->dayOfWeek; // 0=Dom, 1=Lun, ..., 6=Sab
+
+        // Obtener todos los alumnos involucrados con su horarioConfig cargado
+        $alumnoIds = collect($request->asistencias)->pluck('alumno_id')->toArray();
+        $alumnos = Alumno::with('horarioConfig')->whereIn('id', $alumnoIds)->get()->keyBy('id');
+
         foreach ($request->asistencias as $item) {
-            Asistencia::updateOrCreate(
-                ['alumno_id' => $item['alumno_id'], 'fecha' => $request->fecha],
-                ['presente'  => $item['presente']]
-            );
+            $alumnoId = $item['alumno_id'];
+            $presente = $item['presente'];
+            $alumno = $alumnos->get($alumnoId);
+
+            if ($presente) {
+                // Si asistió, siempre se registra la asistencia (ej. recuperación de clases)
+                Asistencia::updateOrCreate(
+                    ['alumno_id' => $alumnoId, 'fecha' => $request->fecha],
+                    ['presente'  => true]
+                );
+            } else {
+                // Si faltó, verificar si ese día le corresponde clase según su horario
+                $horario = $alumno ? $alumno->horarioConfig : null;
+                $diasConClaseSet = $this->obtenerDiasConClase($horario);
+
+                $esFinDeSemana = in_array($diaSemana, [0, 6]);
+
+                $debeTenerClase = true;
+                if ($esFinDeSemana) {
+                    $debeTenerClase = false;
+                } elseif ($diasConClaseSet !== null && !in_array($diaSemana, $diasConClaseSet)) {
+                    $debeTenerClase = false;
+                }
+
+                if ($debeTenerClase) {
+                    // Si hoy le tocaba clase, registramos la falta
+                    Asistencia::updateOrCreate(
+                        ['alumno_id' => $alumnoId, 'fecha' => $request->fecha],
+                        ['presente'  => false]
+                    );
+                } else {
+                    // Si no le tocaba clase, removemos cualquier registro previo para esa fecha
+                    // para no contarle falta injustificada
+                    Asistencia::where('alumno_id', $alumnoId)
+                        ->where('fecha', $request->fecha)
+                        ->delete();
+                }
+            }
         }
 
         return response()->json(['message' => 'Asistencias registradas correctamente']);

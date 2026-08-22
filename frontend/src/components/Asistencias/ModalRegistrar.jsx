@@ -278,24 +278,23 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
     if (alumnos.length === 0) return toast.warning('No hay alumnos cargados')
     setGuardando(true)
     try {
-      const lista = alumnos.map(a => ({
+      // Si hay un filtro de horario activo, solo enviamos/guardamos los alumnos de ese horario
+      const listaParaGuardar = filtroHorario
+        ? alumnos.filter(a => String(a.horario_config?.id) === filtroHorario || a.horario_config?.nombre === filtroHorario)
+        : alumnos;
+
+      const lista = listaParaGuardar.map(a => ({
         alumno_id: a.alumno_id,
         presente: presencias[a.alumno_id] || false,
       }))
       await api.post('/asistencias/registrar-dia', { fecha, asistencias: lista })
       const presentesCount = lista.filter(x => x.presente).length
-      Swal.fire({
-        icon: 'success',
-        title: '¡Asistencia Guardada!',
-        text: `${presentesCount} presentes registrados para ${fecha}`,
-        timer: 2000,
-        showConfirmButton: false,
-        background: 'var(--bg-secondary)',
-        color: 'var(--text-primary)',
-        iconColor: 'var(--accent-green)',
+      toast.success(`Guardado: ${presentesCount} presentes para este horario.`, {
+        position: "top-right",
+        autoClose: 2000,
       })
-      onGuardado?.()
-      onCerrar()
+      onGuardado?.(fecha)
+      cargar()
     } catch {
       toast.error('Error al guardar asistencias')
     } finally {
@@ -322,19 +321,19 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
         </div>
 
         {/* Selector de fecha + stats */}
-        <div style={s.controles}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="modal-controles" style={s.controles}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <label style={s.labelFecha}>Fecha:</label>
             <input
               type="date"
               value={fecha}
               onChange={e => setFecha(e.target.value)}
-              style={s.inputFecha}
+              style={{ ...s.inputFecha, width: 135 }}
             />
           </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--accent-green)', fontWeight: 700 }}>✓ {presentes} presentes</span>
-            <span style={{ fontSize: 13, color: 'var(--accent-red)', fontWeight: 700 }}>✗ {ausentes} ausentes</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            <span style={{ fontSize: 12.5, color: 'var(--accent-green)', fontWeight: 700, whiteSpace: 'nowrap' }}>✓ {presentes} presentes</span>
+            <span style={{ fontSize: 12.5, color: 'var(--accent-red)', fontWeight: 700, whiteSpace: 'nowrap' }}>✗ {ausentes} ausentes</span>
             <button
               style={s.btnMarcarTodos}
               onClick={marcarTodos}
@@ -456,6 +455,13 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
           from { opacity: 0; transform: translateY(24px) scale(0.96); }
           to   { opacity: 1; transform: none; }
         }
+        @media (max-width: 520px) {
+          .modal-controles {
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            gap: 12px !important;
+          }
+        }
       `}</style>
     </div>
   )
@@ -501,8 +507,8 @@ const s = {
   },
   controles: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '12px 22px', borderBottom: '1px solid var(--border)',
-    gap: 12, flexWrap: 'wrap', flexShrink: 0,
+    padding: '12px 16px', borderBottom: '1px solid var(--border)',
+    gap: 8, flexWrap: 'nowrap', flexShrink: 0,
   },
   labelFecha: { fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' },
   inputFecha: {
@@ -511,11 +517,12 @@ const s = {
     color: 'var(--text-primary)', fontSize: 13, outline: 'none', fontFamily: 'inherit',
   },
   btnMarcarTodos: {
-    display: 'flex', alignItems: 'center', gap: 5,
-    padding: '6px 12px', background: 'var(--bg-tertiary)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+    padding: '6px 10px', background: 'var(--bg-tertiary)',
     border: '1px solid var(--border)', borderRadius: 8,
-    color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600,
+    color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 600,
     cursor: 'pointer', fontFamily: 'inherit',
+    width: 138, flexShrink: 0,
   },
   lista: {
     flex: 1, overflowY: 'auto',
