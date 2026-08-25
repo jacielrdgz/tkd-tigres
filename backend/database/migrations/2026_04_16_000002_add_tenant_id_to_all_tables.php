@@ -8,11 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Agregar tenant_id y role a users
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->nullable()->after('id')->constrained('tenants')->onDelete('cascade');
-            $table->enum('role', ['owner', 'instructor', 'padre'])->default('owner')->after('email');
-        });
+        if (!Schema::hasColumn('users', 'tenant_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->foreignId('tenant_id')->nullable()->constrained('tenants')->onDelete('cascade');
+                $table->string('role', 20)->default('owner');
+            });
+        }
 
         // Agregar tenant_id a alumnos
         Schema::table('alumnos', function (Blueprint $table) {
