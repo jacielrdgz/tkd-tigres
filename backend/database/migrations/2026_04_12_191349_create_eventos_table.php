@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('eventos', function (Blueprint $table) {
             $table->id();
             $table->string('nombre');
-            $table->enum('tipo', ['examen', 'torneo', 'seminario']);
+            $table->string('tipo', 20)->default('examen');
             $table->date('fecha');
             $table->text('descripcion')->nullable();
             $table->timestamps();

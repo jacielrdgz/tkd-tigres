@@ -8,11 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Actualizar tabla `eventos`
-        Schema::table('eventos', function (Blueprint $table) {
-            // Cambiar enum para incluir demostracion
-            $table->string('tipo', 20)->change(); // primero lo hacemos string para reemplazar el enum
-        });
+        if (DB::getDriverName() !== 'pgsql') {
+            Schema::table('eventos', function (Blueprint $table) {
+                // Cambiar enum para incluir demostracion
+                $table->string('tipo', 20)->change(); // primero lo hacemos string para reemplazar el enum
+            });
+        }
 
         Schema::table('eventos', function (Blueprint $table) {
             $table->string('lugar', 200)->nullable()->after('fecha');

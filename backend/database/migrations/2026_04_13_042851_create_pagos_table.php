@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('pagos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('alumno_id')->constrained('alumnos')->onDelete('cascade');
-            $table->string('mes', 7);
+            $table->string('mes', 7)->nullable();
             $table->decimal('monto', 8, 2);
             $table->enum('metodo_pago', ['efectivo', 'transferencia', 'tarjeta']);
             $table->enum('estado', ['pagado', 'pendiente', 'vencido'])->default('pendiente');

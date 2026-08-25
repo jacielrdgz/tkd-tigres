@@ -11,11 +11,16 @@ return new class extends Migration
     {
         Schema::table('pagos', function (Blueprint $table) {
             $table->string('tipo', 20)->default('mensualidad')->after('alumno_id');
-            // Cambiar mes, fecha_inicio y fecha_fin a nullable para cuando sea inscripcion
-            $table->string('mes', 7)->nullable()->change();
-            $table->date('fecha_inicio')->nullable()->change();
-            $table->date('fecha_fin')->nullable()->change();
         });
+
+        if (DB::getDriverName() !== 'pgsql') {
+            Schema::table('pagos', function (Blueprint $table) {
+                // Cambiar mes, fecha_inicio y fecha_fin a nullable para cuando sea inscripcion
+                $table->string('mes', 7)->nullable()->change();
+                $table->date('fecha_inicio')->nullable()->change();
+                $table->date('fecha_fin')->nullable()->change();
+            });
+        }
 
         // Asegurar que los existentes sean mensualidad
         DB::table('pagos')->update(['tipo' => 'mensualidad']);
