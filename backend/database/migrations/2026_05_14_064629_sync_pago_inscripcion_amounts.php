@@ -9,12 +9,7 @@ return new class extends Migration
 {
     public function up()
     {
-        // 1. Cambiar el tipo de columna pago_inscripcion a decimal para soportar montos (solo si no es pgsql)
-        if (DB::getDriverName() !== 'pgsql') {
-            Schema::table('evento_alumno', function (Blueprint $table) {
-                $table->decimal('pago_inscripcion', 10, 2)->default(0)->change();
-            });
-        }
+        // 1. Sincronizar montos desde las tablas de detalle
 
         // 2. Sincronizar montos desde las tablas de detalle
         $pivots = DB::table('evento_alumno')->get();
