@@ -8,7 +8,12 @@ Route::get('/', function () {
 
 Route::get('/ejecutar-migraciones', function () {
     try {
-        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true]);
+        if (\Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
+            \Illuminate\Support\Facades\DB::statement('DROP SCHEMA public CASCADE;');
+            \Illuminate\Support\Facades\DB::statement('CREATE SCHEMA public;');
+        }
+
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         $outputMigrate = \Illuminate\Support\Facades\Artisan::output();
 
         \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
