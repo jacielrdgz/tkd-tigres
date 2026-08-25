@@ -28,8 +28,10 @@ Route::get('/ping', fn() => response()->json([
 Route::get('/ejecutar-migraciones', function () {
     try {
         if (\Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
-            \Illuminate\Support\Facades\DB::statement('DROP SCHEMA public CASCADE;');
-            \Illuminate\Support\Facades\DB::statement('CREATE SCHEMA public;');
+            $tables = \Illuminate\Support\Facades\DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema='public'");
+            foreach ($tables as $table) {
+                \Illuminate\Support\Facades\DB::statement('DROP TABLE IF EXISTS "' . $table->table_name . '" CASCADE;');
+            }
         }
 
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
