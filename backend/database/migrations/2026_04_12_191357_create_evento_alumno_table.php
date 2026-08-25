@@ -20,7 +20,7 @@ return new class extends Migration
           ->constrained('alumnos')
           ->onDelete('cascade');
     $table->string('resultado')->nullable();
-    $table->boolean('pago_inscripcion')->default(false);
+    $table->decimal('pago_inscripcion', 10, 2)->default(0);
     $table->timestamps();
         });
     }

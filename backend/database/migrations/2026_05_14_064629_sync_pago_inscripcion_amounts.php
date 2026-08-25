@@ -10,9 +10,13 @@ return new class extends Migration
     public function up()
     {
         // 1. Cambiar el tipo de columna pago_inscripcion a decimal para soportar montos
-        Schema::table('evento_alumno', function (Blueprint $table) {
-            $table->decimal('pago_inscripcion', 10, 2)->default(0)->change();
-        });
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE evento_alumno ALTER COLUMN pago_inscripcion TYPE numeric(10,2) USING (CASE WHEN pago_inscripcion::text IN ('1', 'true', 't') THEN 1.00 ELSE 0.00 END);");
+        } else {
+            Schema::table('evento_alumno', function (Blueprint $table) {
+                $table->decimal('pago_inscripcion', 10, 2)->default(0)->change();
+            });
+        }
 
         // 2. Sincronizar montos desde las tablas de detalle
         $pivots = DB::table('evento_alumno')->get();
