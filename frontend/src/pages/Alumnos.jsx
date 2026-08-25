@@ -7,6 +7,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { FiDownload, FiChevronDown, FiUserPlus } from 'react-icons/fi'
 
 
 
@@ -79,6 +80,158 @@ const VACIO = {
   estatus: 'activo',
 }
 
+function CustomDropdown({ label, options, value, onChange, minWidth = '160px', isMobile }) {
+  const [open, setOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const selectedOption = options.find(o => String(o.value) === String(value))
+  const displayLabel = selectedOption ? selectedOption.label : label
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        display: 'inline-block',
+        width: isMobile ? '100%' : minWidth,
+        maxWidth: isMobile ? '100%' : minWidth,
+      }}
+      ref={dropdownRef}
+    >
+      <button
+        type="button"
+        style={{
+          ...s.btnSecundario,
+          width: '100%',
+          justifyContent: 'space-between',
+          borderColor: open ? 'var(--accent-blue)' : 'var(--border)',
+          backgroundColor: open ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+          color: 'var(--text-secondary)',
+          transform: open ? 'translateY(-1px)' : 'none',
+          padding: '9px 12px',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+        }}
+        onClick={() => setOpen(v => !v)}
+        onMouseEnter={e => {
+          if (!open) {
+            e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+            e.currentTarget.style.borderColor = 'var(--accent-blue)'
+            e.currentTarget.style.transform = 'translateY(-1px)'
+          }
+        }}
+        onMouseLeave={e => {
+          if (!open) {
+            e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.transform = 'none'
+          }
+        }}
+      >
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            textAlign: 'left',
+            marginRight: '6px',
+          }}
+          title={displayLabel}
+        >
+          {displayLabel}
+        </span>
+        <FiChevronDown
+          size={13}
+          style={{
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease',
+            color: open ? 'var(--accent-blue)' : 'var(--text-muted)',
+            flexShrink: 0,
+          }}
+        />
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            left: 0,
+            minWidth: '100%',
+            width: 'max-content',
+            maxWidth: '280px',
+            maxHeight: '260px',
+            overflowY: 'auto',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '6px',
+            zIndex: 100,
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+          }}
+        >
+          {options.map((opt) => {
+            const isSelected = String(opt.value) === String(value)
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                style={{
+                  flexShrink: 0,
+                  background: isSelected ? 'var(--accent-blue-bg)' : 'transparent',
+                  color: isSelected ? 'var(--accent-blue)' : 'var(--text-primary)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 10px',
+                  fontSize: '13px',
+                  lineHeight: '1.3',
+                  fontWeight: isSelected ? '700' : '500',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+                onClick={() => {
+                  onChange(opt.value)
+                  setOpen(false)
+                }}
+                onMouseEnter={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = 'transparent'
+                  }
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Alumnos() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -96,6 +249,20 @@ export default function Alumnos() {
     }
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Estados de exportación
+  const [exportOpen, setExportOpen] = useState(false)
+  const exportRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) {
+        setExportOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
   }, [])
 
   // Estados de filtros — se inicializan desde la URL
@@ -461,20 +628,52 @@ export default function Alumnos() {
   }
   alumnosMostrados.sort((a, b) => {
     switch (orden) {
-      case 'id': return a.id - b.id
+      case 'id': {
+        if (horarioFiltro) {
+          const ordA = a.cinta_config?.orden ?? a.cintaConfig?.orden ?? 999
+          const ordB = b.cinta_config?.orden ?? b.cintaConfig?.orden ?? 999
+          if (ordA !== ordB) return ordA - ordB
+          const edA = a.edad ?? 0
+          const edB = b.edad ?? 0
+          if (edA !== edB) return edA - edB
+        }
+        return a.id - b.id
+      }
       case 'cinta_asc': {
         const oA = a.cinta_config?.orden ?? 999
         const oB = b.cinta_config?.orden ?? 999
-        return oA - oB
+        if (oA !== oB) return oA - oB
+        const edA = a.edad ?? 0
+        const edB = b.edad ?? 0
+        if (edA !== edB) return edA - edB
+        return a.id - b.id
       }
       case 'cinta_desc': {
         const oA = a.cinta_config?.orden ?? 999
         const oB = b.cinta_config?.orden ?? 999
-        return oB - oA
+        if (oA !== oB) return oB - oA
+        const edA = a.edad ?? 0
+        const edB = b.edad ?? 0
+        if (edA !== edB) return edA - edB
+        return a.id - b.id
       }
-      case 'edad_asc': return a.edad - b.edad
-      case 'edad_desc': return b.edad - a.edad
-      case 'horario_asc': return (a.horarioConfig?.nombre || '').localeCompare(b.horarioConfig?.nombre || '')
+      case 'edad_asc': return (a.edad ?? 0) - (b.edad ?? 0) || a.id - b.id
+      case 'edad_desc': return (b.edad ?? 0) - (a.edad ?? 0) || a.id - b.id
+      case 'horario_asc': {
+        const horaA = a.horario_config?.hora_inicio || a.horarioConfig?.hora_inicio || '23:59:59'
+        const horaB = b.horario_config?.hora_inicio || b.horarioConfig?.hora_inicio || '23:59:59'
+        if (horaA !== horaB) return horaA.localeCompare(horaB)
+
+        const ordA = a.cinta_config?.orden ?? a.cintaConfig?.orden ?? 999
+        const ordB = b.cinta_config?.orden ?? b.cintaConfig?.orden ?? 999
+        if (ordA !== ordB) return ordA - ordB
+
+        const edA = a.edad ?? 0
+        const edB = b.edad ?? 0
+        if (edA !== edB) return edA - edB
+
+        return a.id - b.id
+      }
       default: return a.id - b.id
     }
   })
@@ -494,8 +693,8 @@ export default function Alumnos() {
     }
 
     try {
-      const data = alumnosMostrados.map(a => ({
-        ID: a.id,
+      const data = alumnosMostrados.map((a, i) => ({
+        '#': i + 1,
         Nombre: `${limpiarDato(a.nombre)} ${limpiarDato(a.apellido_paterno)} ${limpiarDato(a.apellido_materno)}`,
         Edad: `${a.edad || 0} años`,
         Cinta: a.cinta_config?.nombre_nivel || 'Sin cinta',
@@ -587,11 +786,19 @@ export default function Alumnos() {
             style={s.btnNuevoAlumno}
             className="mobile-hide"
             onClick={abrirCrear}
-            onMouseOver={e => handleHover(e, 'rgba(59, 130, 246, 0.6)')}
-            onMouseOut={e => handleOut(e, 'rgba(59, 130, 246, 0.4)')}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)'
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+              e.currentTarget.style.filter = 'brightness(1.08)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'none'
+              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.filter = 'none'
+            }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Nuevo alumno
+            <FiUserPlus size={16} />
+            <span>Nuevo alumno</span>
           </button>
         )}
       </div>
@@ -602,6 +809,16 @@ export default function Alumnos() {
           placeholder="Buscar por nombre..."
           value={busquedaInput}
           onChange={e => setBusquedaInput(e.target.value)}
+          onFocus={e => {
+            e.currentTarget.style.borderColor = 'var(--accent-blue)'
+            e.currentTarget.style.background = 'var(--bg-tertiary)'
+            e.currentTarget.style.boxShadow = '0 0 12px rgba(59, 130, 246, 0.3)'
+          }}
+          onBlur={e => {
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.background = 'var(--bg-secondary)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
         />
         {/* Contador de resultados */}
         {!cargando && (
@@ -629,24 +846,42 @@ export default function Alumnos() {
           <button
             style={estatusFiltro === 'todos' ? s.tabActiveAzul : (tabHover === 'todos' ? s.tabHover : s.tab)}
             onClick={() => setEstatusFiltro('todos')}
-            onMouseEnter={() => setTabHover('todos')}
-            onMouseLeave={() => setTabHover(null)}
+            onMouseEnter={e => {
+              setTabHover('todos')
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={e => {
+              setTabHover(null)
+              e.currentTarget.style.transform = 'none'
+            }}
           >
             Todos ({cargando ? '--' : totalTodos})
           </button>
           <button
             style={estatusFiltro === 'activo' ? s.tabActiveVerde : (tabHover === 'activo' ? s.tabHover : s.tab)}
             onClick={() => setEstatusFiltro('activo')}
-            onMouseEnter={() => setTabHover('activo')}
-            onMouseLeave={() => setTabHover(null)}
+            onMouseEnter={e => {
+              setTabHover('activo')
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={e => {
+              setTabHover(null)
+              e.currentTarget.style.transform = 'none'
+            }}
           >
             Activos ({cargando ? '--' : totalActivos})
           </button>
           <button
             style={estatusFiltro === 'inactivo' ? s.tabActiveRojo : (tabHover === 'inactivo' ? s.tabHover : s.tab)}
             onClick={() => setEstatusFiltro('inactivo')}
-            onMouseEnter={() => setTabHover('inactivo')}
-            onMouseLeave={() => setTabHover(null)}
+            onMouseEnter={e => {
+              setTabHover('inactivo')
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={e => {
+              setTabHover(null)
+              e.currentTarget.style.transform = 'none'
+            }}
           >
             Inactivos ({cargando ? '--' : totalInactivos})
           </button>
@@ -655,62 +890,155 @@ export default function Alumnos() {
 
       <div style={s.filtrosSecundarios}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <select
-            style={{ ...s.selectFiltro, width: isMobile ? '100%' : '150px' }}
+          <CustomDropdown
+            label="Todas las cintas"
+            options={[
+              { value: '', label: 'Todas las cintas' },
+              ...cintasConfig.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
+            ]}
             value={cintaFiltro}
-            onChange={e => setCintaFiltro(e.target.value)}
-          >
-            <option value="">Todas las cintas</option>
-            {cintasConfig.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
-          </select>
+            onChange={val => setCintaFiltro(val)}
+            minWidth="170px"
+            isMobile={isMobile}
+          />
 
-          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '150px' }} value={edadFiltro} onChange={e => setEdadFiltro(e.target.value)}>
-            <option value="">Todas las edades</option>
-            <option value="infantil">Infantil (3-11)</option>
-            <option value="cadete">Cadete (12-14)</option>
-            <option value="juvenil">Juvenil (15-17)</option>
-            <option value="adultos">Adultos (+18)</option>
-          </select>
+          <CustomDropdown
+            label="Todas las edades"
+            options={[
+              { value: '', label: 'Todas las edades' },
+              { value: 'infantil', label: 'Infantil (3-11)' },
+              { value: 'cadete', label: 'Cadete (12-14)' },
+              { value: 'juvenil', label: 'Juvenil (15-17)' },
+              { value: 'adultos', label: 'Adultos (+18)' },
+            ]}
+            value={edadFiltro}
+            onChange={val => setEdadFiltro(val)}
+            minWidth="170px"
+            isMobile={isMobile}
+          />
 
-          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '160px' }} value={horarioFiltro} onChange={e => setHorarioFiltro(e.target.value)}>
-            <option value="">Todos los horarios</option>
-            {horarios.map(h => (
-              <option key={h.id} value={h.id}>{h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})</option>
-            ))}
-          </select>
+          <CustomDropdown
+            label="Todos los horarios"
+            options={[
+              { value: '', label: 'Todos los horarios' },
+              ...horarios.map(h => ({
+                value: String(h.id),
+                label: `${h.nombre} (${formatHora(h.hora_inicio)} - ${formatHora(h.hora_fin)})`
+              }))
+            ]}
+            value={horarioFiltro}
+            onChange={val => setHorarioFiltro(val)}
+            minWidth="175px"
+            isMobile={isMobile}
+          />
 
-          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '160px' }} value={orden} onChange={e => setOrden(e.target.value)}>
-            <option value="id">Ordenar por ID</option>
-            <option value="cinta_desc">Cinta (Mayor a menor)</option>
-            <option value="cinta_asc">Cinta (Menor a mayor)</option>
-            <option value="edad_asc">Edad (Menor a mayor)</option>
-            <option value="edad_desc">Edad (Mayor a menor)</option>
-            <option value="horario_asc">Horario (Temprano a tarde)</option>
-          </select>
+          <CustomDropdown
+            label="Ordenar por ID"
+            options={[
+              { value: 'id', label: 'Ordenar por ID' },
+              { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
+              { value: 'cinta_asc', label: 'Cinta (Menor a mayor)' },
+              { value: 'edad_asc', label: 'Edad (Menor a mayor)' },
+              { value: 'edad_desc', label: 'Edad (Mayor a menor)' },
+              { value: 'horario_asc', label: 'Horario (Temprano a tarde)' },
+            ]}
+            value={orden}
+            onChange={val => setOrden(val)}
+            minWidth="170px"
+            isMobile={isMobile}
+          />
 
-          <div style={{ ...s.btnLimpiarWrapper, visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) ? 'visible' : 'hidden' }}>
+          <div style={{ visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) ? 'visible' : 'hidden', display: 'inline-block' }}>
             <button
               style={s.btnLimpiar}
               onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'
+                e.currentTarget.style.borderColor = 'var(--accent-red)'
+                e.currentTarget.style.color = 'var(--accent-red)'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--bg-secondary)'
+                e.currentTarget.style.borderColor = 'var(--border)'
+                e.currentTarget.style.color = 'var(--text-secondary)'
+                e.currentTarget.style.transform = 'none'
+              }}
             >
-              ↻ Limpiar
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+              <span>Limpiar</span>
             </button>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="mobile-hide">
-          <button style={s.btnExportExcel} onClick={exportarExcel}
-            onMouseOver={e => handleHover(e, 'rgba(16, 185, 129, 0.5)')}
-            onMouseOut={e => handleOut(e, 'rgba(16, 185, 129, 0.3)')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            Excel
+        {/* Exportar con dropdown */}
+        <div style={{ position: 'relative' }} ref={exportRef} className="mobile-hide">
+          <button
+            style={{
+              ...s.btnSecundario,
+              borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
+              boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none'
+            }}
+            onClick={() => setExportOpen(v => !v)}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--bg-tertiary)'
+              e.currentTarget.style.borderColor = 'var(--accent-blue)'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'var(--bg-secondary)'
+              e.currentTarget.style.borderColor = exportOpen ? 'var(--accent-blue)' : 'var(--border)'
+              e.currentTarget.style.transform = 'none'
+            }}
+          >
+            <FiDownload size={15} />
+            Exportar
+            <FiChevronDown
+              size={13}
+              style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
+            />
           </button>
-          <button style={s.btnExportPdf} onClick={exportarPDF}
-            onMouseOver={e => handleHover(e, 'rgba(239, 68, 68, 0.5)')}
-            onMouseOut={e => handleOut(e, 'rgba(239, 68, 68, 0.3)')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
-            PDF
-          </button>
+
+          {exportOpen && (
+            <div style={s.dropdownExport}>
+              <button
+                style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
+                onClick={() => { exportarExcel(); setExportOpen(false) }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)'
+                  e.currentTarget.style.filter = 'brightness(1.1)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)'
+                  e.currentTarget.style.filter = 'none'
+                }}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Excel
+              </button>
+              <button
+                style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
+                onClick={() => { exportarPDF(); setExportOpen(false) }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.5)'
+                  e.currentTarget.style.filter = 'brightness(1.1)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.3)'
+                  e.currentTarget.style.filter = 'none'
+                }}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                PDF
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -741,7 +1069,7 @@ export default function Alumnos() {
                 No hay alumnos registrados que coincidan con los filtros
               </div>
             ) : (
-              alumnosMostrados.map(a => (
+              alumnosMostrados.map((a, idx) => (
                 <div
                   key={a.id}
                   style={{
@@ -774,7 +1102,7 @@ export default function Alumnos() {
                           {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          ID: {parseInt(a.id)} · {a.edad} años
+                          #{idx + 1} · {a.edad} años
                         </div>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' }}>
                           <span style={{
@@ -891,7 +1219,7 @@ export default function Alumnos() {
                     </td>
                   </tr>
                 ) : (
-                  alumnosMostrados.map(a => (
+                  alumnosMostrados.map((a, idx) => (
                     <tr
                       key={a.id}
                       style={{
@@ -943,7 +1271,7 @@ export default function Alumnos() {
                             maxWidth: '240px'
                           }}
                         >
-                          {`ID: ${parseInt(a.id)}`} {a.email && a.email !== 'NULL' && a.email !== 'null' && (
+                          {`#${idx + 1}`} {a.email && a.email !== 'NULL' && a.email !== 'null' && (
                             <span style={{ opacity: 0.5 }}> | {a.email}</span>
                           )}
                         </div>
@@ -966,9 +1294,24 @@ export default function Alumnos() {
 
                       <td style={s.td}>
                         <span
+                          title={user?.role !== 'instructor' ? `Clic para cambiar estatus (Actual: ${capitalizar(a.estatus)})` : ''}
                           onClick={() => {
                             if (user?.role !== 'instructor') {
                               alternarEstatus(a)
+                            }
+                          }}
+                          onMouseEnter={e => {
+                            if (user?.role !== 'instructor') {
+                              e.currentTarget.style.background = a.estatus === 'activo'
+                                ? 'rgba(16, 185, 129, 0.3)'
+                                : 'rgba(239, 68, 68, 0.3)'
+                            }
+                          }}
+                          onMouseLeave={e => {
+                            if (user?.role !== 'instructor') {
+                              e.currentTarget.style.background = a.estatus === 'activo'
+                                ? s.statusActivoBg
+                                : s.statusInactivoBg
                             }
                           }}
                           style={{
@@ -976,7 +1319,9 @@ export default function Alumnos() {
                             background: a.estatus === 'activo' ? s.statusActivoBg : s.statusInactivoBg,
                             color: a.estatus === 'activo' ? s.statusActivoText : s.statusInactivoText,
                             cursor: user?.role !== 'instructor' ? 'pointer' : 'default',
-                            userSelect: 'none'
+                            userSelect: 'none',
+                            transition: 'background 0.15s ease',
+                            display: 'inline-block',
                           }}
                         >
                           {capitalizar(a.estatus)}
@@ -1126,7 +1471,7 @@ export default function Alumnos() {
                 </div>
                 <div>
                   <div style={s.drawerNombre}>{historialAlumno.nombre} {historialAlumno.apellido_paterno}</div>
-                  <div style={s.drawerSub}>{historialAlumno.cinta_config?.nombre_nivel || 'Sin cinta'} · ID: {Number(historialAlumno.id)}</div>
+                  <div style={s.drawerSub}>{historialAlumno.cinta_config?.nombre_nivel || 'Sin cinta'}{historialAlumno.edad ? ` · ${historialAlumno.edad} años` : ''}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -1463,10 +1808,78 @@ const s = {
   tabActiveRojo: { padding: '8px 20px', background: 'var(--accent-red)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-red)', transition: 'all 0.2s' },
   tabActiveAzul: { padding: '8px 20px', background: 'var(--accent-blue)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-blue)', transition: 'all 0.2s' },
   filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
-  selectFiltro: { padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '150px', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' },
+  selectFiltro: {
+    padding: '9px 32px 9px 14px',
+    backgroundColor: 'var(--bg-secondary)',
+    backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")`,
+    backgroundPosition: 'right 12px center',
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: '14px 14px',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-secondary)',
+    outline: 'none',
+    fontSize: '13px',
+    fontWeight: '600',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    MozAppearance: 'none',
+    boxShadow: 'none',
+  },
   btnLimpiarWrapper: { display: 'inline-block', width: '90px' },
-  btnLimpiar: { width: '100%', padding: '8px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' },
-  btnLimpiarHover: { background: 'var(--border)', borderColor: 'var(--border-hover)' },
+  btnLimpiar: {
+    width: '100%',
+    padding: '9px 14px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-secondary)',
+    borderRadius: '10px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '600',
+    fontFamily: 'inherit',
+    transition: 'all 0.15s ease',
+    boxShadow: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+  },
+  btnLimpiarHover: { background: 'var(--bg-tertiary)', borderColor: 'var(--border)' },
+  btnSecundario: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '7px',
+    padding: '9px 16px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-secondary)',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    fontFamily: 'inherit',
+    boxShadow: 'none',
+  },
+  dropdownExport: {
+    position: 'absolute',
+    top: 'calc(100% + 8px)',
+    right: 0,
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    padding: '8px',
+    zIndex: 100,
+    minWidth: '150px',
+    boxShadow: 'var(--shadow-md)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
   btnExportExcel: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)', },
   btnExportPdf: { background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)', },
   tabla: { background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', minHeight: 'auto', boxShadow: 'var(--shadow-md)' },
@@ -1485,7 +1898,23 @@ const s = {
   btnVer: { background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '12px' },
   btnEdit: { background: 'var(--accent-blue-bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: 'var(--accent-blue)', fontSize: '12px' },
   btnDel: { background: 'var(--accent-red-bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 5px', cursor: 'pointer', color: 'var(--accent-red)', fontSize: '12px' },
-  btnNuevoAlumno: { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' },
+  btnNuevoAlumno: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 18px',
+    fontSize: '13.5px',
+    fontWeight: '700',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
+  },
   btnPrimary: { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s' },
   btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },

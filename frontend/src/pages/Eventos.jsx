@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
 
-const VACIO = { nombre: '', tipo: 'examen', fecha: '', lugar: '', descripcion: '', costo: '' }
+const VACIO = { nombre: '', tipo: 'torneo', fecha: '', lugar: '', descripcion: '', costo: '' }
 
 const COLOR_TIPO = {
-  examen:       { bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: 'rgba(59, 130, 246, 0.3)' },
   torneo:       { bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: 'rgba(16, 185, 129, 0.3)' },
   demostracion: { bg: 'rgba(249, 115, 22, 0.15)', color: '#f97316', border: 'rgba(249, 115, 22, 0.3)' },
   seminario:    { bg: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: 'rgba(168, 85, 247, 0.3)' },
@@ -17,7 +16,7 @@ const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Se
 export default function Eventos() {
   const navigate = useNavigate()
   const [eventos, setEventos]   = useState([])
-  const [submodulo, setSubmodulo] = useState('examenes') 
+  const [submodulo, setSubmodulo] = useState('todos') 
   const [cargando, setCargando] = useState(true)
 
   // Filtros
@@ -43,8 +42,10 @@ export default function Eventos() {
     setCargando(true)
     try {
       const resE = await api.get('/eventos')
-      // Sort by date ascending (closest first)
-      const evs = resE.data.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+      // Excluir exámenes ya que tienen su propio módulo independiente
+      const evs = resE.data
+        .filter(e => e.tipo !== 'examen')
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
       setEventos(evs)
     } catch (e) { console.error(e) } 
     finally { setCargando(false) }
@@ -53,7 +54,7 @@ export default function Eventos() {
 
   // --- CRUD EVENTOS ---
   const abrirCrear = () => { 
-    setFormEvento({ ...VACIO, tipo: submodulo === 'otros' ? 'seminario' : (submodulo === 'examenes' ? 'examen' : 'torneo') })
+    setFormEvento({ ...VACIO, tipo: submodulo === 'otros' ? 'seminario' : 'torneo' })
     setEditando(null)
     setModalEvento(true) 
   }
@@ -111,9 +112,8 @@ export default function Eventos() {
   const eventosFiltrados = useMemo(() => {
     return eventos.filter(e => {
       // 1. Tipo
-      if (submodulo === 'examenes' && e.tipo !== 'examen') return false
       if (submodulo === 'torneos' && e.tipo !== 'torneo') return false
-      if (submodulo === 'otros' && (e.tipo === 'examen' || e.tipo === 'torneo')) return false
+      if (submodulo === 'otros' && e.tipo === 'torneo') return false
 
       // 2. Busqueda
       if (busqueda && !e.nombre.toLowerCase().includes(busqueda.toLowerCase()) && !(e.lugar || '').toLowerCase().includes(busqueda.toLowerCase())) return false
@@ -127,7 +127,7 @@ export default function Eventos() {
 
       return true
     })
-  }, [eventos, submodulo, busqueda, filtroMes, filtroEstado])
+  }, [eventos, submodulo, busqueda, filtroMes, filtroEstado, hoyIso])
 
   // --- ESTADISTICAS ---
   const stats = useMemo(() => {
@@ -179,58 +179,22 @@ export default function Eventos() {
 
       <div style={s.subnav}>
         <button
-          style={submodulo === 'examenes' ? s.subnavBtnActive : s.subnavBtn}
-          onClick={() => setSubmodulo('examenes')}
-          onMouseOver={e => {
-            if (submodulo !== 'examenes') {
-              e.currentTarget.style.background = 'var(--bg-tertiary)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }
-          }}
-          onMouseOut={e => {
-            if (submodulo !== 'examenes') {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--text-muted)';
-            }
-          }}
+          style={submodulo === 'todos' ? s.subnavBtnActive : s.subnavBtn}
+          onClick={() => setSubmodulo('todos')}
         >
-          Exámenes
+          Todos los Eventos
         </button>
         <button
           style={submodulo === 'torneos' ? s.subnavBtnActive : s.subnavBtn}
           onClick={() => setSubmodulo('torneos')}
-          onMouseOver={e => {
-            if (submodulo !== 'torneos') {
-              e.currentTarget.style.background = 'var(--bg-tertiary)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }
-          }}
-          onMouseOut={e => {
-            if (submodulo !== 'torneos') {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--text-muted)';
-            }
-          }}
         >
           Torneos
         </button>
         <button
           style={submodulo === 'otros' ? s.subnavBtnActive : s.subnavBtn}
           onClick={() => setSubmodulo('otros')}
-          onMouseOver={e => {
-            if (submodulo !== 'otros') {
-              e.currentTarget.style.background = 'var(--bg-tertiary)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }
-          }}
-          onMouseOut={e => {
-            if (submodulo !== 'otros') {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--text-muted)';
-            }
-          }}
         >
-          Otros
+          Seminarios y Otros
         </button>
       </div>
 
@@ -398,7 +362,6 @@ export default function Eventos() {
               <div>
                 <label style={s.label}>Tipo de Evento</label>
                 <select style={s.select} value={formEvento.tipo} onChange={e=>setFormEvento({...formEvento, tipo: e.target.value})}>
-                  <option value="examen">Examen de Grados</option>
                   <option value="torneo">Torneo / Competencia</option>
                   <option value="seminario">Seminario / Curso</option>
                   <option value="demostracion">Demostración</option>

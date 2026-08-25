@@ -142,6 +142,8 @@ body {
 .app-main {
   margin-left: var(--sidebar-width);
   flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
   padding: 32px;
   min-height: 100vh;
   background: var(--bg-primary);
@@ -462,6 +464,15 @@ body {
   0%   { transform: scale(0); }
   50%  { transform: scale(1.15); }
   100% { transform: scale(1); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
 }
 
 /* ============================================================

@@ -2,6 +2,34 @@ import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
+import { FiUser, FiCamera, FiUserPlus } from 'react-icons/fi'
+
+const formatFechaNatural = (fecha) => {
+  if (!fecha) return '-'
+  const d = new Date(fecha + 'T12:00:00')
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+const modalCredencialStyles = {
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
+  modalCard: { background: 'var(--bg-secondary)', borderRadius: '16px', width: '580px', maxWidth: '95vw', border: '1px solid var(--border)' },
+  cardHeader: { background: 'var(--bg-tertiary)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
+  cardTitle: { fontSize: '18px', fontWeight: '600', textTransform: 'uppercase', color: 'var(--text-primary)', margin: 0 },
+  btnCerrarWhite: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
+  cardBody: { padding: '30px', display: 'flex', gap: '18px', alignItems: 'flex-start', textAlign: 'left' },
+  avatarBox: { width: '180px', height: '220px', flexShrink: 0, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: '8px' },
+  avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  avatarInicialesBox: { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  avatarIniciales: { fontSize: '56px', fontWeight: '700', color: 'var(--accent-blue)' },
+  cardInfo: { flex: 1, display: 'flex', flexDirection: 'column', gap: '15px' },
+  infoItem: { display: 'flex', borderBottom: '1px solid var(--border)', paddingBottom: '6px' },
+  infoLabel: { width: '100px', fontWeight: '700', color: 'var(--text-muted)', fontSize: '15px', textAlign: 'right', marginRight: '20px' },
+  infoValue: { color: 'var(--text-primary)', fontSize: '14.5px', fontWeight: '500' },
+  cardFooter: { padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '15px', background: 'var(--bg-tertiary)' },
+  btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '8px 30px', borderRadius: '5px', fontWeight: '600', cursor: 'pointer' },
+  btnImprimir: { background: 'var(--accent-blue)', color: '#fff', border: 'none', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', cursor: 'pointer' },
+  btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center' },
+}
 
 export default function InstructorManager() {
   const [instructores, setInstructores] = useState([])
@@ -165,15 +193,20 @@ export default function InstructorManager() {
         <button 
           style={s.btnAdd} 
           onClick={() => handleOpenModal()}
-          onMouseOver={e => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
           }}
-          onMouseOut={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
           }}
-        >+ Nuevo Instructor</button>
+        >
+          <FiUserPlus size={16} />
+          <span>Nuevo Instructor</span>
+        </button>
       </div>
 
       {loading ? <div style={s.loading}>Cargando equipo...</div> : (
@@ -184,7 +217,9 @@ export default function InstructorManager() {
                 {inst.foto_url ? (
                   <img src={`${import.meta.env.VITE_API_URL}/storage/${inst.foto_url}`} alt="Foto" style={s.photo} />
                 ) : (
-                  <div style={s.photoPlaceholder}>🥋</div>
+                  <div style={s.photoPlaceholder}>
+                    <FiUser size={32} color="var(--text-muted)" />
+                  </div>
                 )}
               </div>
               <div style={s.instInfo}>
@@ -301,9 +336,13 @@ export default function InstructorManager() {
             <div style={s.modalBody}>
               <div style={s.modalPhotoSection}>
                 <div style={s.modalPhotoFrame}>
-                  {preview ? <img src={preview} style={s.modalPhoto} /> : <div style={s.modalPhotoPlaceholder}>🥋</div>}
+                  {preview ? <img src={preview} style={s.modalPhoto} /> : (
+                    <div style={s.modalPhotoPlaceholder}>
+                      <FiUser size={48} color="var(--text-muted)" />
+                    </div>
+                  )}
                   <label style={s.modalBtnUpload}>
-                    📷 Foto
+                    <FiCamera size={12} style={{ marginRight: '4px' }} /> Foto
                     <input type="file" hidden accept="image/*" onChange={e => {
                       const f = e.target.files[0]
                       if(f) { setForm({...form, foto: f}); setPreview(URL.createObjectURL(f)) }
@@ -379,65 +418,85 @@ export default function InstructorManager() {
 
       {/* Modal Credencial */}
       {showCredencial && selected && (
-        <div style={s.overlay}>
-          <div style={s.credCard}>
-            <div style={s.credHeader}>
-              <h4 style={s.credTitle}>Credencial de Instructor</h4>
-              <button 
-                style={s.btnClose} 
-                onClick={() => setShowCredencial(false)}
-                onMouseOver={e => {
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >×</button>
+        <div style={modalCredencialStyles.overlay} onClick={() => setShowCredencial(false)}>
+          <div style={modalCredencialStyles.modalCard} onClick={e => e.stopPropagation()}>
+            <div style={modalCredencialStyles.cardHeader}>
+              <h3 style={modalCredencialStyles.cardTitle}>
+                {selected.nombre} {selected.apellido_paterno} {selected.apellido_materno || ''}
+              </h3>
+              <button style={modalCredencialStyles.btnCerrarWhite} onClick={() => setShowCredencial(false)}>✕</button>
             </div>
-            <div style={s.credBody}>
-              <div style={s.credPhotoBox}>
+            <div style={modalCredencialStyles.cardBody}>
+              <div style={modalCredencialStyles.avatarBox}>
                 {selected.foto_url ? (
-                  <img src={`${import.meta.env.VITE_API_URL}/storage/${selected.foto_url}`} style={s.credPhoto} />
+                  <img
+                    src={`${import.meta.env.VITE_API_URL}/storage/${selected.foto_url}`}
+                    alt={selected.nombre}
+                    style={modalCredencialStyles.avatarImg}
+                  />
                 ) : (
-                  <div style={s.credPlaceholder}>🥋</div>
+                  <div style={modalCredencialStyles.avatarInicialesBox}>
+                    <span style={modalCredencialStyles.avatarIniciales}>
+                      {(selected.nombre?.charAt(0) || '') + (selected.apellido_paterno?.charAt(0) || '')}
+                    </span>
+                  </div>
                 )}
               </div>
-              <div style={s.credInfo}>
-                <div style={s.credLabel}>Instructor</div>
-                <div style={s.credValue}>{selected.nombre} {selected.apellido_paterno}</div>
-                
-                <div style={s.credLabel}>Grado Actual</div>
-                <div style={{...s.credCinta, background: getCintaColor(selected)}}>
-                  {getCintaLabel(selected)}
+              <div style={modalCredencialStyles.cardInfo}>
+                <div style={modalCredencialStyles.infoItem}>
+                  <span style={modalCredencialStyles.infoLabel}>Rol:</span>
+                  <span style={modalCredencialStyles.infoValue}>Instructor</span>
                 </div>
-
-                <div style={s.credGrid}>
-                  <div>
-                    <div style={s.credLabel}>Teléfono</div>
-                    <div style={s.credValueSmall}>{selected.telefono || 'N/A'}</div>
-                  </div>
-                  <div>
-                    <div style={s.credLabel}>Nacimiento</div>
-                    <div style={s.credValueSmall}>{selected.fecha_nacimiento || 'N/A'}</div>
-                  </div>
+                <div style={modalCredencialStyles.infoItem}>
+                  <span style={modalCredencialStyles.infoLabel}>Grado:</span>
+                  <span style={{
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    background: getCintaColor(selected),
+                    color: '#ffffff',
+                    fontWeight: '700',
+                    fontSize: '12.5px',
+                    display: 'inline-block'
+                  }}>
+                    {getCintaLabel(selected)}
+                  </span>
+                </div>
+                <div style={modalCredencialStyles.infoItem}>
+                  <span style={modalCredencialStyles.infoLabel}>Teléfono:</span>
+                  <span style={modalCredencialStyles.infoValue}>{selected.telefono || '-'}</span>
+                </div>
+                <div style={modalCredencialStyles.infoItem}>
+                  <span style={modalCredencialStyles.infoLabel}>F. Nac.:</span>
+                  <span style={modalCredencialStyles.infoValue}>{formatFechaNatural(selected.fecha_nacimiento)}</span>
                 </div>
               </div>
             </div>
-            <div style={s.credFooter}>
-              <button 
-                style={s.btnPrimary} 
+            <div style={modalCredencialStyles.cardFooter}>
+              {selected.telefono && (
+                <a
+                  href={'https://wa.me/52' + selected.telefono?.replace(/\s+/g, '')}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={modalCredencialStyles.btnWhatsapp}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '6px' }}>
+                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.185-.573c.948.517 2.011.808 3.146.809 3.181 0 5.767-2.584 5.768-5.764 0-3.18-2.586-5.763-5.768-5.763zm4.52 8.161c-.199.557-1.162 1.058-1.597 1.115-.41.054-.935.086-1.503-.099-.345-.113-.775-.262-1.328-.489-2.315-.953-3.82-3.308-3.936-3.461-.116-.155-.945-1.258-.945-2.399 0-1.141.594-1.701.806-1.933.211-.231.462-.29.616-.29.154 0 .308.001.442.008.14.007.33-.053.516.39.186.444.636 1.547.692 1.659.056.111.093.242.019.39-.074.148-.112.241-.223.37-.111.13-.233.29-.333.389-.111.111-.228.232-.098.455.13.223.577.95 1.24 1.54.853.759 1.567.994 1.79.1.223-.112.455-.228.678-.541.222-.314.185-.537.408-.65s.445-.074.743.074c.297.149 1.874.883 2.196 1.043.322.16.537.241.616.37.079.13.079.752-.12 1.309z" />
+                  </svg>
+                  WHATSAPP
+                </a>
+              )}
+              <button
+                style={modalCredencialStyles.btnImprimir}
                 onClick={() => window.print()}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >Imprimir Credencial</button>
+              >
+                IMPRIMIR
+              </button>
+              <button
+                style={modalCredencialStyles.btnAceptar}
+                onClick={() => setShowCredencial(false)}
+              >
+                CERRAR
+              </button>
             </div>
           </div>
         </div>
@@ -449,9 +508,25 @@ export default function InstructorManager() {
 const s = {
   container: { animation: 'fadeIn 0.3s ease-in-out' },
   headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' },
-  tabTitle: { fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 },
+  tabTitle: { fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
   tabSubtitle: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
-  btnAdd: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', fontSize: '14px', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s' },
+  btnAdd: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 18px',
+    fontSize: '13.5px',
+    fontWeight: '700',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
+  },
   loading: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
   empty: { gridColumn: '1 / -1', padding: '60px', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg-secondary)', borderRadius: '24px', border: '1px dashed var(--border)' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' },

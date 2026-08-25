@@ -40,10 +40,22 @@ export default function AsistenciasTopbar({
         <div style={{ position: 'relative' }} ref={ref}>
           <button
             id="btn-exportar-asistencias"
-            style={s.btnSecundario}
+            style={{
+              ...s.btnSecundario,
+              borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
+              boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none'
+            }}
             onClick={() => setExportOpen(v => !v)}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--bg-tertiary)'
+              e.currentTarget.style.borderColor = 'var(--accent-blue)'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'var(--bg-secondary)'
+              e.currentTarget.style.borderColor = exportOpen ? 'var(--accent-blue)' : 'var(--border)'
+              e.currentTarget.style.transform = 'none'
+            }}
           >
             <FiDownload size={15} />
             Exportar
@@ -58,6 +70,16 @@ export default function AsistenciasTopbar({
               <button
                 style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
                 onClick={() => { onExportar('excel'); setExportOpen(false) }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)'
+                  e.currentTarget.style.filter = 'brightness(1.1)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)'
+                  e.currentTarget.style.filter = 'none'
+                }}
               >
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 Excel
@@ -65,6 +87,16 @@ export default function AsistenciasTopbar({
               <button
                 style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
                 onClick={() => { onExportar('pdf'); setExportOpen(false) }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.5)'
+                  e.currentTarget.style.filter = 'brightness(1.1)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.3)'
+                  e.currentTarget.style.filter = 'none'
+                }}
               >
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 PDF

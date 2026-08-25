@@ -141,6 +141,9 @@ class EventoAlumnoController extends Controller
             // Examen
             'resultado_examen'   => 'nullable|in:pendiente,aprobado,reprobado',
             'costo_examen'       => 'nullable|numeric|min:0',
+            'grado_actual_id'    => 'nullable|exists:configuraciones_cintas,id',
+            'grado_siguiente_id' => 'nullable|exists:configuraciones_cintas,id',
+            'es_historico'       => 'nullable|boolean',
             // Torneo
             'resultado_torneo'   => 'nullable|in:oro,plata,bronce,eliminado,pendiente',
             'costo_torneo'       => 'nullable|numeric|min:0',

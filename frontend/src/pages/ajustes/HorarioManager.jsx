@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
+import { FiClock } from 'react-icons/fi'
 
 export default function HorarioManager() {
   const [horarios, setHorarios] = useState([])
@@ -115,10 +116,29 @@ export default function HorarioManager() {
   }
 
   return (
-    <div>
+    <div style={s.container}>
       <div style={s.headerRow}>
-        <h3 style={s.tabTitle}>Gestión de Horarios</h3>
-        <button style={s.btnAdd} onClick={() => handleOpenModal()}>+ Nuevo Horario</button>
+        <div>
+          <h3 style={s.tabTitle}>Nuestros Horarios</h3>
+          <p style={s.tabSubtitle}>Administra las clases, días y horarios de entrenamiento.</p>
+        </div>
+        <button
+          style={s.btnAdd}
+          onClick={() => handleOpenModal()}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
+          }}
+        >
+          <FiClock size={16} />
+          <span>Nuevo Horario</span>
+        </button>
       </div>
 
       {loading ? <div style={s.loading}>Cargando horarios...</div> : (
@@ -140,8 +160,18 @@ export default function HorarioManager() {
                 <button 
                   style={s.btnIconEdit} 
                   onClick={() => handleOpenModal(h)}
-                  onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                  onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#3b82f6'
+                    e.currentTarget.style.color = '#ffffff'
+                    e.currentTarget.style.transform = 'scale(1.1)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'var(--accent-blue-bg)'
+                    e.currentTarget.style.color = 'var(--accent-blue)'
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
                   title="Editar"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -152,8 +182,18 @@ export default function HorarioManager() {
                 <button 
                   style={s.btnIconDel} 
                   onClick={() => handleDelete(h)}
-                  onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                  onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#ef4444'
+                    e.currentTarget.style.color = '#ffffff'
+                    e.currentTarget.style.transform = 'scale(1.1)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'var(--accent-red-bg)'
+                    e.currentTarget.style.color = 'var(--accent-red)'
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
                   title="Eliminar"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -228,16 +268,34 @@ export default function HorarioManager() {
 }
 
 const s = {
-  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
+  container: { animation: 'fadeIn 0.3s ease-in-out' },
+  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' },
   tabTitle: { fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
-  btnAdd: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 20px', fontWeight: '800', cursor: 'pointer', fontSize: '14px' },
+  tabSubtitle: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
+  btnAdd: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 18px',
+    fontSize: '13.5px',
+    fontWeight: '700',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
+  },
   loading: { padding: '40px', textAlign: 'center', color: 'var(--text-muted)' },
   list: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden' },
   listHeader: { display: 'flex', padding: '12px 24px', background: 'var(--bg-tertiary)', fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' },
   row: { display: 'flex', padding: '16px 24px', borderBottom: '1px solid var(--border)', alignItems: 'center', transition: '0.2s' },
   empty: { padding: '40px', textAlign: 'center', color: 'var(--text-muted)' },
-  btnIconEdit: { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.15s' },
-  btnIconDel: { background: 'var(--accent-red-bg)', color: 'var(--accent-red)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.15s' },
+  btnIconEdit: { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' },
+  btnIconDel: { background: 'var(--accent-red-bg)', color: 'var(--accent-red)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' },
   
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
   modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', width: '450px', maxWidth: '95vw', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' },

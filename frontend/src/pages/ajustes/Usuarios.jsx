@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { FiShield, FiUserPlus } from 'react-icons/fi'
 
 export default function Usuarios() {
   const navigate = useNavigate()
@@ -153,14 +154,47 @@ export default function Usuarios() {
 
   return (
     <div style={s.page}>
-      <button style={s.btnBack} onClick={() => navigate('/ajustes')}>← Volver a ajustes</button>
+      <button
+        style={s.btnBack}
+        onClick={() => navigate('/ajustes')}
+        onMouseEnter={e => {
+          e.currentTarget.style.background = 'var(--bg-tertiary)'
+          e.currentTarget.style.color = 'var(--text-primary)'
+          e.currentTarget.style.borderColor = 'var(--accent-blue)'
+          e.currentTarget.style.transform = 'translateY(-1px)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.background = 'var(--bg-secondary)'
+          e.currentTarget.style.color = 'var(--text-muted)'
+          e.currentTarget.style.borderColor = 'var(--border)'
+          e.currentTarget.style.transform = 'none'
+        }}
+      >
+        ← Volver a ajustes
+      </button>
       
       <div style={s.header}>
         <div>
           <h2 style={s.title}>Usuarios y Roles</h2>
           <p style={s.subtitle}>Gestiona quién tiene acceso a tu academia y qué acciones puede realizar.</p>
         </div>
-        <button style={s.btnAdd} onClick={() => handleOpenModal()}>+ Nuevo Usuario</button>
+        <button
+          style={s.btnAdd}
+          onClick={() => handleOpenModal()}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
+          }}
+        >
+          <FiUserPlus size={16} />
+          <span>Nuevo Usuario</span>
+        </button>
       </div>
 
       {loading ? <div style={s.loading}>Cargando equipo...</div> : (
@@ -178,19 +212,33 @@ export default function Usuarios() {
                   )}
                 </div>
                 {currentUser?.is_superadmin && (
-                  <div style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    🏫 <strong>{u.tenant?.nombre || 'Global / Sistema'}</strong>
+                  <div style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <FiShield size={14} color="var(--accent-blue)" />
+                    <strong>{u.tenant?.nombre || 'Global / Sistema'}</strong>
                     {u.tenant_id && <span style={{ marginLeft: '6px', color: 'var(--text-muted)' }}>(ID: {u.tenant_id})</span>}
                   </div>
                 )}
                 
-                {/* Botones de acción alineados debajo */}
                 <div style={s.cardActions}>
                   {u.id !== currentUser?.id && u.role !== 'owner' && (
                     <button
                       style={u.is_suspended ? s.btnActivar : s.btnSuspender}
                       onClick={() => handleToggleSuspension(u)}
                       title={u.is_suspended ? "Activar cuenta" : "Suspender cuenta"}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = u.is_suspended ? '#22c55e' : '#f59e0b'
+                        e.currentTarget.style.color = '#ffffff'
+                        e.currentTarget.style.transform = 'scale(1.1)'
+                        e.currentTarget.style.boxShadow = u.is_suspended
+                          ? '0 4px 12px rgba(34, 197, 94, 0.4)'
+                          : '0 4px 12px rgba(245, 158, 11, 0.4)'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = u.is_suspended ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)'
+                        e.currentTarget.style.color = u.is_suspended ? '#22c55e' : '#f59e0b'
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
                     >
                       {u.is_suspended ? (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -202,15 +250,17 @@ export default function Usuarios() {
                   <button
                     style={s.btnEdit}
                     onClick={() => handleOpenModal(u)}
-                    onMouseOver={e => {
+                    onMouseEnter={e => {
                       e.currentTarget.style.background = '#3b82f6';
                       e.currentTarget.style.color = 'white';
                       e.currentTarget.style.transform = 'scale(1.1)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
                     }}
-                    onMouseOut={e => {
+                    onMouseLeave={e => {
                       e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
                       e.currentTarget.style.color = '#3b82f6';
                       e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = 'none';
                     }}
                     title="Editar"
                   >
@@ -219,15 +269,17 @@ export default function Usuarios() {
                   <button
                     style={s.btnDel}
                     onClick={() => handleDelete(u)}
-                    onMouseOver={e => {
+                    onMouseEnter={e => {
                       e.currentTarget.style.background = '#ef4444';
                       e.currentTarget.style.color = 'white';
                       e.currentTarget.style.transform = 'scale(1.1)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
                     }}
-                    onMouseOut={e => {
+                    onMouseLeave={e => {
                       e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
                       e.currentTarget.style.color = '#ef4444';
                       e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = 'none';
                     }}
                     title="Borrar"
                   >
@@ -292,12 +344,28 @@ export default function Usuarios() {
 }
 
 const s = {
-  page: { padding: '40px 24px', maxWidth: '1000px', margin: '0 auto' },
+  page: { paddingBottom: '40px', width: '100%', boxSizing: 'border-box' },
   btnBack: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginBottom: '24px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' },
   title: { fontSize: '28px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 },
   subtitle: { color: 'var(--text-secondary)', fontSize: '15px', marginTop: '4px' },
-  btnAdd: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-md)' },
+  btnAdd: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 18px',
+    fontSize: '13.5px',
+    fontWeight: '700',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
+  },
   loading: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' },
   card: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'flex-start', gap: '16px', transition: 'transform 0.2s' },

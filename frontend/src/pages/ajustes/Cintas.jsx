@@ -3,6 +3,7 @@ import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
 import { useNavigate } from 'react-router-dom'
+import { FiAward } from 'react-icons/fi'
 
 const SUGGESTED_COLORS = [
   { bg: '#ffffff', tx: '#000000', label: 'Blanca' },
@@ -162,7 +163,24 @@ export default function Cintas({ isEmbedded = false }) {
     <div style={isEmbedded ? {} : s.pageTool}>
       {!isEmbedded && (
         <>
-          <button style={s.btnBack} onClick={() => navigate('/ajustes')}>← Volver a ajustes</button>
+          <button
+            style={s.btnBack}
+            onClick={() => navigate('/ajustes')}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--bg-tertiary)'
+              e.currentTarget.style.color = 'var(--text-primary)'
+              e.currentTarget.style.borderColor = 'var(--accent-blue)'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'var(--bg-secondary)'
+              e.currentTarget.style.color = 'var(--text-muted)'
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.transform = 'none'
+            }}
+          >
+            ← Volver a ajustes
+          </button>
           <div style={s.toolHeaderRow}>
             <div>
               <h2 style={s.titleTool}>Configuración de Grados</h2>
@@ -176,7 +194,10 @@ export default function Cintas({ isEmbedded = false }) {
         {/* Editor Lateral */}
         <div style={s.toolFormCard}>
           <div style={s.cardHeaderGlow} />
-          <h4 style={s.toolLabel}>{editId ? '🥋 Editando Grado' : '🥋 Nuevo Grado'}</h4>
+          <h4 style={s.toolLabel}>
+            <FiAward size={16} style={{ marginRight: '6px' }} />
+            {editId ? 'Editando Grado' : 'Nuevo Grado'}
+          </h4>
           
           <div style={s.inputContainer}>
             <label style={s.fieldLabel}>Nombre de la Cinta</label>
@@ -229,13 +250,37 @@ export default function Cintas({ isEmbedded = false }) {
           {renderBeltPreview(form.bg, form.tx, form.nombre)}
 
           <div style={s.btnGroup}>
-            <button style={s.btnSave} onClick={handleSave} disabled={saving}>
+            <button
+              style={s.btnSave}
+              onClick={handleSave}
+              disabled={saving}
+              onMouseEnter={e => {
+                if (!saving) {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(37, 99, 235, 0.4)'
+                  e.currentTarget.style.filter = 'brightness(1.1)'
+                }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'none'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.2)'
+                e.currentTarget.style.filter = 'none'
+              }}
+            >
               {saving ? '...' : (editId ? 'Guardar Cambios' : 'Crear Grado')}
             </button>
             {editId && (
               <button 
                 style={s.btnCancel} 
                 onClick={() => {setEditId(null); setForm({nombre:'', bg:'#3b82f6', tx:'#ffffff'})}}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                }}
               >
                 Cancelar
               </button>
@@ -307,10 +352,42 @@ export default function Cintas({ isEmbedded = false }) {
                     <button style={{ ...s.btnIcon, ...s.btnMove }} onClick={() => moveItem(i, 1)} disabled={i === cintas.length - 1} title="Bajar">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                     </button>
-                    <button style={{ ...s.btnIcon, ...s.btnEdit }} onClick={() => startEdit(c)} title="Editar">
+                    <button
+                      style={{ ...s.btnIcon, ...s.btnEdit }}
+                      onClick={() => startEdit(c)}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = '#3b82f6'
+                        e.currentTarget.style.color = '#ffffff'
+                        e.currentTarget.style.transform = 'scale(1.1)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = 'rgba(59,130,246,0.1)'
+                        e.currentTarget.style.color = 'var(--accent-blue)'
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                      title="Editar"
+                    >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                     </button>
-                    <button style={{ ...s.btnIcon, ...s.btnDel }} onClick={() => handleDelete(c)} title="Borrar">
+                    <button
+                      style={{ ...s.btnIcon, ...s.btnDel }}
+                      onClick={() => handleDelete(c)}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = '#ef4444'
+                        e.currentTarget.style.color = '#ffffff'
+                        e.currentTarget.style.transform = 'scale(1.1)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = 'rgba(239,68,68,0.1)'
+                        e.currentTarget.style.color = 'var(--accent-red)'
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                      title="Borrar"
+                    >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                     </button>
                   </div>
@@ -326,7 +403,7 @@ export default function Cintas({ isEmbedded = false }) {
 
 const s = {
   subtitleMain: { color: 'var(--text-secondary)', fontSize: '15px', marginTop: '4px' },
-  pageTool: { padding: '40px 24px', maxWidth: '1100px', margin: '0 auto' },
+  pageTool: { paddingBottom: '40px', width: '100%', boxSizing: 'border-box' },
   btnBack: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginBottom: '24px' },
   toolHeaderRow: { marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   titleTool: { fontSize: '28px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 },
@@ -461,7 +538,7 @@ const s = {
 
   // Save buttons
   btnGroup: { display: 'flex', gap: '10px' },
-  btnSave: { flex: 1, background: 'linear-gradient(135deg, var(--accent-blue) 0%, #2563eb 100%)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37,99,235,0.2)', transition: 'all 0.2s', ':active': { transform: 'scale(0.98)' } },
+  btnSave: { flex: 1, background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37,99,235,0.2)', transition: 'all 0.2s' },
   btnCancel: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', cursor: 'pointer', fontWeight: '700' },
   
   // List styling

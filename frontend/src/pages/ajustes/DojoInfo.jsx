@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import { useAuth } from '../../context/AuthContext'
+import { FiShield, FiCamera, FiPhone, FiMapPin, FiSave, FiLoader, FiAward } from 'react-icons/fi'
 
 export default function DojoInfo() {
   const { refreshUser } = useAuth()
@@ -113,10 +114,12 @@ export default function DojoInfo() {
             {fotoPreview ? (
               <img src={fotoPreview} alt="Logo" style={s.logoImg} />
             ) : (
-              <div style={s.logoPlaceholder}>🏫</div>
+              <div style={s.logoPlaceholder}>
+                <FiAward size={48} color="var(--accent-blue)" />
+              </div>
             )}
             <label style={s.btnUpload}>
-              📷 Cambiar Logo
+              <FiCamera size={14} style={{ marginRight: '6px' }} /> Cambiar Logo
               <input type="file" hidden accept="image/*" onChange={handleFileChange} />
             </label>
           </div>
@@ -137,7 +140,10 @@ export default function DojoInfo() {
           
           {/* SECCIÓN 1: IDENTIDAD */}
           <section style={s.section}>
-            <h3 style={s.sectionTitle}>✨ Identidad de la Academia</h3>
+            <h3 style={s.sectionTitle}>
+              <FiShield size={18} style={{ marginRight: '8px', color: 'var(--accent-blue)', verticalAlign: 'middle' }} />
+              Identidad de la Academia
+            </h3>
             <div style={s.grid2}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Nombre de la Escuela</label>
@@ -197,7 +203,10 @@ export default function DojoInfo() {
 
           {/* SECCIÓN 2: CONTACTO Y REDES */}
           <section style={s.section}>
-            <h3 style={s.sectionTitle}>📞 Contacto y Redes Sociales</h3>
+            <h3 style={s.sectionTitle}>
+              <FiPhone size={18} style={{ marginRight: '8px', color: 'var(--accent-blue)', verticalAlign: 'middle' }} />
+              Contacto y Redes Sociales
+            </h3>
             <div style={s.grid2}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Teléfono</label>
@@ -248,7 +257,10 @@ export default function DojoInfo() {
 
           {/* SECCIÓN 3: UBICACIÓN */}
           <section style={s.section}>
-            <h3 style={s.sectionTitle}>📍 Ubicación Física</h3>
+            <h3 style={s.sectionTitle}>
+              <FiMapPin size={18} style={{ marginRight: '8px', color: 'var(--accent-blue)', verticalAlign: 'middle' }} />
+              Ubicación Física
+            </h3>
             <div style={s.grid2}>
               <div style={{...s.inputGroup, flex: 2}}>
                 <label style={s.label}>Calle</label>
@@ -306,11 +318,33 @@ export default function DojoInfo() {
 
           <div style={s.actions}>
             <button 
-              style={{ ...s.btnSave, opacity: saving ? 0.7 : 1 }} 
+              style={{ ...s.btnSave, opacity: saving ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} 
               onClick={handleSave} 
               disabled={saving}
+              onMouseEnter={e => {
+                if (!saving) {
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+                  e.currentTarget.style.filter = 'brightness(1.08)'
+                }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'none'
+                e.currentTarget.style.boxShadow = 'none'
+                e.currentTarget.style.filter = 'none'
+              }}
             >
-              {saving ? '⏳ Guardando cambios...' : '💾 Guardar Todo'}
+              {saving ? (
+                <>
+                  <FiLoader className="spin" size={16} style={{ marginRight: '8px' }} />
+                  Guardando cambios...
+                </>
+              ) : (
+                <>
+                  <FiSave size={16} style={{ marginRight: '8px' }} />
+                  Guardar Todo
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -340,5 +374,5 @@ const s = {
   label: { fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
   input: { width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', transition: '0.2s focus', borderFocus: '1px solid var(--accent-blue)' },
   actions: { marginTop: '16px', display: 'flex', justifyContent: 'flex-end' },
-  btnSave: { minWidth: '200px', background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)', color: '#fff', border: 'none', borderRadius: '14px', padding: '16px 32px', fontWeight: '800', cursor: 'pointer', fontSize: '16px', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)', transition: '0.3s transform, 0.3s box-shadow' }
+  btnSave: { minWidth: '200px', background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '14px', padding: '16px 32px', fontWeight: '800', cursor: 'pointer', fontSize: '16px', boxShadow: 'none', transition: 'all 0.2s ease' }
 }

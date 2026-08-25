@@ -15,6 +15,8 @@ import Asistencias from './pages/Asistencias'
 import AsistenciasAntiguo from './pages/AsistenciasAntiguo'
 import Eventos from './pages/Eventos'
 import EventoDetalle from './pages/EventoDetalle'
+import Examenes from './pages/Examenes'
+import ExamenDetalle from './pages/ExamenDetalle'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Ajustes from './pages/Ajustes'
@@ -110,6 +112,8 @@ const router = createBrowserRouter([
           { path: "asistencias-antiguo", element: <SetupGuard><AsistenciasAntiguo /></SetupGuard> },
           { path: "eventos", element: <SetupGuard><Eventos /></SetupGuard> },
           { path: "eventos/:id", element: <SetupGuard><EventoDetalle /></SetupGuard> },
+          { path: "examenes", element: <SetupGuard><Examenes /></SetupGuard> },
+          { path: "examenes/:id", element: <SetupGuard><ExamenDetalle /></SetupGuard> },
           {
             path: "ajustes",
             element: <Outlet />,

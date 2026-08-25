@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { toast } from 'react-toastify'
+import { FiUser, FiSun, FiMoon, FiShield, FiUsers, FiAward, FiSliders } from 'react-icons/fi'
 
 export default function Ajustes() {
   const { user } = useAuth();
@@ -32,7 +33,7 @@ function CardAppearance() {
     <div style={s.card}>
       <div style={s.cardHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ ...s.cardIcon, color: 'var(--accent-purple)', background: 'var(--accent-purple-bg)' }}>✨</span>
+          <span style={{ ...s.cardIcon, color: 'var(--accent-purple)', background: 'var(--accent-purple-bg)' }}><FiSun size={18} /></span>
           <h3 style={s.cardTitle}>Apariencia</h3>
         </div>
       </div>
@@ -50,8 +51,26 @@ function CardAppearance() {
               background: theme === 'light' ? 'var(--accent-blue-bg)' : 'var(--bg-primary)',
               color: theme === 'light' ? 'var(--accent-blue)' : 'var(--text-secondary)',
             }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              if (theme === 'light') {
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.35)'
+              } else {
+                e.currentTarget.style.background = 'var(--bg-tertiary)'
+                e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                e.currentTarget.style.color = 'var(--text-primary)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)'
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'none'
+              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.background = theme === 'light' ? 'var(--accent-blue-bg)' : 'var(--bg-primary)'
+              e.currentTarget.style.borderColor = theme === 'light' ? 'var(--accent-blue)' : 'var(--border)'
+              e.currentTarget.style.color = theme === 'light' ? 'var(--accent-blue)' : 'var(--text-secondary)'
+            }}
           >
-            ☀️ Modo Claro
+            <FiSun size={16} style={{ marginRight: '6px' }} /> Modo Claro
           </button>
           <button
             onClick={() => theme !== 'dark' && toggleTheme()}
@@ -61,8 +80,26 @@ function CardAppearance() {
               background: theme === 'dark' ? 'var(--accent-blue-bg)' : 'var(--bg-primary)',
               color: theme === 'dark' ? 'var(--accent-blue)' : 'var(--text-secondary)',
             }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              if (theme === 'dark') {
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.35)'
+              } else {
+                e.currentTarget.style.background = 'var(--bg-tertiary)'
+                e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                e.currentTarget.style.color = 'var(--text-primary)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)'
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'none'
+              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.background = theme === 'dark' ? 'var(--accent-blue-bg)' : 'var(--bg-primary)'
+              e.currentTarget.style.borderColor = theme === 'dark' ? 'var(--accent-blue)' : 'var(--border)'
+              e.currentTarget.style.color = theme === 'dark' ? 'var(--accent-blue)' : 'var(--text-secondary)'
+            }}
           >
-            🌙 Modo Oscuro
+            <FiMoon size={16} style={{ marginRight: '6px' }} /> Modo Oscuro
           </button>
         </div>
       </div>
@@ -132,7 +169,7 @@ function CardMiPerfil() {
     <div style={s.card}>
       <div style={s.cardHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ ...s.cardIcon, color: '#f59e0b', background: 'rgba(245,158,11,0.1)' }}>👤</span>
+          <span style={{ ...s.cardIcon, color: '#f59e0b', background: 'rgba(245,158,11,0.1)' }}><FiUser size={18} /></span>
           <h3 style={s.cardTitle}>Mi Perfil</h3>
         </div>
         {preview && (
@@ -182,6 +219,20 @@ function CardMiPerfil() {
                   <button
                     style={s.btnAvatarAction}
                     onClick={() => fileRef.current?.click()}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'var(--bg-tertiary)'
+                      e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                      e.currentTarget.style.color = 'var(--text-primary)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'var(--bg-primary)'
+                      e.currentTarget.style.borderColor = 'var(--border)'
+                      e.currentTarget.style.color = 'var(--text-secondary)'
+                      e.currentTarget.style.transform = 'none'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                     Cambiar foto
@@ -191,6 +242,22 @@ function CardMiPerfil() {
                       style={{ ...s.btnAvatarAction, color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)' }}
                       onClick={handleRemove}
                       disabled={removing}
+                      onMouseEnter={e => {
+                        if (!removing) {
+                          e.currentTarget.style.background = '#ef4444'
+                          e.currentTarget.style.borderColor = '#ef4444'
+                          e.currentTarget.style.color = '#ffffff'
+                          e.currentTarget.style.transform = 'translateY(-2px)'
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)'
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = 'rgba(239,68,68,0.08)'
+                        e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'
+                        e.currentTarget.style.color = '#ef4444'
+                        e.currentTarget.style.transform = 'none'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
                     >
                       {removing ? 'Eliminando...' : 'Quitar foto'}
                     </button>
@@ -205,6 +272,18 @@ function CardMiPerfil() {
                     style={{ ...s.btnAvatarAction, background: 'var(--accent-blue)', color: '#fff', borderColor: 'var(--accent-blue)' }}
                     onClick={handleUpload}
                     disabled={uploading}
+                    onMouseEnter={e => {
+                      if (!uploading) {
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)'
+                        e.currentTarget.style.filter = 'brightness(1.1)'
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'none'
+                      e.currentTarget.style.boxShadow = 'none'
+                      e.currentTarget.style.filter = 'none'
+                    }}
                   >
                     {uploading ? 'Guardando...' : '✓ Guardar foto'}
                   </button>
@@ -212,6 +291,16 @@ function CardMiPerfil() {
                     style={{ ...s.btnAvatarAction, color: 'var(--text-muted)' }}
                     onClick={handleCancel}
                     disabled={uploading}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'var(--bg-tertiary)'
+                      e.currentTarget.style.color = 'var(--text-primary)'
+                      e.currentTarget.style.transform = 'translateY(-1px)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'var(--bg-primary)'
+                      e.currentTarget.style.color = 'var(--text-muted)'
+                      e.currentTarget.style.transform = 'none'
+                    }}
                   >
                     Cancelar
                   </button>
@@ -255,10 +344,23 @@ function CardConfigurarEscuela() {
     <div style={s.card}>
       <div style={s.cardHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ ...s.cardIcon, color: 'var(--accent-blue)', background: 'var(--accent-blue-bg)' }}>🏫</span>
+          <span style={{ ...s.cardIcon, color: 'var(--accent-blue)', background: 'var(--accent-blue-bg)' }}><FiShield size={18} /></span>
           <h3 style={s.cardTitle}>Configurar mi escuela</h3>
         </div>
-        <Link style={s.btnLink} to="/ajustes/configuracion">Gestionar →</Link>
+        <Link
+          style={{ ...s.btnLink, transition: 'all 0.2s', display: 'inline-block' }}
+          to="/ajustes/configuracion"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateX(4px)'
+            e.currentTarget.style.color = '#60a5fa'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.color = 'var(--accent-blue)'
+          }}
+        >
+          Gestionar →
+        </Link>
       </div>
 
       <div style={s.cardBody}>
@@ -268,7 +370,9 @@ function CardConfigurarEscuela() {
               {escuela?.logo_url ? (
                 <img src={`${import.meta.env.VITE_API_URL || ''}/storage/${escuela.logo_url}`} alt="Logo" style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover' }} />
               ) : (
-                <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🥋</div>
+                <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FiAward size={22} color="var(--accent-blue)" />
+                </div>
               )}
               <div>
                 <div style={{ fontWeight: '700', fontSize: '16px', color: 'var(--text-primary)' }}>{escuela?.nombre || 'Mi Escuela'}</div>
@@ -276,7 +380,7 @@ function CardConfigurarEscuela() {
               </div>
             </div>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-              Personaliza los datos de tu dojo, gestiona tus instructores, configura tus horarios y define tus grados de cintas.
+              Personaliza los datos de tu dojang, gestiona tus instructores, configura tus horarios y define tus grados de cintas.
             </p>
           </>
         )}
@@ -284,7 +388,22 @@ function CardConfigurarEscuela() {
 
       <div style={s.cardFooter}>
         <span style={s.cardStats}>Identidad y Operatividad</span>
-        <Link style={s.btnAddQuick} to="/ajustes/configuracion">Personalizar</Link>
+        <Link
+          style={{ ...s.btnAddQuick, display: 'inline-flex' }}
+          to="/ajustes/configuracion"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
+          }}
+        >
+          <FiSliders size={14} /> Personalizar
+        </Link>
       </div>
     </div>
   )
@@ -297,10 +416,23 @@ function CardUsuarios() {
     <div style={s.card}>
       <div style={s.cardHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ ...s.cardIcon, color: 'var(--accent-purple)', background: 'var(--accent-purple-bg)' }}>👥</span>
+          <span style={{ ...s.cardIcon, color: 'var(--accent-purple)', background: 'var(--accent-purple-bg)' }}><FiUsers size={18} /></span>
           <h3 style={s.cardTitle}>Usuarios y Roles</h3>
         </div>
-        <Link style={s.btnLink} to="/ajustes/usuarios">Gestionar →</Link>
+        <Link
+          style={{ ...s.btnLink, transition: 'all 0.2s', display: 'inline-block' }}
+          to="/ajustes/usuarios"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateX(4px)'
+            e.currentTarget.style.color = '#60a5fa'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.color = 'var(--accent-blue)'
+          }}
+        >
+          Gestionar →
+        </Link>
       </div>
 
       <div style={s.cardBody}>
@@ -327,17 +459,32 @@ function CardUsuarios() {
 
       <div style={s.cardFooter}>
         <span style={s.cardStats}>Seguridad y Accesos</span>
-        <Link style={s.btnAddQuick} to="/ajustes/usuarios">Ver Equipo</Link>
+        <Link
+          style={{ ...s.btnAddQuick, display: 'inline-flex' }}
+          to="/ajustes/usuarios"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
+          }}
+        >
+          <FiUsers size={14} /> Ver Equipo
+        </Link>
       </div>
     </div>
   )
 }
 
 const s = {
-  container: { padding: '40px 24px', maxWidth: '1200px', margin: '0 auto' },
-  headerMain: { marginBottom: '40px' },
-  titleMain: { fontSize: '32px', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-1px' },
-  subtitleMain: { color: 'var(--text-secondary)', fontSize: '16px', marginTop: '6px' },
+  container: { paddingBottom: '40px', width: '100%', boxSizing: 'border-box' },
+  headerMain: { marginBottom: '28px' },
+  titleMain: { fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
+  subtitleMain: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '500' },
   gridCards: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '24px' },
 
   card: { background: 'var(--bg-secondary)', borderRadius: '24px', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-sm)' },
@@ -353,7 +500,24 @@ const s = {
   cardEmpty: { padding: '20px', textAlign: 'center', color: 'var(--text-muted)' },
   cardFooter: { padding: '20px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   cardStats: { fontSize: '12px', color: 'var(--text-muted)' },
-  btnAddQuick: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 18px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' },
+  btnAddQuick: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    background: 'var(--accent-blue)',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '9px 18px',
+    fontSize: '13px',
+    fontWeight: '700',
+    letterSpacing: '0.2px',
+    textDecoration: 'none',
+    boxShadow: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
 
   themeBtn: {
     flex: 1,

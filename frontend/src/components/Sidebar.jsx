@@ -1,27 +1,45 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import {
+  FiGrid,
+  FiUsers,
+  FiClipboard,
+  FiCreditCard,
+  FiAward,
+  FiSettings,
+  FiGlobe,
+  FiShield,
+  FiFileText,
+  FiLogOut,
+  FiLoader,
+  FiCalendar,
+  FiEye,
+  FiCamera,
+  FiX,
+} from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
 import logoImg from '../assets/tigreslogo.jpg';
 
 const menu = [
-  { path: '/', label: 'Dashboard', icon: '▦' },
-  { path: '/alumnos', label: 'Alumnos', icon: '👥' },
-  { path: '/asistencias', label: 'Asistencias', icon: '📋' },
-  { path: '/pagos', label: 'Pagos', icon: '💳' },
-  { path: '/eventos', label: 'Eventos', icon: '🏆' },
+  { path: '/', label: 'Dashboard', icon: <FiGrid size={18} /> },
+  { path: '/alumnos', label: 'Alumnos', icon: <FiUsers size={18} /> },
+  { path: '/asistencias', label: 'Asistencias', icon: <FiClipboard size={18} /> },
+  { path: '/pagos', label: 'Pagos', icon: <FiCreditCard size={18} /> },
+  { path: '/examenes', label: 'Exámenes', icon: <FiAward size={18} /> },
+  { path: '/eventos', label: 'Eventos', icon: <FiCalendar size={18} /> },
 ];
 
-const menuAjustes = { path: '/ajustes', label: 'Ajustes', icon: '⚙️' };
+const menuAjustes = { path: '/ajustes', label: 'Ajustes', icon: <FiSettings size={18} /> };
 
 const menuSuperAdmin = [
-  { path: '/admin/dashboard', label: 'Dashboard Global', icon: '🌍' },
-  { path: '/admin/academias', label: 'Academias', icon: '🏫' },
-  { path: '/admin/solicitudes', label: 'Solicitudes', icon: '📝' },
-  { path: '/admin/suscripciones', label: 'Suscripciones', icon: '💳' },
-  { path: '/admin/usuarios', label: 'Usuarios Globales', icon: '👥' },
-  { path: '/admin/configuracion', label: 'Configuración Global', icon: '⚙️' },
+  { path: '/admin/dashboard', label: 'Dashboard Global', icon: <FiGlobe size={18} /> },
+  { path: '/admin/academias', label: 'Academias', icon: <FiShield size={18} /> },
+  { path: '/admin/solicitudes', label: 'Solicitudes', icon: <FiFileText size={18} /> },
+  { path: '/admin/suscripciones', label: 'Suscripciones', icon: <FiCreditCard size={18} /> },
+  { path: '/admin/usuarios', label: 'Usuarios Globales', icon: <FiUsers size={18} /> },
+  { path: '/admin/configuracion', label: 'Configuración Global', icon: <FiSettings size={18} /> },
 ];
 
 export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: propSetMobileOpen }) {
@@ -31,6 +49,7 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
   const [isMobile, setIsMobile] = useState(false);
   const [avatarHover, setAvatarHover] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [modalFoto, setModalFoto] = useState(null);
   const avatarInputRef = useRef(null);
 
   const mobileOpen = propMobileOpen !== undefined ? propMobileOpen : localMobileOpen;
@@ -83,6 +102,8 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
     day: 'numeric', month: 'short', year: 'numeric'
   });
 
+  const logoUrlFinal = user?.tenant?.logo ? `${import.meta.env.VITE_API_URL || ''}/storage/${user.tenant.logo}` : logoImg;
+
   return (
     <>
       {/* Mobile overlay */}
@@ -99,16 +120,25 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
         } : {}),
       }}>
         {/* Logo & tenant info */}
-        <div style={styles.logoSection}>
+        <div
+          style={{ ...styles.logoSection, cursor: 'pointer' }}
+          title="Ver logo de la escuela"
+          onClick={() => setModalFoto({
+            url: logoUrlFinal,
+            titulo: tenantName,
+            sub: 'Logo Oficial de la Escuela',
+            isAvatar: false
+          })}
+        >
           {user?.tenant?.logo ? (
             <img
-              src={`${import.meta.env.VITE_API_URL || ''}/storage/${user.tenant.logo}`}
+              src={logoUrlFinal}
               alt="Logo"
               style={styles.logoImage}
             />
           ) : (
-            <div style={{ ...styles.logoImage, background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
-              🥋
+            <div style={{ ...styles.logoImage, background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-blue)' }}>
+              <FiShield size={22} />
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -136,25 +166,6 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
 
         {/* User info + logout */}
         <div style={styles.footer}>
-          {/* Asistencias antiguo link (temporal) - Comentado por ahora
-          <NavLink
-            to="/asistencias-antiguo"
-            onClick={closeMobile}
-            style={({ isActive }) => ({
-              ...styles.link,
-              ...(isActive ? styles.linkActive : {}),
-              marginBottom: '4px',
-              border: '1px dashed var(--accent-red)',
-              borderRadius: '10px',
-              background: isActive ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
-              color: isActive ? 'var(--accent-red)' : 'var(--text-secondary)'
-            })}
-          >
-            <span style={styles.icon}>📋⚠️</span>
-            <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 'bold' }}>Asistencias ANTIGUO</span>
-          </NavLink>
-          */}
-
           {/*Ajustes link*/}
           <NavLink
             to="/ajustes"
@@ -167,7 +178,7 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
           </NavLink>
 
           <div style={styles.userInfo}>
-            {/* Avatar clickeable */}
+            {/* Avatar clickeable para ampliar foto */}
             <div
               style={{
                 ...styles.userAvatar,
@@ -175,8 +186,13 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
                 position: 'relative',
                 overflow: 'hidden',
               }}
-              title="Cambiar foto"
-              onClick={() => avatarInputRef.current?.click()}
+              title="Ver foto de perfil"
+              onClick={() => setModalFoto({
+                url: user?.avatar_url,
+                titulo: user?.name || 'Mi Perfil',
+                sub: user?.role === 'owner' ? 'Administrador' : (user?.role || 'Usuario'),
+                isAvatar: true
+              })}
               onMouseEnter={() => setAvatarHover(true)}
               onMouseLeave={() => setAvatarHover(false)}
             >
@@ -187,15 +203,12 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
                   style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                 />
               ) : (
-                uploadingAvatar ? '⏳' : (user?.name?.charAt(0)?.toUpperCase() || '?')
+                uploadingAvatar ? <FiLoader className="spin" size={16} /> : (user?.name?.charAt(0)?.toUpperCase() || '?')
               )}
-              {/* Overlay de edición */}
+              {/* Overlay con icono de ver foto */}
               {avatarHover && !uploadingAvatar && (
                 <div style={styles.avatarOverlay}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
+                  <FiEye size={14} color="#fff" />
                 </div>
               )}
             </div>
@@ -238,10 +251,159 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            Cerrar sesión
+            <FiLogOut size={14} />
+            <span>Cerrar sesión</span>
           </button>
         </div>
       </aside>
+
+      {/* MODAL LIGHTBOX VER FOTO */}
+      {modalFoto && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setModalFoto(null)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: '24px',
+              padding: '28px',
+              maxWidth: '380px',
+              width: '100%',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              position: 'relative',
+              boxSizing: 'border-box',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Botón X Cerrar */}
+            <button
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border)',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onClick={() => setModalFoto(null)}
+              onMouseEnter={e => e.currentTarget.style.background = '#ef4444'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+            >
+              <FiX size={16} />
+            </button>
+
+            <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', textAlign: 'center' }}>
+              {modalFoto.titulo}
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
+              {modalFoto.sub}
+            </p>
+
+            {/* Imagen ampliada */}
+            <div
+              style={{
+                width: '220px',
+                height: '220px',
+                borderRadius: modalFoto.isAvatar ? '50%' : '20px',
+                overflow: 'hidden',
+                border: '4px solid var(--accent-blue)',
+                boxShadow: '0 10px 30px rgba(59, 130, 246, 0.35)',
+                background: 'var(--bg-tertiary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '24px',
+                flexShrink: 0,
+              }}
+            >
+              {modalFoto.url ? (
+                <img
+                  src={modalFoto.url}
+                  alt="Vista previa"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{ fontSize: '72px', fontWeight: '800', color: 'var(--accent-blue)' }}>
+                  {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+
+            {/* Botones de acción */}
+            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              {modalFoto.isAvatar && (
+                <button
+                  style={{
+                    flex: 1,
+                    padding: '11px 16px',
+                    background: 'var(--accent-blue)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+                  }}
+                  onClick={() => {
+                    setModalFoto(null);
+                    avatarInputRef.current?.click();
+                  }}
+                >
+                  <FiCamera size={16} />
+                  Cambiar foto
+                </button>
+              )}
+              <button
+                style={{
+                  flex: 1,
+                  padding: '11px 16px',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setModalFoto(null)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile bottom navigation */}
       {isMobile && !mobileOpen && (
@@ -442,6 +604,10 @@ const styles = {
     cursor: 'pointer',
     fontFamily: 'Inter, sans-serif',
     transition: 'all 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
   },
   bottomNav: {
     position: 'fixed',
