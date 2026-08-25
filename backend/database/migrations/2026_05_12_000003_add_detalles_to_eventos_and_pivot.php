@@ -9,11 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('eventos', function (Blueprint $table) {
-            $table->json('detalles')->nullable()->after('descripcion');
+            $table->json('detalles')->nullable();
         });
 
         Schema::table('evento_alumno', function (Blueprint $table) {
-            $table->json('detalles')->nullable()->after('pago_inscripcion');
+            $table->json('detalles')->nullable();
         });
     }
 
