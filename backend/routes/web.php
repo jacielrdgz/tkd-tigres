@@ -8,22 +8,20 @@ Route::get('/', function () {
 
 Route::get('/ejecutar-migraciones', function () {
     try {
-        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true]);
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         $outputMigrate = \Illuminate\Support\Facades\Artisan::output();
-
-        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
-        $outputSeed = \Illuminate\Support\Facades\Artisan::output();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Todas las 42 migraciones y seeders fueron ejecutados con éxito en Supabase!',
-            'migrate_output' => $outputMigrate,
-            'seed_output' => $outputSeed,
+            'message' => 'Migraciones ejecutadas con éxito en Supabase!',
+            'output' => $outputMigrate,
         ]);
     } catch (\Throwable $e) {
         return response()->json([
             'status' => 'error',
             'message' => $e->getMessage(),
-        ], 500);
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ], 200);
     }
 });
