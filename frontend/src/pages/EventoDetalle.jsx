@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
+import { obtenerInfoEscuelaParaPDF } from '../utils/pdfHelper'
 
 const tieneFoto = (foto) => {
   if (!foto || foto === 'null' || foto === 'NULL' || foto === '') return false
@@ -426,13 +427,14 @@ export default function EventoDetalle() {
 
   const generarRecibo = async (inscrito) => {
     try {
+      const escuelaInfo = await obtenerInfoEscuelaParaPDF(user)
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
       doc.setFillColor(245, 247, 250)
       doc.rect(0, 0, 216, 279, 'F')
       doc.setFillColor(59, 130, 246)
       doc.rect(0, 0, 5, 279, 'F')
 
-      let logoFinal = escuelaInfo?.logo_base64
+      let logoFinal = escuelaInfo?.logoBase64
       if (!logoFinal) {
         try {
           const resp = await fetch('/tigreslogo.jpg')

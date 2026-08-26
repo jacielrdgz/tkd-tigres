@@ -25,6 +25,7 @@ import {
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
+import { obtenerInfoEscuelaParaPDF } from '../utils/pdfHelper'
 
 const formatCosto = (val) => {
   if (val === null || val === undefined || val === '') return '0'
@@ -480,13 +481,7 @@ export default function ExamenDetalle() {
       return toast.warning('No hay alumnos para exportar')
     }
 
-    let escuelaInfo = null
-    try {
-      const res = await api.get('/configuracion-escuela')
-      escuelaInfo = res.data
-    } catch (e) {
-      console.warn('No se pudo cargar la información de la escuela para el PDF')
-    }
+    const escuelaInfo = await obtenerInfoEscuelaParaPDF()
 
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
 
@@ -497,7 +492,7 @@ export default function ExamenDetalle() {
     doc.rect(0, 0, 5, 279, 'F')
 
     // CARGAR LOGO
-    let logoFinal = escuelaInfo?.logo_base64
+    let logoFinal = escuelaInfo?.logoBase64
     if (!logoFinal) {
       try {
         const resp = await fetch('/tigreslogo.jpg')
@@ -528,7 +523,7 @@ export default function ExamenDetalle() {
     doc.setTextColor(30, 41, 59)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(22)
-    doc.text(escuelaInfo?.nombre ? escuelaInfo.nombre.toUpperCase() : 'TIGRES DO', 52, 22)
+    doc.text(escuelaInfo?.nombre ? escuelaInfo.nombre.toUpperCase() : 'MI ESCUELA', 52, 22)
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)

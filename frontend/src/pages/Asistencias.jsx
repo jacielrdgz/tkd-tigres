@@ -13,6 +13,7 @@ import ModalAlumno from '../components/Asistencias/ModalAlumno'
 import ModalDia from '../components/Asistencias/ModalDia'
 import ModalRegistrar from '../components/Asistencias/ModalRegistrar'
 import Swal from 'sweetalert2'
+import { obtenerInfoEscuelaParaPDF } from '../utils/pdfHelper'
 
 function mesActual() {
   const hoy = new Date()
@@ -139,13 +140,7 @@ export default function Asistencias() {
       XLSX.utils.book_append_sheet(wb, ws, 'Asistencias')
       XLSX.writeFile(wb, `Asistencias_${mes}.xlsx`)
     } else {
-      let escuelaInfo = null
-      try {
-        const res = await api.get('/configuracion-escuela')
-        escuelaInfo = res.data
-      } catch (e) {
-        console.warn('No se pudo cargar escuelaInfo para el PDF')
-      }
+      const escuelaInfo = await obtenerInfoEscuelaParaPDF()
 
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
 
@@ -156,7 +151,7 @@ export default function Asistencias() {
       doc.rect(0, 0, 5, 279, 'F')
 
       // CARGAR LOGO
-      let logoFinal = escuelaInfo?.logo_base64
+      let logoFinal = escuelaInfo?.logoBase64
       if (!logoFinal) {
         try {
           const resp = await fetch('/tigreslogo.jpg')

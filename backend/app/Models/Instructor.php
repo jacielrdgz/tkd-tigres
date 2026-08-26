@@ -25,6 +25,15 @@ class Instructor extends Model
         'configuracion_cinta_id'
     ];
 
+    public function getFotoUrlAttribute($value): ?string
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://') || str_starts_with($value, 'data:')) {
+            return $value;
+        }
+        return asset('storage/' . $value);
+    }
+
     public function cintaConfig()
     {
         return $this->belongsTo(ConfiguracionCinta::class, 'configuracion_cinta_id');

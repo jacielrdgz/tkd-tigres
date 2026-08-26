@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
+import { obtenerInfoEscuelaParaPDF } from '../utils/pdfHelper'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -344,6 +345,7 @@ export default function Pagos() {
 
   const generarRecibo = async (pago, alumno) => {
     try {
+      const escuelaInfo = await obtenerInfoEscuelaParaPDF(user)
       const doc = new jsPDF({
         orientation: 'p',
         unit: 'mm',
@@ -356,8 +358,8 @@ export default function Pagos() {
       doc.setFillColor(59, 130, 246)
       doc.rect(0, 0, 5, 279, 'F')
 
-      // CARGAR LOGO — directo desde el backend en base64 para evitar CORS
-      let logoFinal = escuelaInfo?.logo_base64
+      // CARGAR LOGO
+      let logoFinal = escuelaInfo?.logoBase64
 
       // Fallback a logo genérico si no hay logo de escuela
       if (!logoFinal) {
@@ -376,7 +378,6 @@ export default function Pagos() {
       }
 
       if (logoFinal) {
-        // En jsPDF base64, usualmente viene con 'data:image/png;base64,...'
         const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
         doc.addImage(logoFinal, ext, 15, 12, 32, 32)
       } else {

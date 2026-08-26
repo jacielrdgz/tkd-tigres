@@ -8,6 +8,7 @@ import autoTable from 'jspdf-autotable'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { FiDownload, FiChevronDown, FiUserPlus } from 'react-icons/fi'
+import { obtenerInfoEscuelaParaPDF } from '../utils/pdfHelper'
 
 
 
@@ -724,7 +725,7 @@ export default function Alumnos() {
     e.currentTarget.style.boxShadow = `0 4px 15px ${color}`;
   };
 
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
     if (alumnosMostrados.length === 0) {
       return Swal.fire({
         title: 'Reporte Vacío',
@@ -737,15 +738,40 @@ export default function Alumnos() {
     }
 
     try {
-      const doc = new jsPDF()
-      doc.setFontSize(20)
-      doc.setTextColor(20, 30, 40)
-      doc.text(`Reporte de Alumnos - ${user?.tenant?.nombre || 'Escuela'}`, 14, 20)
+      const escuelaInfo = await obtenerInfoEscuelaParaPDF(user)
+      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
 
+      // Fondo y barra lateral membretada
+      doc.setFillColor(245, 247, 250)
+      doc.rect(0, 0, 216, 279, 'F')
+      doc.setFillColor(59, 130, 246)
+      doc.rect(0, 0, 5, 279, 'F')
+
+      // Dibujar Logo
+      if (escuelaInfo.logoBase64) {
+        const ext = escuelaInfo.logoBase64.includes('png') ? 'PNG' : 'JPEG'
+        doc.addImage(escuelaInfo.logoBase64, ext, 15, 12, 30, 30)
+      } else {
+        doc.setFillColor(230, 235, 245)
+        doc.circle(30, 27, 15, 'F')
+        doc.setFontSize(16)
+        doc.setTextColor(59, 130, 246)
+        doc.setFont('helvetica', 'bold')
+        doc.text('TKD', 30, 31, { align: 'center' })
+      }
+
+      // Membrete Escuela
+      doc.setTextColor(30, 41, 59)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(20)
+      doc.text((escuelaInfo.nombre || 'MI ESCUELA').toUpperCase(), 50, 22)
+
+      doc.setFont('helvetica', 'normal')
       doc.setFontSize(10)
       doc.setTextColor(100)
-      doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 28)
-      doc.text(`Total de alumnos listados: ${alumnosMostrados.length}`, 14, 34)
+      doc.text(`Reporte Oficial de Alumnos • Disciplina: ${escuelaInfo.disciplina}`, 50, 28)
+      doc.text(`Generado el: ${new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, 50, 34)
+      doc.text(`Total de alumnos: ${alumnosMostrados.length}`, 50, 40)
 
       const tableColumn = ["ID", "Nombre Alumno", "Edad", "Cinta", "Teléfono Tutor", "Estatus"]
       const tableRows = alumnosMostrados.map(a => [
@@ -760,10 +786,10 @@ export default function Alumnos() {
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
-        startY: 40,
+        startY: 48,
         theme: 'striped',
         headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
-        styles: { fontSize: 8 },
+        styles: { fontSize: 8.5 },
         columnStyles: {
           1: { cellWidth: 60 }
         }

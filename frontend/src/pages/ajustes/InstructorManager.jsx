@@ -92,7 +92,7 @@ export default function InstructorManager() {
         configuracion_cinta_id: inst.configuracion_cinta_id || '',
         foto: null
       })
-      setPreview(inst.foto_url ? `${import.meta.env.VITE_API_URL || ''}/storage/${inst.foto_url}` : null)
+      setPreview(inst.foto_url ? ((inst.foto_url.startsWith('http') || inst.foto_url.startsWith('data:')) ? inst.foto_url : `${import.meta.env.VITE_API_URL || ''}/storage/${inst.foto_url}`) : null)
     } else {
       setSelected(null)
       setForm({
@@ -215,7 +215,11 @@ export default function InstructorManager() {
             <div key={inst.id} style={s.instCard}>
               <div style={s.instPhoto}>
                 {inst.foto_url ? (
-                  <img src={`${import.meta.env.VITE_API_URL}/storage/${inst.foto_url}`} alt="Foto" style={s.photo} />
+                  <img 
+                    src={(inst.foto_url.startsWith('http') || inst.foto_url.startsWith('data:')) ? inst.foto_url : `${import.meta.env.VITE_API_URL || ''}/storage/${inst.foto_url}`} 
+                    alt="Foto" 
+                    style={s.photo} 
+                  />
                 ) : (
                   <div style={s.photoPlaceholder}>
                     <FiUser size={32} color="var(--text-muted)" />
@@ -430,7 +434,7 @@ export default function InstructorManager() {
               <div style={modalCredencialStyles.avatarBox}>
                 {selected.foto_url ? (
                   <img
-                    src={`${import.meta.env.VITE_API_URL}/storage/${selected.foto_url}`}
+                    src={(selected.foto_url.startsWith('http') || selected.foto_url.startsWith('data:')) ? selected.foto_url : `${import.meta.env.VITE_API_URL || ''}/storage/${selected.foto_url}`}
                     alt={selected.nombre}
                     style={modalCredencialStyles.avatarImg}
                   />
