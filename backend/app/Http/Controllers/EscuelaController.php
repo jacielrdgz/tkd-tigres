@@ -132,6 +132,18 @@ class EscuelaController extends Controller
 
             if (!empty($dataToUpdate)) {
                 $escuela->update($dataToUpdate);
+                
+                // Sincronizar el nombre y disciplina en el tenant para la barra lateral y header
+                $tenantUpdate = [];
+                if (!empty($dataToUpdate['nombre'])) {
+                    $tenantUpdate['nombre'] = $dataToUpdate['nombre'];
+                }
+                if (!empty($dataToUpdate['disciplina'])) {
+                    $tenantUpdate['disciplina'] = $dataToUpdate['disciplina'];
+                }
+                if (!empty($tenantUpdate)) {
+                    $tenant->update($tenantUpdate);
+                }
             }
 
             // Manejar logo
@@ -142,7 +154,7 @@ class EscuelaController extends Controller
                 $path = $request->file('foto')->store('logos', 'public');
                 $escuela->update(['logo_url' => $path]);
                 
-                // Opcional: sincronizar con el logo del tenant por ahora
+                // Sincronizar el logo con el tenant
                 $tenant->update(['logo' => $path]);
             }
 
