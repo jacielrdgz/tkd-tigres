@@ -749,12 +749,13 @@ export default function Alumnos() {
         subtituloValor: `${alumnosMostrados.length} ALUMNOS`
       })
 
-      const tableColumn = ["#", "Alumno", "Cinta", "Teléfono Tutor", "Estatus"]
+      const tableColumn = ["#", "Nombre Alumno", "Edad", "Cinta", "Teléfono Tutor", "Estatus"]
       const tableRows = alumnosMostrados.map((a, idx) => [
         idx + 1,
         `${limpiarDato(a.nombre)} ${limpiarDato(a.apellido_paterno)} ${limpiarDato(a.apellido_materno)}`,
+        a.edad ? `${a.edad} años` : '-',
         a.cinta_config?.nombre_nivel || 'Sin cinta',
-        limpiarDato(a.telefono_tutor),
+        limpiarDato(a.telefono_tutor) || '-',
         capitalizar(a.estatus || 'activo')
       ])
 
@@ -767,7 +768,11 @@ export default function Alumnos() {
         styles: { fontSize: 8.5, cellPadding: 3.5 },
         columnStyles: {
           0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 65, fontStyle: 'bold' }
+          1: { cellWidth: 58, fontStyle: 'bold' },
+          2: { cellWidth: 22, halign: 'center' },
+          3: { cellWidth: 32 },
+          4: { cellWidth: 34 },
+          5: { cellWidth: 24, halign: 'center' }
         },
         margin: { left: 14, right: 14, bottom: 18 }
       })
