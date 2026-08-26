@@ -24,11 +24,11 @@ class StoreAlumnoRequest extends FormRequest
             'telefono_tutor'   => ['required', 'string', 'max:20', 'regex:/^[0-9+\s()-]+$/'],
             'email'            => [
                 'nullable',
-                'email:rfc,dns',
+                'email',
                 'max:150',
             ],
             'fecha_nacimiento' => ['required', 'date', 'before:today'],
-            'foto'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'foto'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif,svg', 'max:10240'],
             'configuracion_cinta_id' => ['nullable', 'integer', 'exists:configuraciones_cintas,id'],
             'estatus'          => ['sometimes', Rule::in(['activo', 'inactivo'])],
             'horario_id'       => ['nullable', 'integer', 'exists:horarios,id'],

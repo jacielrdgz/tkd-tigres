@@ -100,8 +100,19 @@ class AlumnoController extends Controller
 
         $validated = $request->validated();
 
-        if ($request->hasFile('foto')) {
-            $validated['foto'] = $request->file('foto')->store('fotos', 'public');
+        if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
+            try {
+                $file = $request->file('foto');
+                $fotosDir = storage_path('app/public/fotos');
+                if (!file_exists($fotosDir)) {
+                    @mkdir($fotosDir, 0777, true);
+                }
+                $filename = 'alumno_' . time() . '_' . uniqid() . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
+                $file->move($fotosDir, $filename);
+                $validated['foto'] = 'fotos/' . $filename;
+            } catch (\Throwable $eFile) {
+                unset($validated['foto']);
+            }
         }
 
         $alumno = Alumno::create($validated);
@@ -130,16 +141,27 @@ class AlumnoController extends Controller
 
         if ($request->has('eliminar_foto') && $request->eliminar_foto == '1') {
             if ($alumno->foto) {
-                Storage::disk('public')->delete($alumno->foto);
+                @Storage::disk('public')->delete($alumno->foto);
             }
             $validated['foto'] = null;
         }
 
-        if ($request->hasFile('foto')) {
-            if ($alumno->foto) {
-                Storage::disk('public')->delete($alumno->foto);
+        if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
+            try {
+                if ($alumno->foto) {
+                    @Storage::disk('public')->delete($alumno->foto);
+                }
+                $file = $request->file('foto');
+                $fotosDir = storage_path('app/public/fotos');
+                if (!file_exists($fotosDir)) {
+                    @mkdir($fotosDir, 0777, true);
+                }
+                $filename = 'alumno_' . $alumno->id . '_' . time() . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
+                $file->move($fotosDir, $filename);
+                $validated['foto'] = 'fotos/' . $filename;
+            } catch (\Throwable $eFile) {
+                unset($validated['foto']);
             }
-            $validated['foto'] = $request->file('foto')->store('fotos', 'public');
         }
 
         $alumno->update($validated);
