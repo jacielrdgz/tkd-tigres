@@ -7,6 +7,8 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes, formatearFechaNaturalPDF } from '../utils/pdfHelper'
+import CustomDropdown from '../components/Common/CustomDropdown'
+import BotonExportar from '../components/Common/BotonExportar'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -796,15 +798,29 @@ export default function Pagos() {
 
       <div style={s.filtrosSecundarios}>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', width: isMobile ? '100%' : 'auto' }}>
-          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '150px' }} value={filtroCinta} onChange={e => setFiltroCinta(e.target.value)}>
-            <option value="">Todas las cintas</option>
-            {cintas.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
-          </select>
+          <CustomDropdown
+            label="Todas las cintas"
+            options={[
+              { value: '', label: 'Todas las cintas' },
+              ...cintas.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
+            ]}
+            value={filtroCinta}
+            onChange={val => setFiltroCinta(val)}
+            minWidth="160px"
+            isMobile={isMobile}
+          />
 
-          <select style={{ ...s.selectFiltro, width: isMobile ? '100%' : '150px' }} value={filtroHorario} onChange={e => setFiltroHorario(e.target.value)}>
-            <option value="">Todos los horarios</option>
-            {horarios.map(h => <option key={h.id} value={h.id}>{h.nombre}</option>)}
-          </select>
+          <CustomDropdown
+            label="Todos los horarios"
+            options={[
+              { value: '', label: 'Todos los horarios' },
+              ...horarios.map(h => ({ value: String(h.id), label: h.nombre }))
+            ]}
+            value={filtroHorario}
+            onChange={val => setFiltroHorario(val)}
+            minWidth="170px"
+            isMobile={isMobile}
+          />
 
           {/* Filtro por mes */}
           <input
@@ -834,32 +850,7 @@ export default function Pagos() {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }} className="mobile-hide">
-          <button style={s.btnExportExcel} onClick={exportarExcel} title="Exportar a Excel"
-            onMouseOver={e => handleHover(e, 'rgba(16, 185, 129, 0.5)')}
-            onMouseOut={e => handleOut(e, 'rgba(16, 185, 129, 0.3)')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            Excel
-          </button>
-          <button style={s.btnExportPDF} onClick={exportarPDF} title="Exportar a PDF"
-            onMouseOver={e => handleHover(e, 'rgba(239, 68, 68, 0.5)')}
-            onMouseOut={e => handleOut(e, 'rgba(239, 68, 68, 0.3)')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <path d="M16 13H8"></path>
-              <path d="M16 17H8"></path>
-              <path d="M10 9H8"></path>
-            </svg>
-            PDF
-          </button>
-        </div>
+        <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} />
       </div>
 
       {/* LISTA DE ALUMNOS */}

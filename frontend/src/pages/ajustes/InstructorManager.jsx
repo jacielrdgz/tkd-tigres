@@ -114,29 +114,33 @@ export default function InstructorManager() {
     
     setSaving(true)
     const formData = new FormData()
-    formData.append('nombre', form.nombre)
-    formData.append('apellido_paterno', form.apellido_paterno)
-    formData.append('apellido_materno', form.apellido_materno)
-    
+    formData.append('nombre', form.nombre.trim())
+    formData.append('apellido_paterno', form.apellido_paterno.trim())
+    if (form.apellido_materno) formData.append('apellido_materno', form.apellido_materno.trim())
     if (form.fecha_nacimiento) formData.append('fecha_nacimiento', form.fecha_nacimiento)
-    formData.append('telefono', form.telefono)
+    if (form.telefono) formData.append('telefono', form.telefono.trim())
     if (form.configuracion_cinta_id) formData.append('configuracion_cinta_id', form.configuracion_cinta_id)
     if (form.foto) formData.append('foto', form.foto)
 
     try {
       if (selected) {
         formData.append('_method', 'PUT')
-        await api.post(`/instructores/${selected.id}`, formData)
+        await api.post(`/instructores/${selected.id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
         toast.success('Instructor actualizado')
       } else {
-        await api.post('/instructores', formData)
+        await api.post('/instructores', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
         toast.success('Instructor agregado')
       }
       setShowModal(false)
       await fetchData()
     } catch (err) {
       console.error(err)
-      toast.error('Error al guardar')
+      const msg = err.response?.data?.message || Object.values(err.response?.data?.errors || {})[0]?.[0] || 'Error al guardar'
+      toast.error(msg)
     } finally {
       setSaving(false)
     }

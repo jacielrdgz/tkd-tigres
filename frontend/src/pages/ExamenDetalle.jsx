@@ -24,9 +24,10 @@ import {
 } from 'react-icons/fi'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import * as XLSX from 'xlsx'
 import { useAuth } from '../context/AuthContext'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF } from '../utils/pdfHelper'
+import CustomDropdown from '../components/Common/CustomDropdown'
+import BotonExportar from '../components/Common/BotonExportar'
 
 const formatCosto = (val) => {
   if (val === null || val === undefined || val === '') return '0'
@@ -695,51 +696,29 @@ export default function ExamenDetalle() {
         </div>
 
         <div style={s.filtrosSecundarios}>
-          <select
-            style={s.selectFiltro}
+          <CustomDropdown
+            label="Todos los resultados"
+            options={[
+              { value: 'todos', label: 'Todos los resultados' },
+              { value: 'aprobado', label: 'Aprobados' },
+              { value: 'pendiente', label: 'Pendientes' },
+              { value: 'reprobado', label: 'No Aprobados' }
+            ]}
             value={filtroResultado}
-            onChange={e => setFiltroResultado(e.target.value)}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'var(--bg-tertiary)'
-              e.currentTarget.style.borderColor = 'var(--accent-blue)'
-              e.currentTarget.style.transform = 'translateY(-1px)'
-              e.currentTarget.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.25)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'var(--bg-secondary)'
-              e.currentTarget.style.borderColor = 'var(--border)'
-              e.currentTarget.style.transform = 'none'
-              e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-            }}
-          >
-            <option value="todos">Todos los resultados</option>
-            <option value="aprobado">Aprobados</option>
-            <option value="pendiente">Pendientes</option>
-            <option value="reprobado">No Aprobados</option>
-          </select>
+            onChange={val => setFiltroResultado(val)}
+            minWidth="175px"
+          />
 
-          <select
-            style={s.selectFiltro}
+          <CustomDropdown
+            label="Todas las cintas"
+            options={[
+              { value: 'todos', label: 'Todas las cintas' },
+              ...cintasConfig.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
+            ]}
             value={filtroCinta}
-            onChange={e => setFiltroCinta(e.target.value)}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'var(--bg-tertiary)'
-              e.currentTarget.style.borderColor = 'var(--accent-blue)'
-              e.currentTarget.style.transform = 'translateY(-1px)'
-              e.currentTarget.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.25)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'var(--bg-secondary)'
-              e.currentTarget.style.borderColor = 'var(--border)'
-              e.currentTarget.style.transform = 'none'
-              e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-            }}
-          >
-            <option value="todos">Todas las cintas</option>
-            {cintasConfig.map(c => (
-              <option key={c.id} value={c.id}>{c.nombre_nivel}</option>
-            ))}
-          </select>
+            onChange={val => setFiltroCinta(val)}
+            minWidth="160px"
+          />
 
           {/* Botón Aprobar Todos (cuando no hay selección individual) */}
           <button
@@ -760,73 +739,7 @@ export default function ExamenDetalle() {
             <span>Aprobar Todos</span>
           </button>
 
-          {/* Exportar con dropdown */}
-          <div style={{ position: 'relative' }} ref={exportRef}>
-            <button
-              style={{
-                ...s.btnSecundario,
-                borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
-                boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none'
-              }}
-              onClick={() => setExportOpen(v => !v)}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'var(--bg-tertiary)'
-                e.currentTarget.style.borderColor = 'var(--accent-blue)'
-                e.currentTarget.style.transform = 'translateY(-1px)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'var(--bg-secondary)'
-                e.currentTarget.style.borderColor = exportOpen ? 'var(--accent-blue)' : 'var(--border)'
-                e.currentTarget.style.transform = 'none'
-              }}
-            >
-              <FiDownload size={15} />
-              Exportar
-              <FiChevronDown
-                size={13}
-                style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
-              />
-            </button>
-
-            {exportOpen && (
-              <div style={s.dropdownExport}>
-                <button
-                  style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
-                  onClick={() => { exportarExcel(); setExportOpen(false) }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)'
-                    e.currentTarget.style.filter = 'brightness(1.1)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'none'
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)'
-                    e.currentTarget.style.filter = 'none'
-                  }}
-                >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  Excel
-                </button>
-                <button
-                  style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
-                  onClick={() => { exportarPDF(); setExportOpen(false) }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.5)'
-                    e.currentTarget.style.filter = 'brightness(1.1)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'none'
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.3)'
-                    e.currentTarget.style.filter = 'none'
-                  }}
-                >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  PDF
-                </button>
-              </div>
-            )}
-          </div>
+          <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} />
         </div>
       </div>
 
