@@ -15,7 +15,7 @@ use App\Models\Traits\BelongsToTenant;
 
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'tenant_id', 'role', 'avatar', 'is_superadmin', 'escuela_solicitada'])]
+#[Fillable(['name', 'email', 'telefono', 'password', 'tenant_id', 'role', 'avatar', 'is_superadmin', 'escuela_solicitada'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {

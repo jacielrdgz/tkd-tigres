@@ -10,6 +10,8 @@ use App\Models\GlobalConfig;
 use App\Mail\CuentaAprobadaMail;
 use App\Mail\SolicitudRechazadaMail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Services\DefaultCintasService;
 
@@ -41,63 +43,101 @@ class AdminSolicitudController extends Controller
             'tenant_id'      => 'required_if:action_type,existing|nullable|exists:tenants,id',
         ]);
 
-        $user = User::findOrFail($id);
+        $user = User::withoutGlobalScopes()->findOrFail($id);
 
         if ($user->tenant_id !== null) {
-            return response()->json(['message' => 'Este usuario ya fue aprobado.'], 400);
+            return response()->json(['message' => 'Este usuario ya fue aprobado previamente.'], 400);
         }
 
         // Obtener configuraciones globales para trial y precio
         $config = GlobalConfig::first();
-        $diasTrial = $config ? $config->dias_trial : 30;
-        $precioPlan = $config ? $config->precio_plan_mensual : 500.00;
+        $diasTrial = $config ? (int)$config->dias_trial : 30;
+        $precioPlan = $config ? (float)$config->precio_plan_mensual : 500.00;
 
         $tenantName = '';
 
-        if ($request->action_type === 'new') {
-            // Crear el tenant (escuela)
-            $tenant = Tenant::create([
-                'nombre'             => $request->nombre_escuela,
-                'slug'               => Str::slug($request->nombre_escuela),
-                'plan'               => 'free',
-                'suscripcion_estado' => 'trial',
-                'suscripcion_hasta'  => now()->addDays($diasTrial)->toDateString(),
-                'suscripcion_monto'  => $precioPlan,
-            ]);
-
-            // Inicializar el perfil de la escuela en la tabla escuelas
-            Escuela::create([
-                'tenant_id'      => $tenant->id,
-                'nombre'         => $tenant->nombre,
-                'titular'        => $user->name,
-                'email_contacto' => $user->email,
-                'disciplina'     => 'taekwondo',
-            ]);
-
-            // Crear cintas por defecto para la nueva escuela
-            DefaultCintasService::crearCintasPorDefecto($tenant->id);
-
-            $user->tenant_id = $tenant->id;
-            $tenantName = $tenant->nombre;
-        } else {
-            // Usar tenant existente
-            $tenant = Tenant::findOrFail($request->tenant_id);
-            $user->tenant_id = $tenant->id;
-            $tenantName = $tenant->nombre;
-        }
-
-        // Guardar rol seleccionado
-        $user->role = $request->role;
-        $user->save();
-
-        // Enviar correo de cuenta aprobada
         try {
-            Mail::to($user->email)->send(new CuentaAprobadaMail($user->name, $tenantName));
+            DB::beginTransaction();
+
+            if ($request->action_type === 'new') {
+                // Generar slug único
+                $baseSlug = Str::slug($request->nombre_escuela);
+                if (empty($baseSlug)) {
+                    $baseSlug = 'escuela-' . time();
+                }
+
+                $slug = $baseSlug;
+                $counter = 1;
+                while (Tenant::where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $counter;
+                    $counter++;
+                }
+
+                // Crear el tenant (escuela)
+                $tenant = Tenant::create([
+                    'nombre'             => $request->nombre_escuela,
+                    'slug'               => $slug,
+                    'telefono'           => $user->telefono ?? null,
+                    'plan'               => 'free',
+                    'suscripcion_estado' => 'trial',
+                    'suscripcion_hasta'  => now()->addDays($diasTrial)->toDateString(),
+                    'suscripcion_monto'  => $precioPlan,
+                ]);
+
+                // Inicializar el perfil de la escuela en la tabla escuelas
+                Escuela::create([
+                    'tenant_id'         => $tenant->id,
+                    'nombre'            => $tenant->nombre,
+                    'titular'           => $user->name,
+                    'email_contacto'    => $user->email,
+                    'telefono_contacto' => $user->telefono ?? null,
+                    'disciplina'        => 'taekwondo',
+                ]);
+
+                // Crear cintas por defecto para la nueva escuela
+                try {
+                    DefaultCintasService::crearCintasPorDefecto($tenant->id);
+                } catch (\Exception $e) {
+                    Log::warning('No se pudieron crear todas las cintas por defecto: ' . $e->getMessage());
+                }
+
+                $user->tenant_id = $tenant->id;
+                $tenantName = $tenant->nombre;
+            } else {
+                // Usar tenant existente
+                $tenant = Tenant::findOrFail($request->tenant_id);
+                $user->tenant_id = $tenant->id;
+                $tenantName = $tenant->nombre;
+            }
+
+            // Guardar rol seleccionado
+            $user->role = $request->role;
+            $user->save();
+
+            DB::commit();
         } catch (\Exception $e) {
-            \Log::error('Error al enviar correo de cuenta aprobada: ' . $e->getMessage());
+            DB::rollBack();
+            Log::error('Error al aprobar solicitud de academia: ' . $e->getMessage(), [
+                'user_id' => $id,
+                'trace'   => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'message' => 'Error al procesar la aprobación: ' . $e->getMessage()
+            ], 500);
         }
 
-        return response()->json(['message' => 'Solicitud aprobada y escuela asignada con éxito.']);
+        // Enviar correo de cuenta aprobada (sin romper la respuesta si falla el SMTP)
+        try {
+            if ($user->email) {
+                Mail::to($user->email)->send(new CuentaAprobadaMail($user->name, $tenantName));
+            }
+        } catch (\Exception $e) {
+            Log::error('Error al enviar correo de cuenta aprobada: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => '¡Solicitud aprobada y escuela asignada con éxito!'
+        ]);
     }
 
     /**
@@ -109,10 +149,10 @@ class AdminSolicitudController extends Controller
             'motivo' => 'required|string|max:500',
         ]);
 
-        $user = User::findOrFail($id);
+        $user = User::withoutGlobalScopes()->findOrFail($id);
 
         if ($user->tenant_id !== null) {
-            return response()->json(['message' => 'No puedes rechazar a un usuario que ya tiene escuela.'], 400);
+            return response()->json(['message' => 'No puedes rechazar a un usuario que ya tiene escuela asignada.'], 400);
         }
 
         $userEmail = $user->email;
@@ -123,11 +163,15 @@ class AdminSolicitudController extends Controller
 
         // Enviar correo de rechazo con motivo
         try {
-            Mail::to($userEmail)->send(new SolicitudRechazadaMail($userName, $request->motivo));
+            if ($userEmail) {
+                Mail::to($userEmail)->send(new SolicitudRechazadaMail($userName, $request->motivo));
+            }
         } catch (\Exception $e) {
-            \Log::error('Error al enviar correo de rechazo: ' . $e->getMessage());
+            Log::error('Error al enviar correo de rechazo: ' . $e->getMessage());
         }
 
-        return response()->json(['message' => 'Solicitud rechazada y eliminada. Se ha notificado al usuario por correo.']);
+        return response()->json([
+            'message' => 'Solicitud rechazada y eliminada. Se ha notificado al usuario por correo.'
+        ]);
     }
 }

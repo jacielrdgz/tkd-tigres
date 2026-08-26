@@ -17,6 +17,7 @@ class RegisterController extends Controller
         $request->validate([
             'name'     => 'required|string|max:100',
             'email'    => 'required|email|unique:users,email',
+            'telefono' => 'nullable|string|max:25',
             'password' => 'required|string|min:6|confirmed',
             'escuela'  => 'required|string|max:150',
         ]);
@@ -26,6 +27,7 @@ class RegisterController extends Controller
         $user = User::create([
             'name'               => $request->name,
             'email'              => $request->email,
+            'telefono'           => $request->telefono,
             'password'           => Hash::make($request->password),
             'role'               => 'secretario', // Rol inicial con mínimos privilegios
             'tenant_id'          => null, // Pendiente de aprobación

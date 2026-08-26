@@ -7,6 +7,7 @@ export default function Register() {
   const [form, setForm] = useState({
     name: '',
     email: '',
+    telefono: '',
     password: '',
     password_confirmation: '',
     escuela: '',
@@ -150,16 +151,29 @@ export default function Register() {
             />
           </div>
 
-          <div>
-            <label style={s.label}>Correo electrónico</label>
-            <input
-              id="register-email"
-              style={s.input}
-              type="email"
-              placeholder="tu@correo.com"
-              value={form.email}
-              onChange={e => update('email', e.target.value)}
-            />
+          <div style={s.grid2}>
+            <div>
+              <label style={s.label}>Correo electrónico</label>
+              <input
+                id="register-email"
+                style={s.input}
+                type="email"
+                placeholder="tu@correo.com"
+                value={form.email}
+                onChange={e => update('email', e.target.value)}
+              />
+            </div>
+            <div>
+              <label style={s.label}>Teléfono celular / WhatsApp</label>
+              <input
+                id="register-telefono"
+                style={s.input}
+                type="tel"
+                placeholder="Ej. 6251234567"
+                value={form.telefono}
+                onChange={e => update('telefono', e.target.value)}
+              />
+            </div>
           </div>
 
           <div style={s.grid2}>
