@@ -30,12 +30,22 @@ Route::get('/ejecutar-migraciones', function () {
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         $outputMigrate = \Illuminate\Support\Facades\Artisan::output();
 
-        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
-        $outputSeed = \Illuminate\Support\Facades\Artisan::output();
+        // Limpiar tenant_id de todos los superadmins en base de datos
+        \Illuminate\Support\Facades\DB::table('users')
+            ->where('is_superadmin', true)
+            ->update(['tenant_id' => null]);
+
+        $outputSeed = '';
+        try {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+            $outputSeed = \Illuminate\Support\Facades\Artisan::output();
+        } catch (\Throwable $se) {
+            $outputSeed = 'Seed ignorado: ' . $se->getMessage();
+        }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Todas las 42 migraciones y seeders fueron ejecutados con éxito en Supabase!',
+            'message' => 'Migraciones ejecutadas con éxito y SuperAdmin desvinculado de tenants.',
             'migrate_output' => $outputMigrate,
             'seed_output' => $outputSeed,
         ]);
