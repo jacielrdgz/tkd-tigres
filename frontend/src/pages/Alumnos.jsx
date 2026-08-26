@@ -764,21 +764,21 @@ export default function Alumnos() {
         body: tableRows,
         startY: startY,
         theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-        styles: { fontSize: 8.5, cellPadding: 3.5 },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, halign: 'center' },
+        styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 58, fontStyle: 'bold' },
-          2: { cellWidth: 22, halign: 'center' },
-          3: { cellWidth: 32 },
-          4: { cellWidth: 34 },
-          5: { cellWidth: 24, halign: 'center' }
+          1: { cellWidth: 56, fontStyle: 'bold', halign: 'left' },
+          2: { cellWidth: 24, halign: 'center' },
+          3: { cellWidth: 32, halign: 'center' },
+          4: { cellWidth: 38, halign: 'center' },
+          5: { cellWidth: 26, halign: 'center' }
         },
-        margin: { left: 14, right: 14, bottom: 18 }
+        margin: { left: 15, right: 15, bottom: 18 }
       })
 
-      // Agregar pie de página membretado con fecha exacta
-      agregarPieDePagina(doc)
+      // Agregar pie de página membretado con fecha exacta y usuario
+      agregarPieDePagina(doc, user)
 
       doc.save(`Reporte_Alumnos_${new Date().toISOString().split('T')[0]}.pdf`)
       toastSuccess("Documento PDF generado 📄")

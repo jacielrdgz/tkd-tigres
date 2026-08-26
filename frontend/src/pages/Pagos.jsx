@@ -336,16 +336,21 @@ export default function Pagos() {
         body: rows,
         startY: startY,
         theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
-        styles: { fontSize: 8, cellPadding: 2.8 },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, halign: 'center' },
+        styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 50, fontStyle: 'bold' }
+          1: { cellWidth: 50, fontStyle: 'bold', halign: 'left' },
+          2: { cellWidth: 26, halign: 'center' },
+          3: { cellWidth: 36, halign: 'center' },
+          4: { cellWidth: 24, halign: 'center' },
+          5: { cellWidth: 20, halign: 'center' },
+          6: { cellWidth: 24, halign: 'center' }
         },
         margin: { left: 14, right: 14, bottom: 18 }
       })
 
-      agregarPieDePagina(doc)
+      agregarPieDePagina(doc, user)
 
       doc.save(`Reporte_Pagos_${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success("PDF generado ✓")
@@ -409,7 +414,7 @@ export default function Pagos() {
         theme: 'striped',
         headStyles: { fillColor: [37, 99, 235], fontSize: 9.5, halign: 'center', textColor: 255 },
         columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
-        styles: { fontSize: 9, cellPadding: 5 },
+        styles: { fontSize: 9, cellPadding: 5, halign: 'center' },
         margin: { left: 14, right: 14 }
       })
 
@@ -437,7 +442,7 @@ export default function Pagos() {
       doc.text("Sello de la Escuela", 165, 230, { align: 'center' })
 
       // PIE DE PÁGINA
-      agregarPieDePagina(doc)
+      agregarPieDePagina(doc, user)
 
       doc.save(`Recibo_${escuelaInfo?.nombre || 'Pago'}_${alumno.nombre}_${pago.fecha_pago}.pdf`)
       toast.success("Recibo generado ✓")

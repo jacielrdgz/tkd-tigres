@@ -80,10 +80,10 @@ export async function obtenerInfoEscuelaParaPDF(user = null) {
 }
 
 /**
- * Formatea la fecha y hora en el formato exacto requerido:
- * Ej: "Generado el 22/8/2026 a las 4:03:44 p.m."
+ * Formatea la fecha y hora en el formato exacto requerido con usuario:
+ * Ej: "Generado por Juan Pérez el 22/8/2026 a las 4:03:44 p.m."
  */
-export function formatearFechaGeneracion() {
+export function formatearFechaGeneracion(user = null) {
   const now = new Date()
   const dia = now.getDate()
   const mes = now.getMonth() + 1
@@ -95,12 +95,15 @@ export function formatearFechaGeneracion() {
   const ampm = horas >= 12 ? 'p.m.' : 'a.m.'
   horas = horas % 12 || 12
 
-  return `Generado el ${dia}/${mes}/${anio} a las ${horas}:${minutos}:${segundos} ${ampm}`
+  const nombreUsuario = user?.name || user?.nombre || (user?.email ? user.email.split('@')[0] : '')
+  const porTexto = nombreUsuario ? ` por ${nombreUsuario}` : ''
+
+  return `Generado${porTexto} el ${dia}/${mes}/${anio} a las ${horas}:${minutos}:${segundos} ${ampm}`
 }
 
 /**
  * Dibuja el membrete oficial en la parte superior del documento PDF.
- * Incluye: Barra lateral azul, Logo de la escuela, Nombre, Dirección, Contacto,
+ * Incluye: Franja vertical azul delgada, Logo de la escuela, Nombre, 3 líneas de datos,
  * y a la derecha el Badge azul con el tipo de reporte y subtítulo/período.
  * 
  * @param {jsPDF} doc Instancia del documento jsPDF
@@ -116,14 +119,14 @@ export function dibujarEncabezadoMembrete(doc, {
   const pageWidth = doc.internal.pageSize.width || 216
   const pageHeight = doc.internal.pageSize.height || 279
 
-  // 1. Barra vertical azul decorativa en el borde izquierdo
+  // 1. Barra vertical azul delgada (3mm) decorativa en el borde izquierdo
   doc.setFillColor(37, 99, 235) // #2563eb
-  doc.rect(0, 0, 5, pageHeight, 'F')
+  doc.rect(0, 0, 3, pageHeight, 'F')
 
   // 2. Logo oficial de la escuela (o placeholder neutro)
-  const logoX = 14
+  const logoX = 12
   const logoY = 12
-  const logoSize = 26
+  const logoSize = 25
 
   if (escuelaInfo?.logoBase64) {
     try {
@@ -135,26 +138,26 @@ export function dibujarEncabezadoMembrete(doc, {
   } else {
     // Placeholder circular elegante sin logo
     doc.setFillColor(241, 245, 249)
-    doc.roundedRect(logoX, logoY, logoSize, logoSize, 4, 4, 'F')
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 3.5, 3.5, 'F')
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
+    doc.setFontSize(13)
     doc.setTextColor(37, 99, 235)
-    doc.text('TKD', logoX + logoSize / 2, logoY + logoSize / 2 + 5, { align: 'center' })
+    doc.text('TKD', logoX + logoSize / 2, logoY + logoSize / 2 + 4.5, { align: 'center' })
   }
 
   // 3. Datos de la Escuela (Nombre, Dirección, Contacto)
-  const textLeftX = logoX + logoSize + 6
-  let curY = 17
+  const textLeftX = logoX + logoSize + 5.5
+  let curY = 16.5
 
   // Nombre de la escuela
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(16)
+  doc.setFontSize(15)
   doc.setTextColor(15, 23, 42) // #0f172a (slate-900)
   doc.text((escuelaInfo?.nombre || 'MI ESCUELA').toUpperCase(), textLeftX, curY)
 
-  // Formateo de las 3 líneas descriptivas
+  // Formateo de las 3 líneas descriptivas requeridas
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
+  doc.setFontSize(7.8)
   doc.setTextColor(100, 116, 139) // #64748b
 
   const d = escuelaInfo?.direccion
@@ -166,7 +169,7 @@ export function dibujarEncabezadoMembrete(doc, {
   const linea1 = partesCiudadEstado.join(', ')
 
   if (linea1) {
-    curY += 4.8
+    curY += 4.5
     doc.text(linea1, textLeftX, curY)
   }
 
@@ -184,7 +187,7 @@ export function dibujarEncabezadoMembrete(doc, {
   const linea2 = partesCalleCol.filter(Boolean).join(' ')
 
   if (linea2) {
-    curY += 4.2
+    curY += 4
     doc.text(linea2, textLeftX, curY)
   }
 
@@ -195,72 +198,72 @@ export function dibujarEncabezadoMembrete(doc, {
   const linea3 = contactParts.join(' ')
 
   if (linea3) {
-    curY += 4.2
+    curY += 4
     doc.text(linea3, textLeftX, curY)
   }
 
-  // 4. Badge Azul a la derecha con el Tipo de Reporte
-  const badgeWidth = 62
-  const badgeHeight = 10
-  const badgeX = pageWidth - badgeWidth - 14
+  // 4. Badge Azul a la derecha con el Tipo de Reporte (estilizado y fino)
+  const badgeWidth = 60
+  const badgeHeight = 9.5
+  const badgeX = pageWidth - badgeWidth - 12
   const badgeY = 12
 
   doc.setFillColor(37, 99, 235) // #2563eb
-  doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.5, 1.5, 'F')
+  doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.2, 1.2, 'F')
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
+  doc.setFontSize(8.5)
   doc.setTextColor(255, 255, 255)
-  doc.text(tipoReporte.toUpperCase(), badgeX + (badgeWidth / 2), badgeY + 6.8, { align: 'center' })
+  doc.text(tipoReporte.toUpperCase(), badgeX + (badgeWidth / 2), badgeY + 6.3, { align: 'center' })
 
   // 5. Subtítulo / Período debajo del Badge
   if (subtituloValor) {
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
+    doc.setFontSize(7.8)
     doc.setTextColor(100, 116, 139)
-    doc.text(subtituloEtiqueta, badgeX, badgeY + badgeHeight + 5)
+    doc.text(subtituloEtiqueta, badgeX, badgeY + badgeHeight + 4.8)
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.5)
+    doc.setFontSize(8.2)
     doc.setTextColor(15, 23, 42)
-    doc.text(subtituloValor.toUpperCase(), badgeX, badgeY + badgeHeight + 9.5)
+    doc.text(subtituloValor.toUpperCase(), badgeX, badgeY + badgeHeight + 9)
   }
 
   // Retorna la posición Y recomendada para iniciar la tabla o contenido principal
-  return 48
+  return 47
 }
 
 /**
- * Agrega el pie de página membretado con la fecha de generación y números de página
+ * Agrega el pie de página membretado con la fecha de generación, usuario y números de página
  * a todas las páginas del documento.
  */
-export function agregarPieDePagina(doc) {
+export function agregarPieDePagina(doc, user = null) {
   const totalPages = doc.internal.getNumberOfPages()
-  const fechaGen = formatearFechaGeneracion()
+  const fechaGen = formatearFechaGeneracion(user)
 
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i)
     const pageWidth = doc.internal.pageSize.width || 216
     const pageHeight = doc.internal.pageSize.height || 279
 
-    // Barra vertical azul lateral
+    // Barra vertical azul lateral delgada (3mm)
     doc.setFillColor(37, 99, 235)
-    doc.rect(0, 0, 5, pageHeight, 'F')
+    doc.rect(0, 0, 3, pageHeight, 'F')
 
     // Línea divisoria sutil
     doc.setDrawColor(226, 232, 240)
     doc.setLineWidth(0.3)
-    doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12)
+    doc.line(12, pageHeight - 11, pageWidth - 12, pageHeight - 11)
 
-    // Texto de fecha de generación exacta
+    // Texto de fecha de generación y usuario
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
+    doc.setFontSize(7.8)
     doc.setTextColor(148, 163, 184)
-    doc.text(fechaGen, 14, pageHeight - 7)
+    doc.text(fechaGen, 12, pageHeight - 6.5)
 
     // Numeración de páginas si es más de 1 página
     if (totalPages > 1) {
-      doc.text(`Página ${i} de ${totalPages}`, pageWidth - 14, pageHeight - 7, { align: 'right' })
+      doc.text(`Página ${i} de ${totalPages}`, pageWidth - 12, pageHeight - 6.5, { align: 'right' })
     }
   }
 }

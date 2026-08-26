@@ -13,6 +13,7 @@ import ModalAlumno from '../components/Asistencias/ModalAlumno'
 import ModalDia from '../components/Asistencias/ModalDia'
 import ModalRegistrar from '../components/Asistencias/ModalRegistrar'
 import Swal from 'sweetalert2'
+import { useAuth } from '../context/AuthContext'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
 
 function mesActual() {
@@ -30,6 +31,7 @@ const formatHora = (hora) => {
 }
 
 export default function Asistencias() {
+  const { user } = useAuth()
   const [tab, setTab] = useState('alumno')        // 'alumno' | 'fecha'
   const [mes, setMes] = useState(mesActual)
 
@@ -168,17 +170,23 @@ export default function Asistencias() {
           `${a.pct}%`,
         ]),
         theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
-        styles: { fontSize: 8, cellPadding: 2.8 },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'center' },
+        styles: { fontSize: 7.8, cellPadding: 2.5, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 55, fontStyle: 'bold' }
+          1: { cellWidth: 48, fontStyle: 'bold', halign: 'left' },
+          2: { cellWidth: 26, halign: 'center' },
+          3: { cellWidth: 42, halign: 'center' },
+          4: { cellWidth: 16, halign: 'center' },
+          5: { cellWidth: 16, halign: 'center' },
+          6: { cellWidth: 16, halign: 'center' },
+          7: { cellWidth: 16, halign: 'center' }
         },
         margin: { left: 14, right: 14, bottom: 18 }
       })
 
       // FOOTER
-      agregarPieDePagina(doc)
+      agregarPieDePagina(doc, user)
 
       doc.save(`Asistencias_${mes}.pdf`)
     }

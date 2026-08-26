@@ -6,6 +6,7 @@ import Swal from 'sweetalert2'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
+import { useAuth } from '../../context/AuthContext'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../../utils/pdfHelper'
 
 const formatHora = (hora) => {
@@ -46,6 +47,7 @@ function Avatar({ alumno, size = 38 }) {
 }
 
 export default function ModalRegistrar({ onCerrar, onGuardado }) {
+  const { user } = useAuth()
   const [fecha, setFecha] = useState(new Date().toLocaleDateString('sv-SE'))
   const [alumnos, setAlumnos] = useState([])
   const [presencias, setPresencias] = useState({})
@@ -152,13 +154,16 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
       body: tableRows,
       startY: startY,
       theme: 'striped',
-      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
-      styles: { fontSize: 8, cellPadding: 2.8 },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, halign: 'center' },
+      styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
       columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 55, fontStyle: 'bold' }
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 60, fontStyle: 'bold', halign: 'left' },
+        2: { cellWidth: 32, halign: 'center' },
+        3: { cellWidth: 50, halign: 'center' },
+        4: { cellWidth: 34, halign: 'center' }
       },
-      margin: { left: 14, right: 14, bottom: 18 },
+      margin: { left: 15, right: 15, bottom: 18 },
       didParseCell: function (data) {
         if (data.section === 'body' && data.column.index === 4) {
           if (data.cell.raw === 'PRESENTE') {
@@ -172,7 +177,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
       }
     })
 
-    agregarPieDePagina(doc)
+    agregarPieDePagina(doc, user)
 
     doc.save(`Asistencias_${fecha}.pdf`)
   }

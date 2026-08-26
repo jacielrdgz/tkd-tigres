@@ -25,6 +25,7 @@ import {
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
+import { useAuth } from '../context/AuthContext'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
 
 const formatCosto = (val) => {
@@ -56,6 +57,7 @@ const formatearFechaNatural = (fechaStr) => {
 }
 
 export default function ExamenDetalle() {
+  const { user } = useAuth()
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -508,11 +510,16 @@ export default function ExamenDetalle() {
       head: [tableColumn],
       body: tableRows,
       theme: 'striped',
-      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
-      styles: { fontSize: 8, cellPadding: 2.8 },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, halign: 'center' },
+      styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 46, fontStyle: 'bold' }
+        1: { cellWidth: 46, fontStyle: 'bold', halign: 'left' },
+        2: { cellWidth: 26, halign: 'center' },
+        3: { cellWidth: 26, halign: 'center' },
+        4: { cellWidth: 20, halign: 'center' },
+        5: { cellWidth: 24, halign: 'center' },
+        6: { cellWidth: 26, halign: 'center' }
       },
       margin: { left: 14, right: 14, bottom: 24 },
       didParseCell: function (data) {
@@ -559,7 +566,7 @@ export default function ExamenDetalle() {
     }
 
     // FOOTER
-    agregarPieDePagina(doc)
+    agregarPieDePagina(doc, user)
 
     const filename = `Acta_Examen_${(examen?.nombre || 'Grados').replace(/\s+/g, '_')}.pdf`
     doc.save(filename)
