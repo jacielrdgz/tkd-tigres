@@ -181,7 +181,14 @@ class EscuelaController extends Controller
 
             return response()->json($escuela->load('direccion'));
         } catch (\Throwable $e) {
-            return response()->json(['message' => $e->getMessage()], 500);
+            return response()->json([
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => array_slice(array_map(function($t) {
+                    return ($t['file'] ?? '?') . ':' . ($t['line'] ?? '?') . ' ' . ($t['class'] ?? '') . ($t['type'] ?? '') . ($t['function'] ?? '');
+                }, $e->getTrace()), 0, 10),
+            ], 500);
         }
     }
 

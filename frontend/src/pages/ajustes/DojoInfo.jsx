@@ -98,7 +98,9 @@ export default function DojoInfo() {
       await refreshUser()
       toast.success('Información actualizada correctamente')
     } catch (err) {
-      toast.error('Error al guardar los cambios')
+      console.error('Error detallado al guardar:', err.response?.data || err)
+      const errorMsg = err.response?.data?.message || err.message || 'Error al guardar los cambios'
+      toast.error(errorMsg)
     } finally {
       setSaving(false)
     }
