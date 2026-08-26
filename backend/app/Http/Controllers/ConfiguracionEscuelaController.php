@@ -18,13 +18,15 @@ class ConfiguracionEscuelaController extends Controller
         $tenant = auth()->user()->tenant;
 
         $request->validate([
-            'nombre'    => 'required|string|max:255',
+            'nombre'    => 'nullable|string|max:255',
             'direccion' => 'nullable|string|max:255',
             'telefono'  => 'nullable|string|max:255',
-            'foto'      => 'nullable|image|max:2048',
+            'foto'      => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:10240',
         ]);
 
-        $tenant->nombre = $request->nombre;
+        if ($request->filled('nombre')) {
+            $tenant->nombre = $request->nombre;
+        }
         $tenant->direccion = $request->direccion;
         $tenant->telefono = $request->telefono;
 
