@@ -32,7 +32,10 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 # Permisos de almacenamiento
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
+# Script de inicio
+RUN echo '#!/bin/bash\nphp artisan migrate --force 2>&1 || true\nphp artisan serve --host=0.0.0.0 --port=10000' > /var/www/start.sh \
+    && chmod +x /var/www/start.sh
+
 EXPOSE 10000
 
-# Servidor de Laravel en producción
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]
+CMD ["/bin/bash", "/var/www/start.sh"]

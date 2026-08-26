@@ -49,6 +49,58 @@ Route::get('/ejecutar-migraciones', function () {
     }
 });
 
+// Diagnostico: verificar tipos de columna y forzar cambio a TEXT
+Route::get('/fix-columns', function () {
+    $results = [];
+    try {
+        // Verificar tipos actuales
+        $cols = \Illuminate\Support\Facades\DB::select("
+            SELECT table_name, column_name, data_type, character_maximum_length 
+            FROM information_schema.columns 
+            WHERE (table_name = 'alumnos' AND column_name = 'foto')
+               OR (table_name = 'escuelas' AND column_name = 'logo_url')
+               OR (table_name = 'tenants' AND column_name = 'logo')
+               OR (table_name = 'instructors' AND column_name = 'foto_url')
+            ORDER BY table_name
+        ");
+        $results['antes'] = $cols;
+
+        // Forzar cambio a TEXT
+        \Illuminate\Support\Facades\DB::statement('ALTER TABLE alumnos ALTER COLUMN foto TYPE TEXT');
+        \Illuminate\Support\Facades\DB::statement('ALTER TABLE escuelas ALTER COLUMN logo_url TYPE TEXT');
+        \Illuminate\Support\Facades\DB::statement('ALTER TABLE tenants ALTER COLUMN logo TYPE TEXT');
+        try {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE instructors ALTER COLUMN foto_url TYPE TEXT');
+        } catch (\Throwable $e) {}
+
+        // Verificar tipos después
+        $colsAfter = \Illuminate\Support\Facades\DB::select("
+            SELECT table_name, column_name, data_type, character_maximum_length 
+            FROM information_schema.columns 
+            WHERE (table_name = 'alumnos' AND column_name = 'foto')
+               OR (table_name = 'escuelas' AND column_name = 'logo_url')
+               OR (table_name = 'tenants' AND column_name = 'logo')
+               OR (table_name = 'instructors' AND column_name = 'foto_url')
+            ORDER BY table_name
+        ");
+        $results['despues'] = $colsAfter;
+
+        // También actualizar el nombre del tenant si es TKD Tigres
+        $tenant = \App\Models\Tenant::first();
+        if ($tenant) {
+            $results['tenant_nombre_actual'] = $tenant->nombre;
+        }
+
+        return response()->json(['status' => 'ok', 'results' => $results]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'results' => $results,
+        ], 200);
+    }
+});
+
 // Auth
 Route::post('/login',    [AuthController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'register']);

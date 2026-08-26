@@ -12,16 +12,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Schema::defaultStringLength(191);
 
-        try {
-            // Ejecutar migraciones pendientes automáticamente en producción
-            $pending = \Illuminate\Support\Facades\Artisan::call('migrate:status', ['--no-ansi' => true]);
-            $output = \Illuminate\Support\Facades\Artisan::output();
-            if (str_contains($output, 'Pending')) {
-                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-            }
-        } catch (\Throwable $e) {
-            // Ignorar errores temporales de conexión
-        }
+        // Las migraciones se ejecutan al iniciar el contenedor (ver Dockerfile)
 
         Gate::policy(\App\Models\Alumno::class, \App\Policies\AlumnoPolicy::class);
         Gate::policy(\App\Models\Pago::class, \App\Policies\PagoPolicy::class);
