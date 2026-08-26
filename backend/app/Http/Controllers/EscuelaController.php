@@ -18,9 +18,10 @@ class EscuelaController extends Controller
         if (!$user->tenant_id || !$user->tenant) {
             $tenant = \App\Models\Tenant::first();
             if (!$tenant) {
+                $tenantName = $user->escuela_solicitada ?: 'Mi Escuela';
                 $tenant = \App\Models\Tenant::create([
-                    'nombre' => 'TKD Tigres',
-                    'slug' => 'tkd-tigres-' . time(),
+                    'nombre' => $tenantName,
+                    'slug' => 'escuela-' . time(),
                     'plan' => 'pro',
                     'suscripcion_estado' => 'activa',
                 ]);
@@ -45,7 +46,7 @@ class EscuelaController extends Controller
             $escuela = Escuela::with('direccion')->firstOrCreate(
                 ['tenant_id' => $tenant->id],
                 [
-                    'nombre' => $tenant->nombre ?: 'TKD Tigres',
+                    'nombre' => $tenant->nombre ?: 'Mi Escuela',
                     'logo_url' => $tenant->logo,
                     'disciplina' => $tenant->disciplina ?? 'taekwondo'
                 ]
@@ -62,20 +63,24 @@ class EscuelaController extends Controller
                 }
             }
 
-            // Adjuntar logo en base64 para evitar problemas de CORS en el PDF del frontend
+            // Logo base64: si ya es base64 lo usamos directamente, si no intentamos leerlo del storage
             $logoBase64 = null;
             if ($escuela->logo_url) {
-                try {
-                    if (Storage::disk('public')->exists($escuela->logo_url)) {
-                        $path = Storage::disk('public')->path($escuela->logo_url);
-                        if (file_exists($path)) {
-                            $type = pathinfo($path, PATHINFO_EXTENSION);
-                            $data = file_get_contents($path);
-                            $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+                if (str_starts_with($escuela->logo_url, 'data:')) {
+                    $logoBase64 = $escuela->logo_url;
+                } else {
+                    try {
+                        if (Storage::disk('public')->exists($escuela->logo_url)) {
+                            $path = Storage::disk('public')->path($escuela->logo_url);
+                            if (file_exists($path)) {
+                                $type = pathinfo($path, PATHINFO_EXTENSION);
+                                $data = file_get_contents($path);
+                                $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+                            }
                         }
+                    } catch (\Throwable $ex) {
+                        $logoBase64 = null;
                     }
-                } catch (\Throwable $ex) {
-                    $logoBase64 = null;
                 }
             }
             $escuela->logo_base64 = $logoBase64;
@@ -96,7 +101,7 @@ class EscuelaController extends Controller
             $escuela = Escuela::firstOrCreate(
                 ['tenant_id' => $tenant->id],
                 [
-                    'nombre' => $tenant->nombre ?: 'TKD Tigres',
+                    'nombre' => $tenant->nombre ?: 'Mi Escuela',
                     'logo_url' => $tenant->logo,
                     'disciplina' => $tenant->disciplina ?? 'taekwondo'
                 ]

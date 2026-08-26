@@ -13,7 +13,10 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191);
 
         try {
-            if (Schema::hasTable('users') && !Schema::hasColumn('users', 'is_superadmin')) {
+            // Ejecutar migraciones pendientes automáticamente en producción
+            $pending = \Illuminate\Support\Facades\Artisan::call('migrate:status', ['--no-ansi' => true]);
+            $output = \Illuminate\Support\Facades\Artisan::output();
+            if (str_contains($output, 'Pending')) {
                 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
             }
         } catch (\Throwable $e) {
