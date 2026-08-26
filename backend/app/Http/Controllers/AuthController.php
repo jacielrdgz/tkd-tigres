@@ -57,6 +57,8 @@ class AuthController extends Controller
         $user->last_login_at = now();
         $user->save();
 
+        $token = $user->createToken('tkd-token')->plainTextToken;
+
         // 4. Manejo de Tenant según tipo de usuario
         if ($user->isSuperAdmin()) {
             // El SuperAdmin no pertenece a ninguna escuela
