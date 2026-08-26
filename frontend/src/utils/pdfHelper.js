@@ -1,5 +1,10 @@
 import api from '../api/axios'
 
+const NOMBRES_MESES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+]
+
 /**
  * Convierte cualquier logo (URL de Supabase, ruta relativa o Base64)
  * a un Data URL Base64 listo para jsPDF.
@@ -80,6 +85,41 @@ export async function obtenerInfoEscuelaParaPDF(user = null) {
 }
 
 /**
+ * Convierte un formato YYYY-MM (ej. 2026-08) a "AGOSTO DE 2026".
+ */
+export function formatearPeriodoOMes(valor) {
+  if (!valor) return ''
+  const str = String(valor).trim()
+  const match = str.match(/^(\d{4})-(\d{1,2})$/)
+  if (match) {
+    const anio = match[1]
+    const mesIdx = parseInt(match[2], 10) - 1
+    if (mesIdx >= 0 && mesIdx < 12) {
+      return `${NOMBRES_MESES[mesIdx].toUpperCase()} DE ${anio}`
+    }
+  }
+  return str.toUpperCase()
+}
+
+/**
+ * Convierte una fecha YYYY-MM-DD a formato natural: "11 de Mayo de 2026".
+ */
+export function formatearFechaNaturalPDF(fecha) {
+  if (!fecha) return ''
+  const str = String(fecha).trim().split(' ')[0].split('T')[0]
+  const parts = str.split('-')
+  if (parts.length === 3) {
+    const anio = parts[0]
+    const mesIdx = parseInt(parts[1], 10) - 1
+    const dia = parseInt(parts[2], 10)
+    if (!isNaN(dia) && mesIdx >= 0 && mesIdx < 12 && anio.length === 4) {
+      return `${dia} de ${NOMBRES_MESES[mesIdx]} de ${anio}`
+    }
+  }
+  return str
+}
+
+/**
  * Formatea la fecha y hora en el formato exacto requerido con usuario:
  * Ej: "Generado por Juan Pérez el 22/8/2026 a las 4:03:44 p.m."
  */
@@ -103,7 +143,7 @@ export function formatearFechaGeneracion(user = null) {
 
 /**
  * Dibuja el membrete oficial en la parte superior del documento PDF.
- * Incluye: Franja vertical azul delgada, Logo de la escuela, Nombre, 3 líneas de datos,
+ * Incluye: Franja vertical azul, Logo de la escuela, Nombre, 3 líneas de datos,
  * y a la derecha el Badge azul con el tipo de reporte y subtítulo/período.
  * 
  * @param {jsPDF} doc Instancia del documento jsPDF
@@ -119,12 +159,12 @@ export function dibujarEncabezadoMembrete(doc, {
   const pageWidth = doc.internal.pageSize.width || 216
   const pageHeight = doc.internal.pageSize.height || 279
 
-  // 1. Barra vertical azul delgada (3mm) decorativa en el borde izquierdo
+  // 1. Barra vertical azul clásica (5mm) decorativa en el borde izquierdo
   doc.setFillColor(37, 99, 235) // #2563eb
-  doc.rect(0, 0, 3, pageHeight, 'F')
+  doc.rect(0, 0, 5, pageHeight, 'F')
 
   // 2. Logo oficial de la escuela (o placeholder neutro)
-  const logoX = 12
+  const logoX = 14
   const logoY = 12
   const logoSize = 25
 
@@ -202,10 +242,10 @@ export function dibujarEncabezadoMembrete(doc, {
     doc.text(linea3, textLeftX, curY)
   }
 
-  // 4. Badge Azul a la derecha con el Tipo de Reporte (estilizado y fino)
+  // 4. Badge Azul a la derecha con el Tipo de Reporte
   const badgeWidth = 60
   const badgeHeight = 9.5
-  const badgeX = pageWidth - badgeWidth - 12
+  const badgeX = pageWidth - badgeWidth - 14
   const badgeY = 12
 
   doc.setFillColor(37, 99, 235) // #2563eb
@@ -246,24 +286,24 @@ export function agregarPieDePagina(doc, user = null) {
     const pageWidth = doc.internal.pageSize.width || 216
     const pageHeight = doc.internal.pageSize.height || 279
 
-    // Barra vertical azul lateral delgada (3mm)
+    // Barra vertical azul lateral clásica (5mm)
     doc.setFillColor(37, 99, 235)
-    doc.rect(0, 0, 3, pageHeight, 'F')
+    doc.rect(0, 0, 5, pageHeight, 'F')
 
     // Línea divisoria sutil
     doc.setDrawColor(226, 232, 240)
     doc.setLineWidth(0.3)
-    doc.line(12, pageHeight - 11, pageWidth - 12, pageHeight - 11)
+    doc.line(14, pageHeight - 11, pageWidth - 14, pageHeight - 11)
 
     // Texto de fecha de generación y usuario
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7.8)
     doc.setTextColor(148, 163, 184)
-    doc.text(fechaGen, 12, pageHeight - 6.5)
+    doc.text(fechaGen, 14, pageHeight - 6.5)
 
     // Numeración de páginas si es más de 1 página
     if (totalPages > 1) {
-      doc.text(`Página ${i} de ${totalPages}`, pageWidth - 12, pageHeight - 6.5, { align: 'right' })
+      doc.text(`Página ${i} de ${totalPages}`, pageWidth - 14, pageHeight - 6.5, { align: 'right' })
     }
   }
 }

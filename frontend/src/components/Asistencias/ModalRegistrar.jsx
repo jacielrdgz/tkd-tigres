@@ -7,7 +7,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { useAuth } from '../../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF } from '../../utils/pdfHelper'
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -135,7 +135,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
       escuelaInfo,
       tipoReporte: 'PASE DE LISTA',
       subtituloEtiqueta: 'Fecha de Lista:',
-      subtituloValor: new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+      subtituloValor: formatearFechaNaturalPDF(fecha)
     })
 
     const tableColumn = ["#", "Nombre Alumno", "Cinta", "Horario", "Asistencia"]

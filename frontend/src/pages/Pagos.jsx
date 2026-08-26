@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes, formatearFechaNaturalPDF } from '../utils/pdfHelper'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -315,7 +315,7 @@ export default function Pagos() {
         escuelaInfo,
         tipoReporte: 'REPORTE DE PAGOS',
         subtituloEtiqueta: 'Filtro / Período:',
-        subtituloValor: filtroMes || (filtroFechaPago ? `FECHA: ${filtroFechaPago}` : 'GENERAL')
+        subtituloValor: filtroMes ? formatearPeriodoOMes(filtroMes) : (filtroFechaPago ? formatearFechaNaturalPDF(filtroFechaPago) : 'GENERAL')
       })
 
       const rows = alumnosFiltrados.map((a, i) => {
@@ -332,11 +332,11 @@ export default function Pagos() {
       })
 
       autoTable(doc, {
-        head: [['#', 'Alumno', 'Cinta', 'Horario', 'Estado', 'Monto', 'Periodo']],
+        head: [['#', 'Nombre Alumno', 'Cinta', 'Horario', 'Estado', 'Monto', 'Periodo']],
         body: rows,
         startY: startY,
         theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, halign: 'center' },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, cellPadding: 2.8, halign: 'center' },
         styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
@@ -370,7 +370,7 @@ export default function Pagos() {
         escuelaInfo,
         tipoReporte: 'COMPROBANTE PAGO',
         subtituloEtiqueta: 'Fecha de Pago:',
-        subtituloValor: pago.fecha_pago || hoy
+        subtituloValor: formatearFechaNaturalPDF(pago.fecha_pago || hoy)
       })
 
       // SECCIÓN ALUMNO

@@ -14,7 +14,7 @@ import ModalDia from '../components/Asistencias/ModalDia'
 import ModalRegistrar from '../components/Asistencias/ModalRegistrar'
 import Swal from 'sweetalert2'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes } from '../utils/pdfHelper'
 
 function mesActual() {
   const hoy = new Date()
@@ -150,13 +150,13 @@ export default function Asistencias() {
         escuelaInfo,
         tipoReporte: 'REPORTE ASISTENCIA',
         subtituloEtiqueta: 'Período:',
-        subtituloValor: mesLabel
+        subtituloValor: formatearPeriodoOMes(mes)
       })
 
       // TABLA
       autoTable(doc, {
         startY: startY,
-        head: [['#', 'Alumno', 'Cinta', 'Horario', 'Asistió', 'Faltó', 'Total', '%']],
+        head: [['#', 'Nombre Alumno', 'Cinta', 'Horario', 'Asistió', 'Faltó', 'Total', '%']],
         body: dataAExportar.map((a, i) => [
           i + 1,
           `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`,
@@ -170,17 +170,17 @@ export default function Asistencias() {
           `${a.pct}%`,
         ]),
         theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'center' },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8, cellPadding: 2.8, halign: 'center' },
         styles: { fontSize: 7.8, cellPadding: 2.5, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 48, fontStyle: 'bold', halign: 'left' },
+          1: { cellWidth: 50, fontStyle: 'bold', halign: 'left' },
           2: { cellWidth: 26, halign: 'center' },
           3: { cellWidth: 42, halign: 'center' },
-          4: { cellWidth: 16, halign: 'center' },
-          5: { cellWidth: 16, halign: 'center' },
-          6: { cellWidth: 16, halign: 'center' },
-          7: { cellWidth: 16, halign: 'center' }
+          4: { cellWidth: 15, halign: 'center' },
+          5: { cellWidth: 15, halign: 'center' },
+          6: { cellWidth: 15, halign: 'center' },
+          7: { cellWidth: 15, halign: 'center' }
         },
         margin: { left: 14, right: 14, bottom: 18 }
       })

@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF } from '../utils/pdfHelper'
 
 const tieneFoto = (foto) => {
   if (!foto || foto === 'null' || foto === 'NULL' || foto === '') return false
@@ -389,13 +389,13 @@ export default function EventoDetalle() {
       const startY = dibujarEncabezadoMembrete(doc, {
         escuelaInfo,
         tipoReporte: esExamen ? 'REPORTE DE EXAMEN' : 'REPORTE DE EVENTO',
-        subtituloEtiqueta: 'Evento:',
-        subtituloValor: `${evento.nombre} (${formatFechaNatural(evento.fecha)})`
+        subtituloEtiqueta: 'Evento / Fecha:',
+        subtituloValor: `${evento.nombre} • ${formatearFechaNaturalPDF(evento.fecha)}`
       })
       
       const head = esExamen 
-        ? [['#', 'Alumno', 'Grado Actual', 'Siguiente', 'Costo', 'Pago', 'Resultado']]
-        : [['#', 'Alumno', 'Costo', 'Pago', 'Resultado']]
+        ? [['#', 'Nombre Alumno', 'Grado Actual', 'Siguiente', 'Costo', 'Pago', 'Resultado']]
+        : [['#', 'Nombre Alumno', 'Costo', 'Pago', 'Resultado']]
 
       const rows = inscritosFiltrados.map((a, i) => {
         const nombre = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim()
@@ -418,7 +418,7 @@ export default function EventoDetalle() {
         body: rows,
         startY: startY,
         theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, halign: 'center' },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, cellPadding: 2.8, halign: 'center' },
         styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
@@ -443,7 +443,7 @@ export default function EventoDetalle() {
         escuelaInfo,
         tipoReporte: 'COMPROBANTE PAGO',
         subtituloEtiqueta: 'Evento / Fecha:',
-        subtituloValor: `${evento.nombre} • ${inscrito.fecha_pago ? fmtFecha(inscrito.fecha_pago.split(' ')[0]) : fmtFecha(new Date().toISOString().split('T')[0])}`
+        subtituloValor: `${evento.nombre} • ${formatearFechaNaturalPDF(inscrito.fecha_pago || new Date().toISOString().split('T')[0])}`
       })
 
       // SECCIÓN ALUMNO

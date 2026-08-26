@@ -26,7 +26,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF } from '../utils/pdfHelper'
 
 const formatCosto = (val) => {
   if (val === null || val === undefined || val === '') return '0'
@@ -490,11 +490,11 @@ export default function ExamenDetalle() {
       escuelaInfo,
       tipoReporte: 'ACTA DE EXAMEN',
       subtituloEtiqueta: 'Examen / Fecha:',
-      subtituloValor: `${(examen?.nombre || 'Examen')} • ${formatearFechaNatural(examen?.fecha)}`
+      subtituloValor: `${(examen?.nombre || 'Examen')} • ${formatearFechaNaturalPDF(examen?.fecha)}`
     })
 
     // TABLA
-    const tableColumn = ['#', 'Alumno', 'Grado Actual', 'Aspirado', 'Costo', 'Estado', 'Resultado']
+    const tableColumn = ['#', 'Nombre Alumno', 'Grado Actual', 'Aspirado', 'Costo', 'Estado', 'Resultado']
     const tableRows = inscritosFiltrados.map((a, i) => [
       i + 1,
       `${a.nombre} ${a.apellido_paterno}`,
@@ -510,7 +510,7 @@ export default function ExamenDetalle() {
       head: [tableColumn],
       body: tableRows,
       theme: 'striped',
-      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, halign: 'center' },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, cellPadding: 2.8, halign: 'center' },
       styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },
