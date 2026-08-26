@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
+import CustomDropdown from '../components/Common/CustomDropdown'
 
 const VACIO = { nombre: '', tipo: 'torneo', fecha: '', lugar: '', descripcion: '', costo: '' }
 
@@ -210,11 +211,17 @@ export default function Eventos() {
         </div>
 
         <div style={s.filtrosSecundarios}>
-          <select style={s.selectFiltro} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
-            <option value="todos">Todos los estados</option>
-            <option value="proximos">Próximos (Por venir)</option>
-            <option value="pasados">Eventos Pasados</option>
-          </select>
+          <CustomDropdown
+            label="Todos los estados"
+            options={[
+              { value: 'todos', label: 'Todos los estados' },
+              { value: 'proximos', label: 'Próximos (Por venir)' },
+              { value: 'pasados', label: 'Eventos Pasados' }
+            ]}
+            value={filtroEstado}
+            onChange={val => setFiltroEstado(val)}
+            minWidth="175px"
+          />
 
           <input
             type="month"

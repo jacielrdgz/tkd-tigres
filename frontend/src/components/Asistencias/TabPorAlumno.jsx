@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { FiSearch, FiEye, FiChevronDown } from 'react-icons/fi'
 import { toast } from 'react-toastify'
+import CustomDropdown from '../Common/CustomDropdown'
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -151,39 +152,33 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
           />
         </div>
 
-        <div style={{ position: 'relative' }}>
-          <select
-            id="filtro-grado"
-            style={s.select}
-            value={filtroGrado}
-            onChange={e => setFiltroGrado(e.target.value)}
-          >
-            <option value="">Todas las cintas</option>
-            {gradosUnicos.map(c => (
-              <option key={c.id ?? c.nombre_nivel} value={c.id ?? c.nombre_nivel}>
-                {c.nombre_nivel}
-              </option>
-            ))}
-          </select>
-          <FiChevronDown size={14} style={s.selectIcon} />
-        </div>
+        <CustomDropdown
+          label="Todas las cintas"
+          options={[
+            { value: '', label: 'Todas las cintas' },
+            ...gradosUnicos.map(c => ({
+              value: String(c.id ?? c.nombre_nivel),
+              label: c.nombre_nivel
+            }))
+          ]}
+          value={filtroGrado}
+          onChange={val => setFiltroGrado(val)}
+          minWidth="160px"
+        />
 
-        <div style={{ position: 'relative' }}>
-          <select
-            id="filtro-horario"
-            style={s.select}
-            value={filtroHorario}
-            onChange={e => setFiltroHorario(e.target.value)}
-          >
-            <option value="">Todos los horarios</option>
-            {horariosUnicos.map(h => (
-              <option key={h.id ?? h.nombre} value={h.id ?? h.nombre}>
-                {h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})
-              </option>
-            ))}
-          </select>
-          <FiChevronDown size={14} style={s.selectIcon} />
-        </div>
+        <CustomDropdown
+          label="Todos los horarios"
+          options={[
+            { value: '', label: 'Todos los horarios' },
+            ...horariosUnicos.map(h => ({
+              value: String(h.id ?? h.nombre),
+              label: `${h.nombre} (${formatHora(h.hora_inicio)} - ${formatHora(h.hora_fin)})`
+            }))
+          ]}
+          value={filtroHorario}
+          onChange={val => setFiltroHorario(val)}
+          minWidth="175px"
+        />
 
         <input
           type="month"

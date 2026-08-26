@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { FiDownload, FiChevronDown, FiFileText } from 'react-icons/fi'
+import { FiDownload, FiChevronDown } from 'react-icons/fi'
 
 export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled = false }) {
   const [exportOpen, setExportOpen] = useState(false)
@@ -23,18 +23,19 @@ export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          padding: '9px 15px',
-          borderRadius: '12px',
+          gap: '7px',
+          padding: '9px 16px',
+          background: exportOpen ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
           border: '1px solid',
           borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
-          backgroundColor: exportOpen ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+          borderRadius: '10px',
           color: 'var(--text-secondary)',
-          fontSize: '13.5px',
+          fontSize: '13px',
           fontWeight: '600',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          transition: 'all 0.2s ease',
-          boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'var(--shadow-sm)',
+          transition: 'all 0.15s ease',
+          fontFamily: 'inherit',
+          boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none',
           opacity: disabled ? 0.6 : 1,
         }}
         onClick={() => !disabled && setExportOpen((v) => !v)}
@@ -61,7 +62,7 @@ export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled
           size={13}
           style={{
             transform: exportOpen ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.2s ease',
+            transition: '0.2s ease',
             color: exportOpen ? 'var(--accent-blue)' : 'var(--text-muted)',
           }}
         />
@@ -71,18 +72,18 @@ export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled
         <div
           style={{
             position: 'absolute',
-            top: 'calc(100% + 6px)',
+            top: 'calc(100% + 8px)',
             right: 0,
             background: 'var(--bg-secondary)',
             border: '1px solid var(--border)',
-            borderRadius: '14px',
+            borderRadius: '12px',
             padding: '8px',
-            boxShadow: '0 15px 35px rgba(0, 0, 0, 0.5)',
             zIndex: 100,
+            minWidth: '150px',
+            boxShadow: 'var(--shadow-md)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px',
-            minWidth: '150px',
+            gap: '8px',
             animation: 'fadeIn 0.15s ease',
           }}
         >
@@ -90,20 +91,21 @@ export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled
             <button
               type="button"
               style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '10px 14px',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                padding: '9px 14px',
-                borderRadius: '10px',
-                border: 'none',
-                background: '#10b981',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: '700',
-                cursor: 'pointer',
+                gap: '6px',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
                 boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
-                transition: 'all 0.2s ease',
                 width: '100%',
               }}
               onClick={() => {
@@ -132,20 +134,21 @@ export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled
             <button
               type="button"
               style={{
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '10px 14px',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                padding: '9px 14px',
-                borderRadius: '10px',
-                border: 'none',
-                background: '#ef4444',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: '700',
-                cursor: 'pointer',
+                gap: '6px',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
                 boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)',
-                transition: 'all 0.2s ease',
                 width: '100%',
               }}
               onClick={() => {

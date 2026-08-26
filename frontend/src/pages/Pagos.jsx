@@ -797,7 +797,7 @@ export default function Pagos() {
       </div>
 
       <div style={s.filtrosSecundarios}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', width: isMobile ? '100%' : 'auto' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <CustomDropdown
             label="Todas las cintas"
             options={[
@@ -806,7 +806,7 @@ export default function Pagos() {
             ]}
             value={filtroCinta}
             onChange={val => setFiltroCinta(val)}
-            minWidth="160px"
+            minWidth="170px"
             isMobile={isMobile}
           />
 
@@ -818,7 +818,7 @@ export default function Pagos() {
             ]}
             value={filtroHorario}
             onChange={val => setFiltroHorario(val)}
-            minWidth="170px"
+            minWidth="200px"
             isMobile={isMobile}
           />
 
@@ -1433,7 +1433,7 @@ const s = {
   ingresosBadge: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '12px 24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.3)', color: '#fff' },
   ingresosLabel: { fontSize: '10px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },
   ingresosValor: { fontSize: '22px', fontWeight: '900', color: '#fff', lineHeight: 1.2 },
-  filtrosSecundarios: { display: 'flex', justifyContent: 'flex-start', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
+  filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
   selectFiltro: { padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '150px', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' },
   dateFilterContainer: { display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: '10px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' },
   dateInput: { background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '13px', fontWeight: '600', outline: 'none', cursor: 'pointer' },

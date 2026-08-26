@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
 import { FiAward, FiCalendar, FiMapPin, FiDollarSign, FiPlus, FiSearch, FiEdit2, FiTrash2, FiUsers } from 'react-icons/fi'
+import CustomDropdown from '../components/Common/CustomDropdown'
 
 const VACIO = { nombre: '', tipo: 'examen', fecha: '', lugar: '', descripcion: '', costo: '' }
 const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -201,11 +202,17 @@ export default function Examenes() {
         </div>
 
         <div style={s.filtrosSecundarios}>
-          <select style={s.selectFiltro} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
-            <option value="todos">Todos los exámeness</option>
-            <option value="proximos">Próximos a realizar</option>
-            <option value="pasados">Exámenes Concluidos</option>
-          </select>
+          <CustomDropdown
+            label="Todos los exámenes"
+            options={[
+              { value: 'todos', label: 'Todos los exámenes' },
+              { value: 'proximos', label: 'Próximos a realizar' },
+              { value: 'pasados', label: 'Exámenes Concluidos' }
+            ]}
+            value={filtroEstado}
+            onChange={val => setFiltroEstado(val)}
+            minWidth="180px"
+          />
 
           <input
             type="month"
