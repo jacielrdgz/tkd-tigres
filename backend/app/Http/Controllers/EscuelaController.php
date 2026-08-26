@@ -20,6 +20,7 @@ class EscuelaController extends Controller
             if (!$tenant) {
                 $tenant = \App\Models\Tenant::create([
                     'nombre' => 'TKD Tigres',
+                    'slug' => 'tkd-tigres-' . time(),
                     'plan' => 'pro',
                     'suscripcion_estado' => 'activa',
                 ]);
@@ -63,11 +64,19 @@ class EscuelaController extends Controller
 
             // Adjuntar logo en base64 para evitar problemas de CORS en el PDF del frontend
             $logoBase64 = null;
-            if ($escuela->logo_url && Storage::disk('public')->exists($escuela->logo_url)) {
-                $path = Storage::disk('public')->path($escuela->logo_url);
-                $type = pathinfo($path, PATHINFO_EXTENSION);
-                $data = file_get_contents($path);
-                $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+            if ($escuela->logo_url) {
+                try {
+                    if (Storage::disk('public')->exists($escuela->logo_url)) {
+                        $path = Storage::disk('public')->path($escuela->logo_url);
+                        if (file_exists($path)) {
+                            $type = pathinfo($path, PATHINFO_EXTENSION);
+                            $data = file_get_contents($path);
+                            $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+                        }
+                    }
+                } catch (\Throwable $ex) {
+                    $logoBase64 = null;
+                }
             }
             $escuela->logo_base64 = $logoBase64;
 
