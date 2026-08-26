@@ -29,5 +29,5 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 EXPOSE 10000
 
-# Ejecutar migraciones completas (migrate:fresh) para asegurar todas las 42 tablas y columnas
-CMD ["sh", "-c", "php artisan migrate:fresh --force && php artisan db:seed --force || true; php artisan serve --host=0.0.0.0 --port=10000"]
+# Servidor de Laravel en producción (sin borrar jamás los datos de Supabase)
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]

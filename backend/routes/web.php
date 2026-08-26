@@ -8,13 +8,6 @@ Route::get('/', function () {
 
 Route::get('/ejecutar-migraciones', function () {
     try {
-        if (\Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
-            \Illuminate\Support\Facades\DB::statement('DROP SCHEMA public CASCADE;');
-            \Illuminate\Support\Facades\DB::statement('CREATE SCHEMA public;');
-            \Illuminate\Support\Facades\DB::statement('GRANT ALL ON SCHEMA public TO postgres;');
-            \Illuminate\Support\Facades\DB::statement('GRANT ALL ON SCHEMA public TO public;');
-        }
-
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         $outputMigrate = \Illuminate\Support\Facades\Artisan::output();
 
