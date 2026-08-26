@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { toast } from 'react-toastify'
-import { FiShield, FiLogIn, FiMail, FiLock } from 'react-icons/fi'
+import { FiShield, FiLogIn } from 'react-icons/fi'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -30,7 +30,7 @@ export default function Login() {
 
   return (
     <div style={s.container}>
-      {/* Fondo con resplandor */}
+      {/* Fondo con gradiente animado */}
       <div style={s.bgGlow} />
 
       <div style={s.card}>
@@ -39,8 +39,8 @@ export default function Login() {
           <div style={s.logoCircle}>
             <FiShield size={28} color="#ffffff" />
           </div>
-          <h1 style={s.title}>TKD Tigres</h1>
-          <p style={s.subtitle}>Panel de gestión y administración</p>
+          <h1 style={s.title}>GymCloud</h1>
+          <p style={s.subtitle}>Panel de gestión para tu escuela</p>
         </div>
 
         <form onSubmit={handleSubmit} style={s.form}>
@@ -104,7 +104,7 @@ export default function Login() {
       </div>
 
       <p style={s.footer}>
-        TKD Tigres © {new Date().getFullYear()} — Gestión integral de academias de artes marciales
+        GymCloud © {new Date().getFullYear()} — Gestión inteligente de artes marciales
       </p>
     </div>
   )
@@ -118,7 +118,7 @@ const s = {
     alignItems: 'center',
     justifyContent: 'center',
     background: 'var(--bg-primary)',
-    padding: '24px 16px',
+    padding: '20px',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -138,36 +138,37 @@ const s = {
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border)',
     borderRadius: '20px',
-    padding: '38px 32px',
+    padding: '40px 32px',
     boxShadow: 'var(--shadow-lg)',
     position: 'relative',
     zIndex: 1,
+    boxSizing: 'border-box',
   },
   brand: {
     textAlign: 'center',
-    marginBottom: '30px',
+    marginBottom: '32px',
   },
   logoCircle: {
-    width: '60px',
-    height: '60px',
+    width: '64px',
+    height: '64px',
     borderRadius: '50%',
     background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    margin: '0 auto 14px',
-    boxShadow: '0 8px 24px rgba(59, 130, 246, 0.35)',
+    margin: '0 auto 16px',
+    boxShadow: '0 8px 30px rgba(59, 130, 246, 0.3)',
   },
   title: {
     fontSize: '24px',
     fontWeight: '800',
     color: 'var(--text-primary)',
     margin: '0 0 4px',
-    letterSpacing: '-0.4px',
+    letterSpacing: '-0.5px',
   },
   subtitle: {
-    fontSize: '13.5px',
-    color: 'var(--text-muted)',
+    fontSize: '14px',
+    color: 'var(--text-secondary)',
     margin: 0,
   },
   form: {
@@ -177,46 +178,47 @@ const s = {
   },
   label: {
     display: 'block',
-    fontSize: '12.5px',
-    fontWeight: '700',
-    color: 'var(--text-secondary)',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: 'var(--text-muted)',
     marginBottom: '6px',
   },
   input: {
     width: '100%',
-    padding: '11px 14px',
+    padding: '12px 14px',
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     borderRadius: '10px',
     color: 'var(--text-primary)',
-    fontSize: '13.5px',
-    fontFamily: 'inherit',
+    fontSize: '14px',
+    fontFamily: 'Inter, sans-serif',
     outline: 'none',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
     boxSizing: 'border-box',
-    transition: 'all 0.15s ease',
   },
   btnPrimary: {
     width: '100%',
-    padding: '13px',
+    padding: '14px',
     background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
     color: '#fff',
     border: 'none',
     borderRadius: '10px',
-    fontSize: '14.5px',
+    fontSize: '15px',
     fontWeight: '700',
-    fontFamily: 'inherit',
+    fontFamily: 'Inter, sans-serif',
     cursor: 'pointer',
-    marginTop: '6px',
+    marginTop: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    boxShadow: '0 6px 20px rgba(59, 130, 246, 0.25)',
-    transition: 'all 0.2s ease',
+    boxShadow: '0 8px 30px rgba(59, 130, 246, 0.25)',
+    transition: 'all 0.2s',
+    boxSizing: 'border-box',
   },
   spinner: {
-    width: '18px',
-    height: '18px',
+    width: '20px',
+    height: '20px',
     border: '3px solid rgba(255,255,255,0.3)',
     borderTopColor: '#fff',
     borderRadius: '50%',
@@ -227,7 +229,7 @@ const s = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    margin: '24px 0 18px',
+    margin: '28px 0 20px',
   },
   dividerLine: {
     flex: 1,
@@ -238,18 +240,17 @@ const s = {
     fontSize: '12px',
     color: 'var(--text-muted)',
     whiteSpace: 'nowrap',
-    fontWeight: '600',
   },
   linkRegister: {
     display: 'block',
     width: '100%',
-    padding: '11px',
+    padding: '12px',
     textAlign: 'center',
     color: 'var(--accent-blue)',
     background: 'var(--accent-blue-bg)',
     borderRadius: '10px',
-    fontSize: '13.5px',
-    fontWeight: '700',
+    fontSize: '14px',
+    fontWeight: '600',
     textDecoration: 'none',
     transition: 'background 0.2s',
     boxSizing: 'border-box',
