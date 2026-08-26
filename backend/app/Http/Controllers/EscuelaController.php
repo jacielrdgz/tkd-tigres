@@ -10,18 +10,40 @@ use Illuminate\Support\Facades\Storage;
 
 class EscuelaController extends Controller
 {
+    private function getTenant()
+    {
+        $user = auth()->user();
+        if (!$user) return null;
+
+        if (!$user->tenant_id || !$user->tenant) {
+            $tenant = \App\Models\Tenant::first();
+            if (!$tenant) {
+                $tenant = \App\Models\Tenant::create([
+                    'nombre_academia' => 'TKD Tigres',
+                    'plan' => 'pro',
+                    'suscripcion_estado' => 'activa',
+                ]);
+            }
+            $user->tenant_id = $tenant->id;
+            $user->save();
+            return $tenant;
+        }
+
+        return $user->tenant;
+    }
+
     public function show()
     {
-        $tenant = auth()->user()->tenant;
+        $tenant = $this->getTenant();
         if (!$tenant) {
-            return response()->json(['message' => 'No tienes una escuela asignada aún. Contacta al administrador.'], 403);
+            return response()->json(['message' => 'No tienes una escuela asignada.'], 403);
         }
         
         // Carga o crea la escuela asociada al tenant
         $escuela = Escuela::with('direccion')->firstOrCreate(
             ['tenant_id' => $tenant->id],
             [
-                'nombre' => $tenant->nombre,
+                'nombre' => $tenant->nombre_academia ?: 'TKD Tigres',
                 'logo_url' => $tenant->logo,
                 'disciplina' => $tenant->disciplina ?? 'taekwondo'
             ]
@@ -53,9 +75,9 @@ class EscuelaController extends Controller
 
     public function update(Request $request)
     {
-        $tenant = auth()->user()->tenant;
+        $tenant = $this->getTenant();
         if (!$tenant) {
-            return response()->json(['message' => 'No tienes una escuela asignada aún. Contacta al administrador.'], 403);
+            return response()->json(['message' => 'No tienes una escuela asignada.'], 403);
         }
         $escuela = Escuela::firstOrCreate(
             ['tenant_id' => $tenant->id],
