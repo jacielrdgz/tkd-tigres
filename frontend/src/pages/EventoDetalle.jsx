@@ -422,7 +422,7 @@ export default function EventoDetalle() {
         styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 48, fontStyle: 'bold', halign: 'left' }
+          1: { cellWidth: 48, halign: 'left' }
         },
         margin: { left: 14, right: 14, bottom: 18 }
       })

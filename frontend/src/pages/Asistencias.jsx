@@ -174,7 +174,7 @@ export default function Asistencias() {
         styles: { fontSize: 7.8, cellPadding: 2.5, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 50, fontStyle: 'bold', halign: 'left' },
+          1: { cellWidth: 50, halign: 'left' },
           2: { cellWidth: 26, halign: 'center' },
           3: { cellWidth: 42, halign: 'center' },
           4: { cellWidth: 15, halign: 'center' },

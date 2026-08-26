@@ -768,7 +768,7 @@ export default function Alumnos() {
         styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 56, fontStyle: 'bold', halign: 'left' },
+          1: { cellWidth: 56, halign: 'left' },
           2: { cellWidth: 24, halign: 'center' },
           3: { cellWidth: 32, halign: 'center' },
           4: { cellWidth: 38, halign: 'center' },

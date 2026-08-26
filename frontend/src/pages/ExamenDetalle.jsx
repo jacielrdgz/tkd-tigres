@@ -514,7 +514,7 @@ export default function ExamenDetalle() {
       styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 46, fontStyle: 'bold', halign: 'left' },
+        1: { cellWidth: 46, halign: 'left' },
         2: { cellWidth: 26, halign: 'center' },
         3: { cellWidth: 26, halign: 'center' },
         4: { cellWidth: 20, halign: 'center' },

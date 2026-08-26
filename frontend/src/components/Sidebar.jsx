@@ -49,6 +49,7 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
   const [avatarHover, setAvatarHover] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [modalFoto, setModalFoto] = useState(null);
+  const [modalConfirmLogout, setModalConfirmLogout] = useState(false);
   const avatarInputRef = useRef(null);
 
   const mobileOpen = propMobileOpen !== undefined ? propMobileOpen : localMobileOpen;
@@ -243,7 +244,7 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
             </div>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={() => setModalConfirmLogout(true)}
             style={styles.logoutBtn}
             onMouseOver={e => {
               e.currentTarget.style.background = '#ef4444';
@@ -263,6 +264,134 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
           </button>
         </div>
       </aside>
+
+      {/* MINI MODAL CONFIRMAR CERRAR SESIÓN */}
+      {modalConfirmLogout && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fadeIn 0.15s ease',
+          }}
+          onClick={() => setModalConfirmLogout(false)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: '24px',
+              padding: '28px 24px',
+              maxWidth: '360px',
+              width: '100%',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              boxSizing: 'border-box',
+              position: 'relative',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Ícono Rojo de Logout */}
+            <div
+              style={{
+                width: '54px',
+                height: '54px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.12)',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '16px',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+              }}
+            >
+              <FiLogOut size={24} style={{ marginLeft: '2px' }} />
+            </div>
+
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>
+              ¿Cerrar Sesión?
+            </h3>
+            <p style={{ margin: '0 0 22px 0', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
+              ¿Estás seguro de que deseas salir de tu cuenta?
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+              <button
+                type="button"
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '13.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onClick={() => setModalConfirmLogout(false)}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '13.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)',
+                  transition: 'all 0.2s ease',
+                }}
+                onClick={async () => {
+                  setModalConfirmLogout(false);
+                  await handleLogout();
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = '#dc2626';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 18px rgba(239, 68, 68, 0.45)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#ef4444';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(239, 68, 68, 0.35)';
+                }}
+              >
+                Sí, Salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL LIGHTBOX VER FOTO */}
       {modalFoto && (

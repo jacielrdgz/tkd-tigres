@@ -158,7 +158,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
       styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 60, fontStyle: 'bold', halign: 'left' },
+        1: { cellWidth: 60, halign: 'left' },
         2: { cellWidth: 32, halign: 'center' },
         3: { cellWidth: 50, halign: 'center' },
         4: { cellWidth: 34, halign: 'center' }
