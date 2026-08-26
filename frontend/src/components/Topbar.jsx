@@ -76,7 +76,7 @@ export default function Topbar({ onToggleSidebar }) {
         <button style={styles.btnMenu} onClick={onToggleSidebar} aria-label="Menu principal">
           ☰
         </button>
-        <h1 style={styles.title}>{title}</h1>
+        <h1 style={styles.title}>{user?.tenant?.nombre || title}</h1>
       </div>
 
       <div style={styles.right} ref={menuRef}>

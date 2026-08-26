@@ -103,13 +103,8 @@ class AlumnoController extends Controller
         if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
             try {
                 $file = $request->file('foto');
-                $fotosDir = storage_path('app/public/fotos');
-                if (!file_exists($fotosDir)) {
-                    @mkdir($fotosDir, 0777, true);
-                }
-                $filename = 'alumno_' . time() . '_' . uniqid() . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
-                $file->move($fotosDir, $filename);
-                $validated['foto'] = 'fotos/' . $filename;
+                $mime = $file->getMimeType() ?: 'image/jpeg';
+                $validated['foto'] = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
             } catch (\Throwable $eFile) {
                 unset($validated['foto']);
             }
@@ -140,25 +135,14 @@ class AlumnoController extends Controller
         $validated = $request->validated();
 
         if ($request->has('eliminar_foto') && $request->eliminar_foto == '1') {
-            if ($alumno->foto) {
-                @Storage::disk('public')->delete($alumno->foto);
-            }
             $validated['foto'] = null;
         }
 
         if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
             try {
-                if ($alumno->foto) {
-                    @Storage::disk('public')->delete($alumno->foto);
-                }
                 $file = $request->file('foto');
-                $fotosDir = storage_path('app/public/fotos');
-                if (!file_exists($fotosDir)) {
-                    @mkdir($fotosDir, 0777, true);
-                }
-                $filename = 'alumno_' . $alumno->id . '_' . time() . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
-                $file->move($fotosDir, $filename);
-                $validated['foto'] = 'fotos/' . $filename;
+                $mime = $file->getMimeType() ?: 'image/jpeg';
+                $validated['foto'] = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
             } catch (\Throwable $eFile) {
                 unset($validated['foto']);
             }

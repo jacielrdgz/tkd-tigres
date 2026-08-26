@@ -146,26 +146,17 @@ class EscuelaController extends Controller
                 }
             }
 
-            // Manejar logo
-            if ($request->hasFile('foto')) {
+            // Manejar logo (almacenamiento en Base64 directo a Supabase)
+            if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
                 try {
                     $file = $request->file('foto');
-                    $logosDir = storage_path('app/public/logos');
-                    if (!file_exists($logosDir)) {
-                        @mkdir($logosDir, 0777, true);
-                    }
-                    $filename = 'logo_' . $tenant->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-                    $file->move($logosDir, $filename);
-                    $path = 'logos/' . $filename;
+                    $mime = $file->getMimeType() ?: 'image/jpeg';
+                    $base64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
 
-                    if ($escuela->logo_url && Storage::disk('public')->exists($escuela->logo_url)) {
-                        @Storage::disk('public')->delete($escuela->logo_url);
-                    }
-
-                    $escuela->update(['logo_url' => $path]);
-                    $tenant->update(['logo' => $path]);
+                    $escuela->update(['logo_url' => $base64]);
+                    $tenant->update(['logo' => $base64]);
                 } catch (\Throwable $eFile) {
-                    \Illuminate\Support\Facades\Log::error("Error guardando logo: " . $eFile->getMessage());
+                    \Illuminate\Support\Facades\Log::error("Error guardando logo Base64: " . $eFile->getMessage());
                 }
             }
 

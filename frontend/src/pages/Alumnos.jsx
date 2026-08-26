@@ -64,7 +64,10 @@ const toastError = (msg) => {
 }
 const limpiarUrl = (url) => {
   if (!url) return null
-  return url.replace(/\\\//g, '/')
+  if (url.startsWith('data:')) return url
+  const clean = url.replace(/\\\//g, '/')
+  if (clean.startsWith('http')) return clean
+  return `${import.meta.env.VITE_API_URL || ''}/storage/${clean}`
 }
 
 const VACIO = {

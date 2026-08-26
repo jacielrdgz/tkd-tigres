@@ -102,7 +102,9 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
     day: 'numeric', month: 'short', year: 'numeric'
   });
 
-  const logoUrlFinal = user?.tenant?.logo ? `${import.meta.env.VITE_API_URL || ''}/storage/${user.tenant.logo}` : logoImg;
+  const logoUrlFinal = user?.tenant?.logo
+    ? (user.tenant.logo.startsWith('data:') ? user.tenant.logo : `${import.meta.env.VITE_API_URL || ''}/storage/${user.tenant.logo}`)
+    : logoImg;
 
   return (
     <>
