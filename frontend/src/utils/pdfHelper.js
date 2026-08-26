@@ -214,28 +214,28 @@ export function dibujarEncabezadoMembrete(doc, {
   }
 
   // Línea 2: Calle y número, Colonia
-  const partesCalleCol = []
+  let calleNum = ''
   if (d?.calle) {
     const num = d.numero_exterior ? ` #${d.numero_exterior}` : ''
     const numInt = d.numero_interior ? ` Int. ${d.numero_interior}` : ''
-    partesCalleCol.push(`${d.calle}${num}${numInt}`)
+    calleNum = `${d.calle}${num}${numInt}`
   }
+  let colStr = ''
   if (d?.colonia) {
-    const colLimpia = d.colonia.replace(/^col\.?\s*/i, '')
-    partesCalleCol.push(colLimpia ? `Amp. ${colLimpia}`.replace(/^Amp\.\s*Amp\.\s*/i, 'Amp. ') : '')
+    colStr = d.colonia
   }
-  const linea2 = partesCalleCol.filter(Boolean).join(' ')
+  const linea2 = [calleNum, colStr].filter(Boolean).join(', ')
 
   if (linea2) {
     curY += 4
     doc.text(linea2, textLeftX, curY)
   }
 
-  // Línea 3: tel y Email
+  // Línea 3: Tel. {telefono} | Email: {email}
   const contactParts = []
-  if (escuelaInfo?.telefono) contactParts.push(`tel ${escuelaInfo.telefono}`)
-  if (escuelaInfo?.email) contactParts.push(`Email ${escuelaInfo.email}`)
-  const linea3 = contactParts.join(' ')
+  if (escuelaInfo?.telefono) contactParts.push(`Tel. ${escuelaInfo.telefono}`)
+  if (escuelaInfo?.email) contactParts.push(`Email: ${escuelaInfo.email}`)
+  const linea3 = contactParts.join(' | ')
 
   if (linea3) {
     curY += 4
