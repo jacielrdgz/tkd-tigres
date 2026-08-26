@@ -6,6 +6,7 @@ import Swal from 'sweetalert2'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
+import { obtenerInfoEscuelaParaPDF } from '../../utils/pdfHelper'
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -125,13 +126,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
   const exportarPDF = async () => {
     if (filtrados.length === 0) return toast.warning('No hay datos para exportar')
 
-    let escuelaInfo = null
-    try {
-      const res = await api.get('/configuracion-escuela')
-      escuelaInfo = res.data
-    } catch (e) {
-      console.warn('No se pudo cargar escuelaInfo para el PDF')
-    }
+    const escuelaInfo = await obtenerInfoEscuelaParaPDF()
 
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
 
@@ -142,21 +137,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
     doc.rect(0, 0, 5, 279, 'F')
 
     // CARGAR LOGO
-    let logoFinal = escuelaInfo?.logo_base64
-    if (!logoFinal) {
-      try {
-        const resp = await fetch('/tigreslogo.jpg')
-        const blob = await resp.blob()
-        logoFinal = await new Promise((res, rej) => {
-          const reader = new FileReader()
-          reader.onload = () => res(reader.result)
-          reader.onerror = rej
-          reader.readAsDataURL(blob)
-        })
-      } catch (err) {
-        console.warn('Logo genérico no disponible')
-      }
-    }
+    let logoFinal = escuelaInfo?.logoBase64
 
     if (logoFinal) {
       const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'

@@ -20,7 +20,6 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
-import logoImg from '../assets/tigreslogo.jpg';
 
 const menu = [
   { path: '/', label: 'Dashboard', icon: <FiGrid size={18} /> },
@@ -106,7 +105,7 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
     ? ((user.tenant.logo.startsWith('data:') || user.tenant.logo.startsWith('http')) 
         ? user.tenant.logo 
         : `${import.meta.env.VITE_API_URL || ''}/storage/${user.tenant.logo}`)
-    : logoImg;
+    : null;
 
   return (
     <>
@@ -125,16 +124,20 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
       }}>
         {/* Logo & tenant info */}
         <div
-          style={{ ...styles.logoSection, cursor: 'pointer' }}
-          title="Ver logo de la escuela"
-          onClick={() => setModalFoto({
-            url: logoUrlFinal,
-            titulo: tenantName,
-            sub: 'Logo Oficial de la Escuela',
-            isAvatar: false
-          })}
+          style={{ ...styles.logoSection, cursor: logoUrlFinal ? 'pointer' : 'default' }}
+          title={logoUrlFinal ? "Ver logo de la escuela" : tenantName}
+          onClick={() => {
+            if (logoUrlFinal) {
+              setModalFoto({
+                url: logoUrlFinal,
+                titulo: tenantName,
+                sub: 'Logo Oficial de la Escuela',
+                isAvatar: false
+              })
+            }
+          }}
         >
-          {user?.tenant?.logo ? (
+          {logoUrlFinal ? (
             <img
               src={logoUrlFinal}
               alt="Logo"

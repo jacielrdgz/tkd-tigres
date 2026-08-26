@@ -361,22 +361,6 @@ export default function Pagos() {
       // CARGAR LOGO
       let logoFinal = escuelaInfo?.logoBase64
 
-      // Fallback a logo genérico si no hay logo de escuela
-      if (!logoFinal) {
-        try {
-          const resp = await fetch('/tigreslogo.jpg')
-          const blob = await resp.blob()
-          logoFinal = await new Promise((res, rej) => {
-            const reader = new FileReader()
-            reader.onload = () => res(reader.result)
-            reader.onerror = rej
-            reader.readAsDataURL(blob)
-          })
-        } catch (err) {
-          console.warn('Logo genérico no disponible:', err.message)
-        }
-      }
-
       if (logoFinal) {
         const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
         doc.addImage(logoFinal, ext, 15, 12, 32, 32)

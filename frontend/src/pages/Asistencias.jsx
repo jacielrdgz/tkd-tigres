@@ -152,20 +152,6 @@ export default function Asistencias() {
 
       // CARGAR LOGO
       let logoFinal = escuelaInfo?.logoBase64
-      if (!logoFinal) {
-        try {
-          const resp = await fetch('/tigreslogo.jpg')
-          const blob = await resp.blob()
-          logoFinal = await new Promise((res, rej) => {
-            const reader = new FileReader()
-            reader.onload = () => res(reader.result)
-            reader.onerror = rej
-            reader.readAsDataURL(blob)
-          })
-        } catch (err) {
-          console.warn('Logo genérico no disponible')
-        }
-      }
 
       if (logoFinal) {
         const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
