@@ -19,7 +19,7 @@ class EscuelaController extends Controller
             $tenant = \App\Models\Tenant::first();
             if (!$tenant) {
                 $tenant = \App\Models\Tenant::create([
-                    'nombre_academia' => 'TKD Tigres',
+                    'nombre' => 'TKD Tigres',
                     'plan' => 'pro',
                     'suscripcion_estado' => 'activa',
                 ]);
@@ -43,7 +43,7 @@ class EscuelaController extends Controller
         $escuela = Escuela::with('direccion')->firstOrCreate(
             ['tenant_id' => $tenant->id],
             [
-                'nombre' => $tenant->nombre_academia ?: 'TKD Tigres',
+                'nombre' => $tenant->nombre ?: 'TKD Tigres',
                 'logo_url' => $tenant->logo,
                 'disciplina' => $tenant->disciplina ?? 'taekwondo'
             ]
