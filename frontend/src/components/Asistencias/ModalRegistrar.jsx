@@ -6,7 +6,7 @@ import Swal from 'sweetalert2'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
-import { obtenerInfoEscuelaParaPDF } from '../../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../../utils/pdfHelper'
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -127,76 +127,14 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
     if (filtrados.length === 0) return toast.warning('No hay datos para exportar')
 
     const escuelaInfo = await obtenerInfoEscuelaParaPDF()
-
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
 
-    // FONDO Y CABECERA (Hoja Membretada)
-    doc.setFillColor(245, 247, 250)
-    doc.rect(0, 0, 216, 279, 'F')
-    doc.setFillColor(59, 130, 246)
-    doc.rect(0, 0, 5, 279, 'F')
-
-    // CARGAR LOGO
-    let logoFinal = escuelaInfo?.logoBase64
-
-    if (logoFinal) {
-      const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
-      doc.addImage(logoFinal, ext, 15, 12, 32, 32)
-    } else {
-      doc.setFillColor(240, 242, 245)
-      doc.circle(31, 28, 16, 'F')
-      doc.setFontSize(20)
-      doc.setTextColor(59, 130, 246)
-      doc.text('TKD', 31, 31, { align: 'center' })
-    }
-
-    // TEXTO CABECERA ESCUELA
-    doc.setTextColor(30, 41, 59)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(22)
-    if (escuelaInfo?.nombre) doc.text(escuelaInfo.nombre.toUpperCase(), 52, 22)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(100)
-    
-    let addressStr = ""
-    if (escuelaInfo?.direccion) {
-      const d = escuelaInfo.direccion
-      const parts = [
-        d.calle && `#${d.numero_exterior || ''}`,
-        d.colonia && `Col. ${d.colonia}`,
-        d.ciudad,
-        d.estado
-      ].filter(Boolean)
-      addressStr = (d.calle ? d.calle + " " : "") + parts.join(", ").replace(/,,/g, ',').trim()
-    }
-    
-    let nextY = 28;
-    if (addressStr) {
-      const splitAddress = doc.splitTextToSize(addressStr, 85);
-      doc.text(splitAddress, 52, nextY)
-      nextY += (splitAddress.length * 4.5);
-    }
-
-    const contacts = [];
-    if (escuelaInfo?.telefono_contacto) contacts.push(`Tel: ${escuelaInfo.telefono_contacto}`);
-    if (escuelaInfo?.email_contacto) contacts.push(`Email: ${escuelaInfo.email_contacto}`);
-    if (contacts.length > 0) doc.text(contacts.join(" | "), 52, nextY)
-
-    // TITULO REPORTE (DERECHA)
-    doc.setFillColor(59, 130, 246)
-    doc.rect(145, 15, 55, 12, 'F')
-    doc.setTextColor(255)
-    doc.setFontSize(11)
-    doc.text("PASE DE LISTA", 172.5, 23, { align: 'center' })
-
-    doc.setTextColor(40)
-    doc.setFontSize(10)
-    doc.text(`Fecha:`, 145, 32)
-    doc.setFont('helvetica', 'bold')
-    doc.text(new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }), 145, 37)
-    doc.setFont('helvetica', 'normal')
+    const startY = dibujarEncabezadoMembrete(doc, {
+      escuelaInfo,
+      tipoReporte: 'PASE DE LISTA',
+      subtituloEtiqueta: 'Fecha de Lista:',
+      subtituloValor: new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+    })
 
     const tableColumn = ["#", "Nombre Alumno", "Cinta", "Horario", "Asistencia"]
     const tableRows = filtrados.map((a, index) => [
@@ -212,9 +150,15 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 55,
+      startY: startY,
       theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246] },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+      styles: { fontSize: 8, cellPadding: 2.8 },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 55, fontStyle: 'bold' }
+      },
+      margin: { left: 14, right: 14, bottom: 18 },
       didParseCell: function (data) {
         if (data.section === 'body' && data.column.index === 4) {
           if (data.cell.raw === 'PRESENTE') {
@@ -228,11 +172,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
       }
     })
 
-    // FOOTER
-    const finalY = doc.lastAutoTable.finalY + 15
-    doc.setFontSize(9)
-    doc.setTextColor(150)
-    doc.text(`Generado el ${new Date().toLocaleDateString('es-MX')} a las ${new Date().toLocaleTimeString('es-MX')}`, 108, 270, { align: 'center' })
+    agregarPieDePagina(doc)
 
     doc.save(`Asistencias_${fecha}.pdf`)
   }

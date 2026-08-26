@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -304,18 +304,19 @@ export default function Pagos() {
     } catch { toast.error("Error al generar Excel") }
   }
 
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
     if (alumnosFiltrados.length === 0) return toast.info('No hay datos para exportar')
 
     try {
-      const doc = new jsPDF()
-      doc.setFontSize(18)
-      doc.text(`Reporte de Pagos - ${user?.tenant?.nombre || 'Escuela'}`, 14, 20)
-      doc.setFontSize(10)
-      doc.setTextColor(100)
-      doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 28)
-      if (filtroMes) doc.text(`Mes: ${filtroMes}`, 14, 34)
-      else if (filtroFechaPago) doc.text(`Filtro de fecha: ${filtroFechaPago}`, 14, 34)
+      const escuelaInfo = await obtenerInfoEscuelaParaPDF(user)
+      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
+
+      const startY = dibujarEncabezadoMembrete(doc, {
+        escuelaInfo,
+        tipoReporte: 'REPORTE DE PAGOS',
+        subtituloEtiqueta: 'Filtro / Período:',
+        subtituloValor: filtroMes || (filtroFechaPago ? `FECHA: ${filtroFechaPago}` : 'GENERAL')
+      })
 
       const rows = alumnosFiltrados.map((a, i) => {
         const horario = horarios.find(h => String(h.id) === String(a.horario_id))
@@ -333,10 +334,18 @@ export default function Pagos() {
       autoTable(doc, {
         head: [['#', 'Alumno', 'Cinta', 'Horario', 'Estado', 'Monto', 'Periodo']],
         body: rows,
-        startY: (filtroMes || filtroFechaPago) ? 40 : 35,
+        startY: startY,
         theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246] }
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+        styles: { fontSize: 8, cellPadding: 2.8 },
+        columnStyles: {
+          0: { cellWidth: 8, halign: 'center' },
+          1: { cellWidth: 50, fontStyle: 'bold' }
+        },
+        margin: { left: 14, right: 14, bottom: 18 }
       })
+
+      agregarPieDePagina(doc)
 
       doc.save(`Reporte_Pagos_${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success("PDF generado ✓")
@@ -352,99 +361,35 @@ export default function Pagos() {
         format: 'letter'
       })
 
-      // FONDO Y CABECERA (Hoja Membretada)
-      doc.setFillColor(245, 247, 250)
-      doc.rect(0, 0, 216, 279, 'F')
-      doc.setFillColor(59, 130, 246)
-      doc.rect(0, 0, 5, 279, 'F')
-
-      // CARGAR LOGO
-      let logoFinal = escuelaInfo?.logoBase64
-
-      if (logoFinal) {
-        const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
-        doc.addImage(logoFinal, ext, 15, 12, 32, 32)
-      } else {
-        doc.setFillColor(240, 242, 245)
-        doc.circle(31, 28, 16, 'F')
-        doc.setFontSize(20)
-        doc.setTextColor(59, 130, 246)
-        doc.text('TKD', 31, 31, { align: 'center' })
-      }
-
-      // TEXTO CABECERA
-      doc.setTextColor(30, 41, 59)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(22)
-      if (escuelaInfo?.nombre) {
-        doc.text(escuelaInfo.nombre.toUpperCase(), 52, 22)
-      }
-
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(100)
-      
-      // DIRECCIÓN DINÁMICA CON AJUSTE DE LÍNEAS
-      let addressStr = ""
-      if (escuelaInfo?.direccion) {
-        const d = escuelaInfo.direccion
-        const parts = [
-          d.calle && `#${d.numero_exterior || ''}`,
-          d.colonia && `Col. ${d.colonia}`,
-          d.ciudad,
-          d.estado
-        ].filter(Boolean)
-        
-        addressStr = (d.calle ? d.calle + " " : "") + parts.join(", ").replace(/,,/g, ',').trim()
-      }
-      
-      let nextY = 28;
-      if (addressStr) {
-        const splitAddress = doc.splitTextToSize(addressStr, 85);
-        doc.text(splitAddress, 52, nextY)
-        nextY += (splitAddress.length * 4.5);
-      }
-
-      const contacts = [];
-      if (escuelaInfo?.telefono_contacto) contacts.push(`Tel: ${escuelaInfo.telefono_contacto}`);
-      if (escuelaInfo?.email_contacto) contacts.push(`Email: ${escuelaInfo.email_contacto}`);
-      
-      if (contacts.length > 0) {
-        doc.text(contacts.join(" | "), 52, nextY)
-      }
-
-      // TITULO RECIBO (DERECHA)
-      doc.setFillColor(59, 130, 246)
-      doc.rect(145, 15, 55, 12, 'F')
-      doc.setTextColor(255)
-      doc.setFontSize(13)
-      doc.text("RECIBO DE PAGO", 172.5, 23, { align: 'center' })
-
-      doc.setTextColor(40)
-      doc.setFontSize(10)
-      doc.text(`Folio: #${pago.id || '001'}`, 145, 32)
-      doc.text(`Fecha: ${fmtFecha(pago.fecha_pago)}`, 145, 37)
+      const startY = dibujarEncabezadoMembrete(doc, {
+        escuelaInfo,
+        tipoReporte: 'COMPROBANTE PAGO',
+        subtituloEtiqueta: 'Fecha de Pago:',
+        subtituloValor: pago.fecha_pago || hoy
+      })
 
       // SECCIÓN ALUMNO
-      doc.setFontSize(12)
+      doc.setTextColor(30, 41, 59)
       doc.setFont('helvetica', 'bold')
-      doc.text("DATOS DEL ALUMNO", 15, 65)
-      doc.line(15, 67, 200, 67)
+      doc.setFontSize(11)
+      doc.text("DATOS DEL ALUMNO", 15, startY + 5)
+      doc.setDrawColor(226, 232, 240)
+      doc.line(15, startY + 7, 200, startY + 7)
 
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(11)
-      doc.text(`Nombre: ${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`, 15, 75)
-      doc.text(`ID del Alumno: ${parseInt(alumno.id)}`, 15, 82)
+      doc.setFontSize(9.5)
+      doc.text(`Nombre: ${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`, 15, startY + 14)
+      doc.text(`ID del Alumno: #${parseInt(alumno.id)}`, 15, startY + 20)
 
       const horario = horarios.find(h => String(h.id) === String(alumno.horario_id))
       const txtHorario = horario ? `${formatHora(horario.hora_inicio)} - ${formatHora(horario.hora_fin)}` : '-'
-      doc.text(`Clase / Horario: ${txtHorario}`, 15, 89)
+      doc.text(`Clase / Horario: ${txtHorario}`, 15, startY + 26)
 
       // SECCIÓN PAGO
-      doc.setFontSize(12)
+      doc.setFontSize(11)
       doc.setFont('helvetica', 'bold')
-      doc.text("DETALLES DEL MOVIMIENTO", 15, 105)
-      doc.line(15, 107, 200, 107)
+      doc.text("DETALLES DEL MOVIMIENTO", 15, startY + 37)
+      doc.line(15, startY + 39, 200, startY + 39)
 
       const fechaRef = (pago.fecha_inicio || hoy) + 'T12:00:00'
       const esMensualidad = pago.tipo === 'mensualidad'
@@ -453,7 +398,7 @@ export default function Pagos() {
         : 'INSCRIPCIÓN ÚNICA'
 
       autoTable(doc, {
-        startY: 115,
+        startY: startY + 45,
         head: [['CONCEPTO', 'PERIODO', 'MÉTODO', 'TOTAL']],
         body: [[
           esMensualidad ? 'MENSUALIDAD TAEKWONDO' : 'INSCRIPCIÓN TAEKWONDO',
@@ -462,41 +407,37 @@ export default function Pagos() {
           `$${parseFloat(pago.monto).toFixed(2)}`
         ]],
         theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246], fontSize: 10, halign: 'center' },
+        headStyles: { fillColor: [37, 99, 235], fontSize: 9.5, halign: 'center', textColor: 255 },
         columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
-        styles: { fontSize: 10, cellPadding: 6 }
+        styles: { fontSize: 9, cellPadding: 5 },
+        margin: { left: 14, right: 14 }
       })
 
-      const finalY = doc.lastAutoTable.finalY + 15
+      const finalY = doc.lastAutoTable.finalY + 12
 
       // CUADRO RESUMEN
-      doc.setFillColor(255)
-      doc.rect(130, finalY, 70, 20, 'F')
-      doc.setDrawColor(59, 130, 246)
-      doc.rect(130, finalY, 70, 20, 'S')
+      doc.setFillColor(248, 250, 252)
+      doc.roundedRect(130, finalY, 70, 18, 2, 2, 'F')
+      doc.setDrawColor(37, 99, 235)
+      doc.roundedRect(130, finalY, 70, 18, 2, 2, 'S')
 
-      doc.setFontSize(14)
+      doc.setFontSize(13)
       doc.setFont('helvetica', 'bold')
-      doc.setTextColor(59, 130, 246)
-      doc.text(`PAGADO: $${parseFloat(pago.monto).toFixed(2)}`, 165, finalY + 13, { align: 'center' })
+      doc.setTextColor(37, 99, 235)
+      doc.text(`PAGADO: $${parseFloat(pago.monto).toFixed(2)}`, 165, finalY + 11.5, { align: 'center' })
 
       // FIRMA Y SELLO
       doc.setTextColor(100)
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-      doc.line(15, 230, 80, 230)
-      doc.text("Firma de Administración", 47, 236, { align: 'center' })
-
-      doc.line(135, 230, 200, 230)
-      doc.text("Sello de la Escuela", 167, 236, { align: 'center' })
-
-      // FOOTER
       doc.setFontSize(9)
-      doc.setTextColor(150)
-      doc.text(`Este documento es un comprobante de pago simplificado generado por ${escuelaInfo?.nombre || 'Administración'}.`, 108, 265, { align: 'center' })
-      if (escuelaInfo?.nombre) {
-        doc.text(escuelaInfo.nombre, 108, 270, { align: 'center' })
-      }
+      doc.setFont('helvetica', 'normal')
+      doc.line(20, 225, 80, 225)
+      doc.text("Firma de Administración", 50, 230, { align: 'center' })
+
+      doc.line(135, 225, 195, 225)
+      doc.text("Sello de la Escuela", 165, 230, { align: 'center' })
+
+      // PIE DE PÁGINA
+      agregarPieDePagina(doc)
 
       doc.save(`Recibo_${escuelaInfo?.nombre || 'Pago'}_${alumno.nombre}_${pago.fecha_pago}.pdf`)
       toast.success("Recibo generado ✓")

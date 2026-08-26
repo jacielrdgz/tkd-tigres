@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
 
 const tieneFoto = (foto) => {
   if (!foto || foto === 'null' || foto === 'NULL' || foto === '') return false
@@ -380,20 +380,21 @@ export default function EventoDetalle() {
     } catch { toast.error("Error al generar Excel") }
   }
 
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
     if (inscritosFiltrados.length === 0) return toast.info('No hay datos para exportar')
     try {
-      const doc = new jsPDF()
-      doc.setFontSize(18)
-      doc.text(`Reporte de Inscritos - ${user?.tenant?.nombre || 'Escuela'}`, 14, 20)
-      doc.setFontSize(10)
-      doc.setTextColor(100)
-      doc.text(`Evento: ${evento.nombre} (${evento.tipo.toUpperCase()})`, 14, 28)
-      doc.text(`Fecha del evento: ${formatFechaNatural(evento.fecha)}`, 14, 34)
-      doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 40)
+      const escuelaInfo = await obtenerInfoEscuelaParaPDF(user)
+      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
+
+      const startY = dibujarEncabezadoMembrete(doc, {
+        escuelaInfo,
+        tipoReporte: esExamen ? 'REPORTE DE EXAMEN' : 'REPORTE DE EVENTO',
+        subtituloEtiqueta: 'Evento:',
+        subtituloValor: `${evento.nombre} (${formatFechaNatural(evento.fecha)})`
+      })
       
       const head = esExamen 
-        ? [['#', 'Alumno', 'Grado Actual', 'Siguiente', 'Costo', 'Pago', 'Result']]
+        ? [['#', 'Alumno', 'Grado Actual', 'Siguiente', 'Costo', 'Pago', 'Resultado']]
         : [['#', 'Alumno', 'Costo', 'Pago', 'Resultado']]
 
       const rows = inscritosFiltrados.map((a, i) => {
@@ -415,11 +416,19 @@ export default function EventoDetalle() {
       autoTable(doc, {
         head: head,
         body: rows,
-        startY: 45,
+        startY: startY,
         theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246] },
-        styles: { fontSize: 8 }
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+        styles: { fontSize: 8, cellPadding: 2.8 },
+        columnStyles: {
+          0: { cellWidth: 8, halign: 'center' },
+          1: { cellWidth: 48, fontStyle: 'bold' }
+        },
+        margin: { left: 14, right: 14, bottom: 18 }
       })
+
+      agregarPieDePagina(doc)
+
       doc.save(`Reporte_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success("PDF generado ✓")
     } catch { toast.error("Error al generar PDF") }
@@ -429,88 +438,42 @@ export default function EventoDetalle() {
     try {
       const escuelaInfo = await obtenerInfoEscuelaParaPDF(user)
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
-      doc.setFillColor(245, 247, 250)
-      doc.rect(0, 0, 216, 279, 'F')
-      doc.setFillColor(59, 130, 246)
-      doc.rect(0, 0, 5, 279, 'F')
 
-      let logoFinal = escuelaInfo?.logoBase64
-      if (logoFinal) {
-        const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
-        doc.addImage(logoFinal, ext, 15, 12, 32, 32)
-      } else {
-        doc.setFillColor(240, 242, 245)
-        doc.circle(31, 28, 16, 'F')
-        doc.setFontSize(20)
-        doc.setTextColor(59, 130, 246)
-        doc.text('TKD', 31, 31, { align: 'center' })
-      }
+      const startY = dibujarEncabezadoMembrete(doc, {
+        escuelaInfo,
+        tipoReporte: 'COMPROBANTE PAGO',
+        subtituloEtiqueta: 'Evento / Fecha:',
+        subtituloValor: `${evento.nombre} • ${inscrito.fecha_pago ? fmtFecha(inscrito.fecha_pago.split(' ')[0]) : fmtFecha(new Date().toISOString().split('T')[0])}`
+      })
 
+      // SECCIÓN ALUMNO
       doc.setTextColor(30, 41, 59)
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(22)
-      if (escuelaInfo?.nombre) doc.text(escuelaInfo.nombre.toUpperCase(), 52, 22)
-      
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(100)
-      let addressStr = ""
-      if (escuelaInfo?.direccion) {
-        const d = escuelaInfo.direccion
-        const parts = [
-          d.calle && `#${d.numero_exterior || ''}`,
-          d.colonia && `Col. ${d.colonia}`,
-          d.ciudad,
-          d.estado
-        ].filter(Boolean)
-        addressStr = (d.calle ? d.calle + " " : "") + parts.join(", ").replace(/,,/g, ',').trim()
-      }
-      let nextY = 28
-      if (addressStr) {
-        const splitAddress = doc.splitTextToSize(addressStr, 85)
-        doc.text(splitAddress, 52, nextY)
-        nextY += (splitAddress.length * 4.5)
-      }
-      const contacts = []
-      if (escuelaInfo?.telefono_contacto) contacts.push(`Tel: ${escuelaInfo.telefono_contacto}`)
-      if (escuelaInfo?.email_contacto) contacts.push(`Email: ${escuelaInfo.email_contacto}`)
-      if (contacts.length > 0) doc.text(contacts.join(" | "), 52, nextY)
-
-      doc.setFillColor(59, 130, 246)
-      doc.rect(145, 15, 55, 12, 'F')
-      doc.setTextColor(255)
-      doc.setFontSize(13)
-      doc.text("RECIBO DE PAGO", 172.5, 23, { align: 'center' })
-
-      doc.setTextColor(40)
-      doc.setFontSize(10)
-      doc.text(`Folio: #${inscrito.pivot_id || '001'}`, 145, 32)
-      doc.text(`Fecha: ${inscrito.fecha_pago ? fmtFecha(inscrito.fecha_pago.split(' ')[0]) : fmtFecha(new Date().toISOString().split('T')[0])}`, 145, 37)
-
-      doc.setFontSize(12)
-      doc.setFont('helvetica', 'bold')
-      doc.text("DATOS DEL ALUMNO", 15, 65)
-      doc.line(15, 67, 200, 67)
-
-      doc.setFont('helvetica', 'normal')
       doc.setFontSize(11)
+      doc.text("DATOS DEL ALUMNO", 15, startY + 5)
+      doc.setDrawColor(226, 232, 240)
+      doc.line(15, startY + 7, 200, startY + 7)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9.5)
       const nom = `${inscrito.nombre} ${inscrito.apellido_paterno} ${inscrito.apellido_materno || ''}`.trim()
-      doc.text(`Nombre: ${nom}`, 15, 75)
-      doc.text(`ID del Alumno: ${parseInt(inscrito.id)}`, 15, 81)
+      doc.text(`Nombre: ${nom}`, 15, startY + 14)
+      doc.text(`ID del Alumno: #${parseInt(inscrito.id)}`, 15, startY + 20)
       
       const horario = horarios.find(h => String(h.id) === String(inscrito.horario_id))
       const txtHorario = horario ? `${formatHora(horario.hora_inicio)} - ${formatHora(horario.hora_fin)}` : '-'
-      doc.text(`Clase / Horario: ${txtHorario}`, 15, 87)
+      doc.text(`Clase / Horario: ${txtHorario}`, 15, startY + 26)
 
       const cintaTxt = esExamen 
         ? (inscrito.examen_detalle?.grado_actual?.nombre_nivel || inscrito.cinta_config?.nombre_nivel || '-')
         : (inscrito.cinta_config?.nombre_nivel || '-')
-      doc.text(`Grado / Cinta: ${cintaTxt}`, 15, 93)
+      doc.text(`Grado / Cinta: ${cintaTxt}`, 15, startY + 32)
 
-      doc.setFontSize(12)
+      // SECCIÓN PAGO
+      doc.setFontSize(11)
       doc.setFont('helvetica', 'bold')
-      doc.text("DETALLES DEL MOVIMIENTO", 15, 105)
-      doc.line(15, 107, 200, 107)
+      doc.text("DETALLES DEL MOVIMIENTO", 15, startY + 43)
+      doc.line(15, startY + 45, 200, startY + 45)
 
       const costoNum = parseFloat(esExamen ? (inscrito.examen_detalle?.costo_examen) : (inscrito.torneo_detalle?.costo_torneo || evento?.costo)) || 0
 
@@ -532,7 +495,7 @@ export default function EventoDetalle() {
         : fmtFecha(new Date().toISOString().split('T')[0])
 
       autoTable(doc, {
-        startY: 115,
+        startY: startY + 51,
         head: [['CONCEPTO', 'DETALLE', 'FECHA PAGO', 'TOTAL']],
         body: [[
           concepto,
@@ -541,40 +504,39 @@ export default function EventoDetalle() {
           `$${costoNum.toFixed(2)}`
         ]],
         theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246], fontSize: 10, halign: 'center' },
+        headStyles: { fillColor: [37, 99, 235], fontSize: 9.5, halign: 'center', textColor: 255 },
         columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
-        styles: { fontSize: 10, cellPadding: 6 }
+        styles: { fontSize: 9, cellPadding: 5 },
+        margin: { left: 14, right: 14 }
       })
 
-      const finalY = doc.lastAutoTable.finalY + 15
-      doc.setFillColor(255)
-      doc.rect(130, finalY, 70, 20, 'F')
-      doc.setDrawColor(59, 130, 246)
-      doc.rect(130, finalY, 70, 20, 'S')
+      const finalY = doc.lastAutoTable.finalY + 12
+      doc.setFillColor(248, 250, 252)
+      doc.roundedRect(130, finalY, 70, 18, 2, 2, 'F')
+      doc.setDrawColor(37, 99, 235)
+      doc.roundedRect(130, finalY, 70, 18, 2, 2, 'S')
 
-      doc.setFontSize(14)
+      doc.setFontSize(13)
       doc.setFont('helvetica', 'bold')
-      doc.setTextColor(59, 130, 246)
-      doc.text(`PAGADO: $${costoNum.toFixed(2)}`, 165, finalY + 13, { align: 'center' })
+      doc.setTextColor(37, 99, 235)
+      doc.text(`PAGADO: $${costoNum.toFixed(2)}`, 165, finalY + 11.5, { align: 'center' })
 
       doc.setTextColor(100)
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-      doc.line(15, 230, 80, 230)
-      doc.text("Firma de Administración", 47, 236, { align: 'center' })
-      doc.line(135, 230, 200, 230)
-      doc.text("Sello de la Escuela", 167, 236, { align: 'center' })
-
       doc.setFontSize(9)
-      doc.setTextColor(150)
-      doc.text(`Este documento es un comprobante de pago simplificado generado por ${escuelaInfo?.nombre || 'Administración'}.`, 108, 265, { align: 'center' })
-      if (escuelaInfo?.nombre) {
-        doc.text(escuelaInfo.nombre, 108, 270, { align: 'center' })
-      }
+      doc.setFont('helvetica', 'normal')
+      doc.line(20, 225, 80, 225)
+      doc.text("Firma de Administración", 50, 230, { align: 'center' })
+      doc.line(135, 225, 195, 225)
+      doc.text("Sello de la Escuela", 165, 230, { align: 'center' })
 
-      doc.save(`Recibo_Evento_${nom.replace(/\s+/g, '_')}.pdf`)
+      agregarPieDePagina(doc)
+
+      doc.save(`Recibo_${escuelaInfo?.nombre || 'Evento'}_${nom}_${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success("Recibo generado ✓")
-    } catch (e) { console.error(e); toast.error("Error al generar recibo") }
+    } catch (e) {
+      console.error(e)
+      toast.error("Error al generar recibo")
+    }
   }
 
   const headers = [

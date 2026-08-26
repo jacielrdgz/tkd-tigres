@@ -8,7 +8,7 @@ import autoTable from 'jspdf-autotable'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { FiDownload, FiChevronDown, FiUserPlus } from 'react-icons/fi'
-import { obtenerInfoEscuelaParaPDF } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
 
 
 
@@ -741,43 +741,18 @@ export default function Alumnos() {
       const escuelaInfo = await obtenerInfoEscuelaParaPDF(user)
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
 
-      // Fondo y barra lateral membretada
-      doc.setFillColor(245, 247, 250)
-      doc.rect(0, 0, 216, 279, 'F')
-      doc.setFillColor(59, 130, 246)
-      doc.rect(0, 0, 5, 279, 'F')
+      // Dibujar membrete oficial superior
+      const startY = dibujarEncabezadoMembrete(doc, {
+        escuelaInfo,
+        tipoReporte: 'REPORTE ALUMNOS',
+        subtituloEtiqueta: 'Total Listados:',
+        subtituloValor: `${alumnosMostrados.length} ALUMNOS`
+      })
 
-      // Dibujar Logo
-      if (escuelaInfo.logoBase64) {
-        const ext = escuelaInfo.logoBase64.includes('png') ? 'PNG' : 'JPEG'
-        doc.addImage(escuelaInfo.logoBase64, ext, 15, 12, 30, 30)
-      } else {
-        doc.setFillColor(230, 235, 245)
-        doc.circle(30, 27, 15, 'F')
-        doc.setFontSize(16)
-        doc.setTextColor(59, 130, 246)
-        doc.setFont('helvetica', 'bold')
-        doc.text('TKD', 30, 31, { align: 'center' })
-      }
-
-      // Membrete Escuela
-      doc.setTextColor(30, 41, 59)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(20)
-      doc.text((escuelaInfo.nombre || 'MI ESCUELA').toUpperCase(), 50, 22)
-
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(100)
-      doc.text(`Reporte Oficial de Alumnos • Disciplina: ${escuelaInfo.disciplina}`, 50, 28)
-      doc.text(`Generado el: ${new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, 50, 34)
-      doc.text(`Total de alumnos: ${alumnosMostrados.length}`, 50, 40)
-
-      const tableColumn = ["ID", "Nombre Alumno", "Edad", "Cinta", "Teléfono Tutor", "Estatus"]
-      const tableRows = alumnosMostrados.map(a => [
-        a.id || '-',
+      const tableColumn = ["#", "Alumno", "Cinta", "Teléfono Tutor", "Estatus"]
+      const tableRows = alumnosMostrados.map((a, idx) => [
+        idx + 1,
         `${limpiarDato(a.nombre)} ${limpiarDato(a.apellido_paterno)} ${limpiarDato(a.apellido_materno)}`,
-        `${a.edad || 0} años`,
         a.cinta_config?.nombre_nivel || 'Sin cinta',
         limpiarDato(a.telefono_tutor),
         capitalizar(a.estatus || 'activo')
@@ -786,14 +761,19 @@ export default function Alumnos() {
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
-        startY: 48,
+        startY: startY,
         theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
-        styles: { fontSize: 8.5 },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 8.5, cellPadding: 3.5 },
         columnStyles: {
-          1: { cellWidth: 60 }
-        }
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 65, fontStyle: 'bold' }
+        },
+        margin: { left: 14, right: 14, bottom: 18 }
       })
+
+      // Agregar pie de página membretado con fecha exacta
+      agregarPieDePagina(doc)
 
       doc.save(`Reporte_Alumnos_${new Date().toISOString().split('T')[0]}.pdf`)
       toastSuccess("Documento PDF generado 📄")

@@ -13,7 +13,7 @@ import ModalAlumno from '../components/Asistencias/ModalAlumno'
 import ModalDia from '../components/Asistencias/ModalDia'
 import ModalRegistrar from '../components/Asistencias/ModalRegistrar'
 import Swal from 'sweetalert2'
-import { obtenerInfoEscuelaParaPDF } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
 
 function mesActual() {
   const hoy = new Date()
@@ -141,80 +141,19 @@ export default function Asistencias() {
       XLSX.writeFile(wb, `Asistencias_${mes}.xlsx`)
     } else {
       const escuelaInfo = await obtenerInfoEscuelaParaPDF()
-
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
 
-      // FONDO Y CABECERA (Hoja Membretada)
-      doc.setFillColor(245, 247, 250)
-      doc.rect(0, 0, 216, 279, 'F')
-      doc.setFillColor(59, 130, 246)
-      doc.rect(0, 0, 5, 279, 'F')
-
-      // CARGAR LOGO
-      let logoFinal = escuelaInfo?.logoBase64
-
-      if (logoFinal) {
-        const ext = logoFinal.includes('png') ? 'PNG' : 'JPEG'
-        doc.addImage(logoFinal, ext, 15, 12, 32, 32)
-      } else {
-        doc.setFillColor(240, 242, 245)
-        doc.circle(31, 28, 16, 'F')
-        doc.setFontSize(20)
-        doc.setTextColor(59, 130, 246)
-        doc.text('TKD', 31, 31, { align: 'center' })
-      }
-
-      // TEXTO CABECERA ESCUELA
-      doc.setTextColor(30, 41, 59)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(22)
-      if (escuelaInfo?.nombre) doc.text(escuelaInfo.nombre.toUpperCase(), 52, 22)
-
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(100)
-      
-      let addressStr = ""
-      if (escuelaInfo?.direccion) {
-        const d = escuelaInfo.direccion
-        const parts = [
-          d.calle && `#${d.numero_exterior || ''}`,
-          d.colonia && `Col. ${d.colonia}`,
-          d.ciudad,
-          d.estado
-        ].filter(Boolean)
-        addressStr = (d.calle ? d.calle + " " : "") + parts.join(", ").replace(/,,/g, ',').trim()
-      }
-      
-      let nextY = 28;
-      if (addressStr) {
-        const splitAddress = doc.splitTextToSize(addressStr, 85);
-        doc.text(splitAddress, 52, nextY)
-        nextY += (splitAddress.length * 4.5);
-      }
-
-      const contacts = [];
-      if (escuelaInfo?.telefono_contacto) contacts.push(`Tel: ${escuelaInfo.telefono_contacto}`);
-      if (escuelaInfo?.email_contacto) contacts.push(`Email: ${escuelaInfo.email_contacto}`);
-      if (contacts.length > 0) doc.text(contacts.join(" | "), 52, nextY)
-
-      // TITULO REPORTE (DERECHA)
-      doc.setFillColor(59, 130, 246)
-      doc.rect(145, 15, 55, 12, 'F')
-      doc.setTextColor(255)
-      doc.setFontSize(11)
-      doc.text("REPORTE ASISTENCIA", 172.5, 23, { align: 'center' })
-
-      doc.setTextColor(40)
-      doc.setFontSize(10)
-      doc.text(`Período:`, 145, 32)
-      doc.setFont('helvetica', 'bold')
-      doc.text(mesLabel.toUpperCase(), 145, 37)
-      doc.setFont('helvetica', 'normal')
+      // Dibujar membrete oficial superior
+      const startY = dibujarEncabezadoMembrete(doc, {
+        escuelaInfo,
+        tipoReporte: 'REPORTE ASISTENCIA',
+        subtituloEtiqueta: 'Período:',
+        subtituloValor: mesLabel
+      })
 
       // TABLA
       autoTable(doc, {
-        startY: 55,
+        startY: startY,
         head: [['#', 'Alumno', 'Cinta', 'Horario', 'Asistió', 'Faltó', 'Total', '%']],
         body: dataAExportar.map((a, i) => [
           i + 1,
@@ -229,14 +168,17 @@ export default function Asistencias() {
           `${a.pct}%`,
         ]),
         theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246] },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+        styles: { fontSize: 8, cellPadding: 2.8 },
+        columnStyles: {
+          0: { cellWidth: 8, halign: 'center' },
+          1: { cellWidth: 55, fontStyle: 'bold' }
+        },
+        margin: { left: 14, right: 14, bottom: 18 }
       })
 
       // FOOTER
-      const finalY = doc.lastAutoTable.finalY + 15
-      doc.setFontSize(9)
-      doc.setTextColor(150)
-      doc.text(`Generado el ${new Date().toLocaleDateString('es-MX')} a las ${new Date().toLocaleTimeString('es-MX')}`, 108, 270, { align: 'center' })
+      agregarPieDePagina(doc)
 
       doc.save(`Asistencias_${mes}.pdf`)
     }
