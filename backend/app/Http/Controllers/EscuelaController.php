@@ -34,115 +34,127 @@ class EscuelaController extends Controller
 
     public function show()
     {
-        $tenant = $this->getTenant();
-        if (!$tenant) {
-            return response()->json(['message' => 'No tienes una escuela asignada.'], 403);
-        }
-        
-        // Carga o crea la escuela asociada al tenant
-        $escuela = Escuela::with('direccion')->firstOrCreate(
-            ['tenant_id' => $tenant->id],
-            [
-                'nombre' => $tenant->nombre ?: 'TKD Tigres',
-                'logo_url' => $tenant->logo,
-                'disciplina' => $tenant->disciplina ?? 'taekwondo'
-            ]
-        );
-
-        $escuela->load('direccion');
-
-        // Marcar como confirmado si ya contiene datos y el usuario visita la página
-        if ($escuela->nombre && $escuela->titular) {
-            $config = $tenant->configuracion ?? [];
-            if (empty($config['setup_confirmado']['info_basica'])) {
-                $config['setup_confirmado']['info_basica'] = true;
-                $tenant->update(['configuracion' => $config]);
+        try {
+            $tenant = $this->getTenant();
+            if (!$tenant) {
+                return response()->json(['message' => 'No tienes una escuela asignada.'], 403);
             }
-        }
+            
+            // Carga o crea la escuela asociada al tenant
+            $escuela = Escuela::with('direccion')->firstOrCreate(
+                ['tenant_id' => $tenant->id],
+                [
+                    'nombre' => $tenant->nombre ?: 'TKD Tigres',
+                    'logo_url' => $tenant->logo,
+                    'disciplina' => $tenant->disciplina ?? 'taekwondo'
+                ]
+            );
 
-        // Adjuntar logo en base64 para evitar problemas de CORS en el PDF del frontend
-        $logoBase64 = null;
-        if ($escuela->logo_url && Storage::disk('public')->exists($escuela->logo_url)) {
-            $path = Storage::disk('public')->path($escuela->logo_url);
-            $type = pathinfo($path, PATHINFO_EXTENSION);
-            $data = file_get_contents($path);
-            $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
-        }
-        $escuela->logo_base64 = $logoBase64;
+            $escuela->load('direccion');
 
-        return response()->json($escuela);
+            // Marcar como confirmado si ya contiene datos y el usuario visita la página
+            if ($escuela->nombre && $escuela->titular) {
+                $config = $tenant->configuracion ?? [];
+                if (empty($config['setup_confirmado']['info_basica'])) {
+                    $config['setup_confirmado']['info_basica'] = true;
+                    $tenant->update(['configuracion' => $config]);
+                }
+            }
+
+            // Adjuntar logo en base64 para evitar problemas de CORS en el PDF del frontend
+            $logoBase64 = null;
+            if ($escuela->logo_url && Storage::disk('public')->exists($escuela->logo_url)) {
+                $path = Storage::disk('public')->path($escuela->logo_url);
+                $type = pathinfo($path, PATHINFO_EXTENSION);
+                $data = file_get_contents($path);
+                $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+            }
+            $escuela->logo_base64 = $logoBase64;
+
+            return response()->json($escuela);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
     }
 
     public function update(Request $request)
     {
-        $tenant = $this->getTenant();
-        if (!$tenant) {
-            return response()->json(['message' => 'No tienes una escuela asignada.'], 403);
-        }
-        $escuela = Escuela::firstOrCreate(
-            ['tenant_id' => $tenant->id],
-            [
-                'nombre' => $tenant->nombre,
-                'logo_url' => $tenant->logo,
-                'disciplina' => $tenant->disciplina ?? 'taekwondo'
-            ]
-        );
-
-        $validated = $request->validate([
-            'nombre'            => 'required|string|max:255',
-            'titular'           => 'nullable|string|max:255',
-            'disciplina'        => 'nullable|string|max:255',
-            'eslogan'           => 'nullable|string|max:255',
-            'descripcion'       => 'nullable|string',
-            'telefono_contacto' => 'nullable|string|max:50',
-            'email_contacto'    => 'nullable|email|max:255',
-            'redes_sociales'    => 'nullable|array',
-            'foto'              => 'nullable|image|max:2048',
-            
-            // Campos de dirección
-            'calle'             => 'nullable|string|max:255',
-            'numero_exterior'   => 'nullable|string|max:50',
-            'numero_interior'   => 'nullable|string|max:50',
-            'colonia'           => 'nullable|string|max:255',
-            'ciudad'            => 'nullable|string|max:255',
-            'estado'            => 'nullable|string|max:255',
-            'codigo_postal'     => 'nullable|string|max:20',
-            'referencias'       => 'nullable|string|max:255',
-        ]);
-
-        // Actualizar datos de la escuela
-        $escuela->update($request->only([
-            'nombre', 'titular', 'disciplina', 'eslogan', 'descripcion', 
-            'telefono_contacto', 'email_contacto', 'redes_sociales'
-        ]));
-
-        // Manejar logo
-        if ($request->hasFile('foto')) {
-            if ($escuela->logo_url) {
-                Storage::disk('public')->delete($escuela->logo_url);
+        try {
+            $tenant = $this->getTenant();
+            if (!$tenant) {
+                return response()->json(['message' => 'No tienes una escuela asignada.'], 403);
             }
-            $path = $request->file('foto')->store('logos', 'public');
-            $escuela->update(['logo_url' => $path]);
-            
-            // Opcional: sincronizar con el logo del tenant por ahora
-            $tenant->update(['logo' => $path]);
+            $escuela = Escuela::firstOrCreate(
+                ['tenant_id' => $tenant->id],
+                [
+                    'nombre' => $tenant->nombre ?: 'TKD Tigres',
+                    'logo_url' => $tenant->logo,
+                    'disciplina' => $tenant->disciplina ?? 'taekwondo'
+                ]
+            );
+
+            $validated = $request->validate([
+                'nombre'            => 'nullable|string|max:255',
+                'titular'           => 'nullable|string|max:255',
+                'disciplina'        => 'nullable|string|max:255',
+                'eslogan'           => 'nullable|string|max:255',
+                'descripcion'       => 'nullable|string',
+                'telefono_contacto' => 'nullable|string|max:50',
+                'email_contacto'    => 'nullable|email|max:255',
+                'redes_sociales'    => 'nullable|array',
+                'foto'              => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:10240',
+                
+                // Campos de dirección
+                'calle'             => 'nullable|string|max:255',
+                'numero_exterior'   => 'nullable|string|max:50',
+                'numero_interior'   => 'nullable|string|max:50',
+                'colonia'           => 'nullable|string|max:255',
+                'ciudad'            => 'nullable|string|max:255',
+                'estado'            => 'nullable|string|max:255',
+                'codigo_postal'     => 'nullable|string|max:20',
+                'referencias'       => 'nullable|string|max:255',
+            ]);
+
+            // Actualizar datos de la escuela
+            $dataToUpdate = array_filter($request->only([
+                'nombre', 'titular', 'disciplina', 'eslogan', 'descripcion', 
+                'telefono_contacto', 'email_contacto', 'redes_sociales'
+            ]), function ($val) { return $val !== null; });
+
+            if (!empty($dataToUpdate)) {
+                $escuela->update($dataToUpdate);
+            }
+
+            // Manejar logo
+            if ($request->hasFile('foto')) {
+                if ($escuela->logo_url) {
+                    Storage::disk('public')->delete($escuela->logo_url);
+                }
+                $path = $request->file('foto')->store('logos', 'public');
+                $escuela->update(['logo_url' => $path]);
+                
+                // Opcional: sincronizar con el logo del tenant por ahora
+                $tenant->update(['logo' => $path]);
+            }
+
+            // Actualizar o crear dirección
+            $escuela->direccion()->updateOrCreate(
+                ['escuela_id' => $escuela->id],
+                $request->only([
+                    'calle', 'numero_exterior', 'numero_interior', 'colonia', 
+                    'ciudad', 'estado', 'codigo_postal', 'referencias'
+                ])
+            );
+
+            // Al guardar cambios, se confirma automáticamente la información básica
+            $config = $tenant->configuracion ?? [];
+            $config['setup_confirmado']['info_basica'] = true;
+            $tenant->update(['configuracion' => $config]);
+
+            return response()->json($escuela->load('direccion'));
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
         }
-
-        // Actualizar o crear dirección
-        $escuela->direccion()->updateOrCreate(
-            ['escuela_id' => $escuela->id],
-            $request->only([
-                'calle', 'numero_exterior', 'numero_interior', 'colonia', 
-                'ciudad', 'estado', 'codigo_postal', 'referencias'
-            ])
-        );
-
-        // Al guardar cambios, se confirma automáticamente la información básica
-        $config = $tenant->configuracion ?? [];
-        $config['setup_confirmado']['info_basica'] = true;
-        $tenant->update(['configuracion' => $config]);
-
-        return response()->json($escuela->load('direccion'));
     }
 
     /**
@@ -150,7 +162,7 @@ class EscuelaController extends Controller
      */
     public function configStatus()
     {
-        $tenant = auth()->user()->tenant;
+        $tenant = $this->getTenant();
         if (!$tenant) {
             return response()->json([
                 'configurado' => false,
