@@ -148,14 +148,25 @@ class EscuelaController extends Controller
 
             // Manejar logo
             if ($request->hasFile('foto')) {
-                if ($escuela->logo_url) {
-                    Storage::disk('public')->delete($escuela->logo_url);
+                try {
+                    $file = $request->file('foto');
+                    $logosDir = storage_path('app/public/logos');
+                    if (!file_exists($logosDir)) {
+                        @mkdir($logosDir, 0777, true);
+                    }
+                    $filename = 'logo_' . $tenant->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                    $file->move($logosDir, $filename);
+                    $path = 'logos/' . $filename;
+
+                    if ($escuela->logo_url && Storage::disk('public')->exists($escuela->logo_url)) {
+                        @Storage::disk('public')->delete($escuela->logo_url);
+                    }
+
+                    $escuela->update(['logo_url' => $path]);
+                    $tenant->update(['logo' => $path]);
+                } catch (\Throwable $eFile) {
+                    \Illuminate\Support\Facades\Log::error("Error guardando logo: " . $eFile->getMessage());
                 }
-                $path = $request->file('foto')->store('logos', 'public');
-                $escuela->update(['logo_url' => $path]);
-                
-                // Sincronizar el logo con el tenant
-                $tenant->update(['logo' => $path]);
             }
 
             // Actualizar o crear dirección

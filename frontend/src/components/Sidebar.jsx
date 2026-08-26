@@ -95,7 +95,7 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
     if (isMobile) setMobileOpen(false);
   };
 
-  const tenantName = isSuperAdmin ? 'Administrador Global' : (user?.tenant?.nombre || 'Mi Escuela');
+  const tenantName = user?.tenant?.nombre || (isSuperAdmin ? 'Administrador Global' : 'Tigres');
   const planLabel = isSuperAdmin ? 'SUPERADMIN' : (user?.tenant?.plan?.toUpperCase() || 'FREE');
 
   const fechaHoy = new Date().toLocaleDateString('es-MX', {

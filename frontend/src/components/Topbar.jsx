@@ -25,7 +25,7 @@ export default function Topbar({ onToggleSidebar }) {
   const menuRef = useRef(null);
 
   // Determinar título
-  let title = ROUTE_TITLES[location.pathname] || 'TKD Tigres';
+  let title = ROUTE_TITLES[location.pathname] || (user?.tenant?.nombre || 'Tigres');
   if (location.pathname.startsWith('/eventos/')) {
     title = 'Detalle de Evento';
   } else if (location.pathname.startsWith('/admin/academias/')) {
