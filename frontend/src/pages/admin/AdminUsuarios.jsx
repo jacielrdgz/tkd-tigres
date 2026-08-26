@@ -2,13 +2,28 @@ import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
+import {
+  FiUsers,
+  FiSearch,
+  FiKey,
+  FiUserCheck,
+  FiHome,
+  FiSlash,
+  FiCheckCircle,
+  FiTrash2,
+  FiX,
+  FiCheck,
+  FiLock,
+  FiShield
+} from 'react-icons/fi';
+import CustomDropdown from '../../components/Common/CustomDropdown';
 
 export default function AdminUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [academias, setAcademias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  
+
   // Filters
   const [roleFilter, setRoleFilter] = useState('');
   const [tenantFilter, setTenantFilter] = useState('');
@@ -17,14 +32,14 @@ export default function AdminUsuarios() {
   // Modals state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showEscuelaModal, setShowEscuelaModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   // Form inputs
   const [newPassword, setNewPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState('secretario');
-  const [procesando, setProcesando] = useState(false);
-  const [showEscuelaModal, setShowEscuelaModal] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState('');
+  const [procesando, setProcesando] = useState(false);
 
   useEffect(() => {
     fetchAcademias();
@@ -71,13 +86,14 @@ export default function AdminUsuarios() {
 
   const handleToggleSuspension = (user) => {
     const actionText = user.is_suspended ? 'reactivar' : 'suspender';
-    
+
     Swal.fire({
       title: `¿${actionText.charAt(0).toUpperCase() + actionText.slice(1)} usuario?`,
       text: `¿Estás seguro de que deseas ${actionText} la cuenta de ${user.name}?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: `Sí, ${actionText}`,
+      cancelButtonText: 'Cancelar',
       confirmButtonColor: user.is_suspended ? 'var(--accent-green)' : 'var(--accent-red)',
       background: 'var(--bg-secondary)',
       color: 'var(--text-primary)',
@@ -102,20 +118,19 @@ export default function AdminUsuarios() {
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
+    if (!newPassword || newPassword.length < 6) {
       toast.error('La contraseña debe tener al menos 6 caracteres');
       return;
     }
-
     setProcesando(true);
     try {
-      await api.post(`/admin/usuarios/${selectedUser.id}/reset-password`, {
-        password: newPassword
+      const res = await api.post(`/admin/usuarios/${selectedUser.id}/forzar-password`, {
+        password: newPassword,
       });
-      toast.success('Contraseña restablecida con éxito');
+      toast.success(res.data.message || 'Contraseña actualizada');
       setShowPasswordModal(false);
     } catch (err) {
-      toast.error('Error al restablecer la contraseña');
+      toast.error(err.response?.data?.message || 'Error al cambiar contraseña');
     } finally {
       setProcesando(false);
     }
@@ -131,41 +146,17 @@ export default function AdminUsuarios() {
     e.preventDefault();
     setProcesando(true);
     try {
-      await api.post(`/admin/usuarios/${selectedUser.id}/role`, {
-        role: selectedRole
+      const res = await api.post(`/admin/usuarios/${selectedUser.id}/cambiar-rol`, {
+        role: selectedRole,
       });
-      toast.success('Rol de usuario actualizado');
+      toast.success(res.data.message || 'Rol actualizado');
       setShowRoleModal(false);
       fetchUsuarios();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al cambiar el rol');
+      toast.error(err.response?.data?.message || 'Error al cambiar rol');
     } finally {
       setProcesando(false);
     }
-  };
-
-  const handleDeleteUser = (user) => {
-    Swal.fire({
-      title: '¿Eliminar usuario permanentemente?',
-      html: `<p>Se eliminará la cuenta de <strong>${user.name}</strong> (${user.email}).</p><p style="color:#ef4444;font-weight:bold;">Esta acción no se puede deshacer.</p>`,
-      icon: 'error',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#ef4444',
-      background: 'var(--bg-secondary)',
-      color: 'var(--text-primary)',
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          const res = await api.delete(`/admin/usuarios/${user.id}`);
-          toast.success(res.data.message || 'Usuario eliminado');
-          fetchUsuarios();
-        } catch (err) {
-          toast.error(err.response?.data?.message || 'Error al eliminar usuario');
-        }
-      }
-    });
   };
 
   const handleOpenEscuelaModal = (user) => {
@@ -183,7 +174,7 @@ export default function AdminUsuarios() {
     setProcesando(true);
     try {
       const res = await api.post(`/admin/usuarios/${selectedUser.id}/cambiar-escuela`, {
-        tenant_id: selectedTenantId
+        tenant_id: selectedTenantId,
       });
       toast.success(res.data.message || 'Escuela actualizada');
       setShowEscuelaModal(false);
@@ -195,263 +186,202 @@ export default function AdminUsuarios() {
     }
   };
 
-  // Local client side search filter
-  const filtered = usuarios.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    u.escuela_nombre.toLowerCase().includes(search.toLowerCase())
+  const filtered = usuarios.filter((u) =>
+    (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.escuela_nombre || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const getRoleBadge = (role, isSuperadmin) => {
     if (isSuperadmin) {
-      return <span style={{ ...styles.badge, background: 'rgba(168,85,247,0.1)', color: '#a855f7' }}>SuperAdmin</span>;
+      return (
+        <span style={{ ...styles.badge, background: 'rgba(168, 85, 247, 0.12)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.25)' }}>
+          SuperAdmin
+        </span>
+      );
     }
     const badges = {
-      owner: { bg: 'rgba(59,130,246,0.1)', color: '#3b82f6', text: 'Administrador' },
-      instructor: { bg: 'rgba(245,158,11,0.1)', color: '#f59e0b', text: 'Instructor' },
-      secretario: { bg: 'rgba(16,185,129,0.1)', color: '#10b981', text: 'Secretario' },
+      owner: { bg: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', text: 'Administrador' },
+      instructor: { bg: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', text: 'Instructor' },
+      secretario: { bg: 'var(--accent-green-bg)', color: 'var(--accent-green)', text: 'Secretario' },
     };
-    const b = badges[role] || { bg: 'rgba(255,255,255,0.05)', color: '#fff', text: role };
+    const b = badges[role] || { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', text: role };
     return <span style={{ ...styles.badge, background: b.bg, color: b.color }}>{b.text}</span>;
   };
 
   return (
     <div style={styles.container}>
+      {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Gestión de Usuarios</h1>
-          <p style={styles.subtitle}>Administra los accesos, contraseñas y roles de todos los usuarios en el sistema</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={styles.headerIconBadge}>
+              <FiUsers size={22} color="var(--accent-blue)" />
+            </div>
+            <h1 style={styles.title}>Gestión de Usuarios Globales</h1>
+          </div>
+          <p style={styles.subtitle}>Supervisa accesos, contraseñas, roles y vinculaciones de escuelas</p>
         </div>
       </div>
 
-      {/* FILTER BAR */}
+      {/* Filters Bar */}
       <div style={styles.filterBar}>
-        <div style={styles.searchContainer}>
-          <input
-            style={styles.search}
-            placeholder="🔍 Buscar por nombre, correo o academia..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={styles.searchWrapper}>
+            <FiSearch size={15} style={styles.searchIcon} />
+            <input
+              style={styles.search}
+              placeholder="Buscar por usuario o escuela..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--accent-blue)';
+                e.currentTarget.style.background = 'var(--bg-tertiary)';
+                e.currentTarget.style.boxShadow = '0 0 12px rgba(59, 130, 246, 0.3)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.background = 'var(--bg-secondary)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+          </div>
+
+          <CustomDropdown
+            label="Todos los Roles"
+            options={[
+              { value: '', label: 'Todos los Roles' },
+              { value: 'owner', label: 'Administrador (Owner)' },
+              { value: 'instructor', label: 'Instructor' },
+              { value: 'secretario', label: 'Secretario' },
+            ]}
+            value={roleFilter}
+            onChange={(val) => setRoleFilter(val)}
+            minWidth="170px"
+          />
+
+          <CustomDropdown
+            label="Todas las Academias"
+            options={[
+              { value: '', label: 'Todas las Academias' },
+              ...academias.map((a) => ({ value: String(a.id), label: a.nombre })),
+            ]}
+            value={tenantFilter}
+            onChange={(val) => setTenantFilter(val)}
+            minWidth="180px"
+          />
+
+          <CustomDropdown
+            label="Todos los Estados"
+            options={[
+              { value: '', label: 'Todos los Estados' },
+              { value: 'activo', label: 'Cuentas Activas' },
+              { value: 'suspendido', label: 'Cuentas Suspendidas' },
+            ]}
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            minWidth="170px"
           />
         </div>
-        <div style={styles.filtersContainer}>
-          <div style={styles.filterGroup}>
-            <label style={styles.filterLabel}>Rol</label>
-            <select
-              style={styles.select}
-              value={roleFilter}
-              onChange={e => setRoleFilter(e.target.value)}
-            >
-              <option value="">Todos los Roles</option>
-              <option value="owner">Administrador (Owner)</option>
-              <option value="instructor">Instructor</option>
-              <option value="secretario">Secretario</option>
-            </select>
-          </div>
 
-          <div style={styles.filterGroup}>
-            <label style={styles.filterLabel}>Academia</label>
-            <select
-              style={styles.select}
-              value={tenantFilter}
-              onChange={e => setTenantFilter(e.target.value)}
-            >
-              <option value="">Todas las Academias</option>
-              {academias.map(t => (
-                <option key={t.id} value={t.id}>{t.nombre}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={styles.filterGroup}>
-            <label style={styles.filterLabel}>Estado</label>
-            <select
-              style={styles.select}
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-            >
-              <option value="">Todos</option>
-              <option value="activo">Activo</option>
-              <option value="suspendido">Suspendido</option>
-            </select>
-          </div>
-        </div>
+        <span style={styles.counterText}>
+          {filtered.length} usuario{filtered.length === 1 ? '' : 's'}
+        </span>
       </div>
 
-      {/* USERS TABLE */}
+      {/* Table Card */}
       {loading ? (
-        <div style={styles.loading}>Cargando usuarios de la plataforma...</div>
+        <div style={styles.loadingContainer}>
+          <div style={styles.spinner} />
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '12px' }}>
+            Cargando usuarios del sistema...
+          </p>
+        </div>
       ) : (
         <div style={styles.tableCard}>
           {filtered.length === 0 ? (
-            <div style={styles.empty}>No se encontraron usuarios que coincidan con los filtros.</div>
+            <div style={styles.empty}>No se encontraron usuarios con los filtros aplicados.</div>
           ) : (
             <div style={styles.tableResponsive}>
               <table style={styles.table}>
                 <thead>
                   <tr>
                     <th style={styles.th}>Usuario</th>
-                    <th style={styles.th}>Escuela Solicitada</th>
-                    <th style={styles.th}>Escuela Actual</th>
-                    <th style={styles.th}>Rol</th>
-                    <th style={styles.th}>Estado</th>
-                    <th style={styles.th}>Último Ingreso</th>
-                    <th style={styles.th}>Acciones</th>
+                    <th style={styles.th}>Academia Asignada</th>
+                    <th style={{ ...styles.th, textAlign: 'center' }}>Rol</th>
+                    <th style={{ ...styles.th, textAlign: 'center' }}>Estado</th>
+                    <th style={{ ...styles.th, textAlign: 'center' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(u => (
-                    <tr key={u.id} style={styles.tr}>
+                  {filtered.map((u) => (
+                    <tr
+                      key={u.id}
+                      style={styles.tr}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
                       <td style={styles.td}>
                         <div style={styles.userInfo}>
-                          <strong>{u.name}</strong>
-                          <span>{u.email}</span>
+                          <span style={styles.userName}>{u.name}</span>
+                          <span style={styles.userEmail}>{u.email}</span>
                         </div>
                       </td>
                       <td style={styles.td}>
-                        <span style={{ color: u.escuela_solicitada && u.escuela_solicitada !== 'No especificada' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '13px' }}>
-                          {u.escuela_solicitada}
-                        </span>
+                        <div style={styles.schoolInfo}>
+                          <span style={styles.schoolName}>{u.escuela_nombre || 'Sin Escuela Asignada'}</span>
+                          {u.tenant_id && <span style={styles.schoolMeta}>Tenant ID: #{u.tenant_id}</span>}
+                        </div>
                       </td>
-                      <td style={styles.td}>
-                        <span style={u.is_superadmin ? { color: 'var(--accent-purple)', fontWeight: 'bold' } : { fontWeight: '600' }}>
-                          {u.escuela_nombre}
-                        </span>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
+                        {getRoleBadge(u.role, u.is_superadmin)}
                       </td>
-                      <td style={styles.td}>{getRoleBadge(u.role, u.is_superadmin)}</td>
-                      <td style={styles.td}>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
                         {u.is_suspended ? (
-                          <span style={{ ...styles.statusIndicator, background: '#ef4444' }}>Suspendido</span>
+                          <span style={{ ...styles.badge, background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}>
+                            SUSPENDIDO
+                          </span>
                         ) : (
-                          <span style={{ ...styles.statusIndicator, background: '#22c55e' }}>Activo</span>
+                          <span style={{ ...styles.badge, background: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>
+                            ACTIVO
+                          </span>
                         )}
                       </td>
-                      <td style={styles.td}>
-                        {u.last_login_at 
-                          ? new Date(u.last_login_at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) 
-                          : 'Sin ingresos'}
-                      </td>
-                      <td style={styles.td}>
-                        {!u.is_superadmin ? (
-                          <div style={styles.actions}>
-                            <button
-                              onClick={() => handleOpenRoleModal(u)}
-                              style={styles.btnRole}
-                              onMouseOver={e => {
-                                e.currentTarget.style.background = '#a855f7';
-                                e.currentTarget.style.color = 'white';
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                              }}
-                              onMouseOut={e => {
-                                e.currentTarget.style.background = 'rgba(168,85,247,0.1)';
-                                e.currentTarget.style.color = '#a855f7';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }}
-                              title="Cambiar Rol"
-                            >
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleOpenPasswordModal(u)}
-                              style={styles.btnPassword}
-                              onMouseOver={e => {
-                                e.currentTarget.style.background = '#f59e0b';
-                                e.currentTarget.style.color = 'white';
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                              }}
-                              onMouseOut={e => {
-                                e.currentTarget.style.background = 'rgba(245,158,11,0.1)';
-                                e.currentTarget.style.color = '#f59e0b';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }}
-                              title="Restablecer Contraseña"
-                            >
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleToggleSuspension(u)}
-                              style={u.is_suspended ? styles.btnActivar : styles.btnSuspender}
-                              onMouseOver={e => {
-                                if (u.is_suspended) {
-                                  e.currentTarget.style.background = '#22c55e';
-                                  e.currentTarget.style.color = 'white';
-                                } else {
-                                  e.currentTarget.style.background = '#f97316';
-                                  e.currentTarget.style.color = 'white';
-                                }
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                              }}
-                              onMouseOut={e => {
-                                if (u.is_suspended) {
-                                  e.currentTarget.style.background = 'rgba(34,197,94,0.1)';
-                                  e.currentTarget.style.color = '#22c55e';
-                                } else {
-                                  e.currentTarget.style.background = 'rgba(249,115,22,0.1)';
-                                  e.currentTarget.style.color = '#f97316';
-                                }
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }}
-                              title={u.is_suspended ? 'Activar cuenta' : 'Suspender cuenta'}
-                            >
-                              {u.is_suspended ? (
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="20 6 9 17 4 12"/>
-                                </svg>
-                              ) : (
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="12" cy="12" r="10"/>
-                                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-                                </svg>
-                              )}
-                            </button>
-                            <button
-                              onClick={() => handleOpenEscuelaModal(u)}
-                              style={styles.btnEscuela}
-                              onMouseOver={e => {
-                                e.currentTarget.style.background = '#3b82f6';
-                                e.currentTarget.style.color = 'white';
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                              }}
-                              onMouseOut={e => {
-                                e.currentTarget.style.background = 'rgba(59,130,246,0.1)';
-                                e.currentTarget.style.color = '#3b82f6';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }}
-                              title="Cambiar Escuela"
-                            >
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                                <polyline points="9 22 9 12 15 12 15 22"/>
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(u)}
-                              style={styles.btnEliminar}
-                              onMouseOver={e => {
-                                e.currentTarget.style.background = '#ef4444';
-                                e.currentTarget.style.color = 'white';
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                              }}
-                              onMouseOut={e => {
-                                e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
-                                e.currentTarget.style.color = '#ef4444';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }}
-                              title="Eliminar usuario"
-                            >
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic' }}>Sin acciones</span>
-                        )}
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
+                        <div style={styles.actions}>
+                          <button
+                            onClick={() => handleOpenPasswordModal(u)}
+                            style={styles.btnActionBlue}
+                            title="Forzar nueva contraseña"
+                          >
+                            <FiKey size={14} />
+                          </button>
+                          {!u.is_superadmin && (
+                            <>
+                              <button
+                                onClick={() => handleOpenRoleModal(u)}
+                                style={styles.btnActionYellow}
+                                title="Cambiar rol"
+                              >
+                                <FiUserCheck size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleOpenEscuelaModal(u)}
+                                style={styles.btnActionPurple}
+                                title="Reasignar a otra escuela"
+                              >
+                                <FiHome size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleToggleSuspension(u)}
+                                style={u.is_suspended ? styles.btnActionGreen : styles.btnActionRed}
+                                title={u.is_suspended ? 'Reactivar cuenta' : 'Suspender cuenta'}
+                              >
+                                {u.is_suspended ? <FiCheckCircle size={14} /> : <FiSlash size={14} />}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -462,73 +392,42 @@ export default function AdminUsuarios() {
         </div>
       )}
 
-      {/* PASSWORD RESET MODAL */}
+      {/* PASSWORD MODAL */}
       {showPasswordModal && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
+        <div style={styles.overlay} onClick={() => setShowPasswordModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <h3 style={styles.modalTitle}>Restablecer Contraseña</h3>
-                <p style={styles.modalSubtitle}>Modificando credenciales para: <strong>{selectedUser?.name}</strong></p>
+                <h3 style={styles.modalTitle}>Forzar Contraseña</h3>
+                <p style={styles.modalSubtitle}>
+                  Usuario: <strong>{selectedUser?.name}</strong> ({selectedUser?.email})
+                </p>
               </div>
-              <button 
-                style={styles.btnClose} 
-                onClick={() => setShowPasswordModal(false)}
-                onMouseOver={e => {
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >×</button>
+              <button style={styles.btnClose} onClick={() => setShowPasswordModal(false)}>
+                <FiX size={18} />
+              </button>
             </div>
             <form onSubmit={handlePasswordSubmit}>
               <div style={styles.modalBody}>
                 <div style={styles.inputGroup}>
-                  <label style={styles.label}>Nueva Contraseña</label>
+                  <label style={styles.label}>Nueva Contraseña Temporal</label>
                   <input
                     type="password"
                     style={styles.input}
                     value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres..."
                     required
-                    autoFocus
                   />
                 </div>
               </div>
               <div style={styles.modalFooter}>
-                <button 
-                  type="button" 
-                  style={styles.btnCancel} 
-                  onClick={() => setShowPasswordModal(false)}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.color = '#ffffff';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'var(--text-secondary)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >Cancelar</button>
-                <button 
-                  type="submit" 
-                  style={styles.btnSubmit} 
-                  disabled={procesando}
-                  onMouseOver={e => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  {procesando ? 'Procesando...' : 'Guardar Nueva Contraseña'}
+                <button type="button" style={styles.btnSecondary} onClick={() => setShowPasswordModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={procesando} style={styles.btnPrimary}>
+                  <FiCheck size={15} />
+                  <span>{procesando ? 'Guardando...' : 'Actualizar Contraseña'}</span>
                 </button>
               </div>
             </form>
@@ -536,74 +435,43 @@ export default function AdminUsuarios() {
         </div>
       )}
 
-      {/* ROLE CHANGE MODAL */}
+      {/* ROLE MODAL */}
       {showRoleModal && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
+        <div style={styles.overlay} onClick={() => setShowRoleModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
                 <h3 style={styles.modalTitle}>Cambiar Rol de Usuario</h3>
-                <p style={styles.modalSubtitle}>Asigna una nueva jerarquía para: <strong>{selectedUser?.name}</strong></p>
+                <p style={styles.modalSubtitle}>
+                  Usuario: <strong>{selectedUser?.name}</strong>
+                </p>
               </div>
-              <button 
-                style={styles.btnClose} 
-                onClick={() => setShowRoleModal(false)}
-                onMouseOver={e => {
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >×</button>
+              <button style={styles.btnClose} onClick={() => setShowRoleModal(false)}>
+                <FiX size={18} />
+              </button>
             </div>
             <form onSubmit={handleRoleSubmit}>
               <div style={styles.modalBody}>
                 <div style={styles.inputGroup}>
-                  <label style={styles.label}>Selecciona el Rol</label>
+                  <label style={styles.label}>Selecciona el Nuevo Rol</label>
                   <select
-                    style={styles.input}
+                    style={styles.selectModal}
                     value={selectedRole}
-                    onChange={e => setSelectedRole(e.target.value)}
-                    required
+                    onChange={(e) => setSelectedRole(e.target.value)}
                   >
-                    <option value="owner">Administrador (Owner)</option>
+                    <option value="owner">Dueño / Administrador (Owner)</option>
                     <option value="instructor">Instructor</option>
-                    <option value="secretario">Secretario</option>
+                    <option value="secretario">Secretario / Recepción</option>
                   </select>
                 </div>
               </div>
               <div style={styles.modalFooter}>
-                <button 
-                  type="button" 
-                  style={styles.btnCancel} 
-                  onClick={() => setShowRoleModal(false)}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.color = '#ffffff';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'var(--text-secondary)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >Cancelar</button>
-                <button 
-                  type="submit" 
-                  style={styles.btnSubmit} 
-                  disabled={procesando}
-                  onMouseOver={e => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  {procesando ? 'Procesando...' : 'Actualizar Rol'}
+                <button type="button" style={styles.btnSecondary} onClick={() => setShowRoleModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={procesando} style={styles.btnPrimary}>
+                  <FiCheck size={15} />
+                  <span>{procesando ? 'Guardando...' : 'Confirmar Rol'}</span>
                 </button>
               </div>
             </form>
@@ -611,80 +479,47 @@ export default function AdminUsuarios() {
         </div>
       )}
 
-      {/* SCHOOL CHANGE MODAL */}
+      {/* SCHOOL MODAL */}
       {showEscuelaModal && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
+        <div style={styles.overlay} onClick={() => setShowEscuelaModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <h3 style={styles.modalTitle}>Cambiar Escuela / Academia</h3>
-                <p style={styles.modalSubtitle}>Reasignando a: <strong>{selectedUser?.name}</strong></p>
+                <h3 style={styles.modalTitle}>Reasignar Academia</h3>
+                <p style={styles.modalSubtitle}>
+                  Usuario: <strong>{selectedUser?.name}</strong>
+                </p>
               </div>
-              <button 
-                style={styles.btnClose} 
-                onClick={() => setShowEscuelaModal(false)}
-                onMouseOver={e => {
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >×</button>
+              <button style={styles.btnClose} onClick={() => setShowEscuelaModal(false)}>
+                <FiX size={18} />
+              </button>
             </div>
             <form onSubmit={handleEscuelaSubmit}>
               <div style={styles.modalBody}>
                 <div style={styles.inputGroup}>
-                  <label style={styles.label}>Selecciona la Academia</label>
+                  <label style={styles.label}>Selecciona la Nueva Academia</label>
                   <select
-                    style={styles.input}
+                    style={styles.selectModal}
                     value={selectedTenantId}
-                    onChange={e => setSelectedTenantId(e.target.value)}
+                    onChange={(e) => setSelectedTenantId(e.target.value)}
                     required
                   >
-                    <option value="">-- Seleccionar --</option>
-                    {academias.map(a => (
-                      <option key={a.id} value={a.id}>{a.nombre}</option>
+                    <option value="">Seleccionar...</option>
+                    {academias.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        [ID: #{a.id}] — {a.nombre}
+                      </option>
                     ))}
                   </select>
                 </div>
-                {selectedUser?.tenant_id && (
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-                    Escuela actual: <strong>{selectedUser.escuela_nombre}</strong>
-                  </p>
-                )}
               </div>
               <div style={styles.modalFooter}>
-                <button 
-                  type="button" 
-                  style={styles.btnCancel} 
-                  onClick={() => setShowEscuelaModal(false)}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.color = '#ffffff';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'var(--text-secondary)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >Cancelar</button>
-                <button 
-                  type="submit" 
-                  style={styles.btnSubmit} 
-                  disabled={procesando}
-                  onMouseOver={e => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  {procesando ? 'Procesando...' : 'Guardar Cambio'}
+                <button type="button" style={styles.btnSecondary} onClick={() => setShowEscuelaModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={procesando} style={styles.btnPrimary}>
+                  <FiCheck size={15} />
+                  <span>{procesando ? 'Guardando...' : 'Reasignar Academia'}</span>
                 </button>
               </div>
             </form>
@@ -696,59 +531,367 @@ export default function AdminUsuarios() {
 }
 
 const styles = {
-  container: { padding: '32px 24px', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' },
-  loading: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
-  header: { marginBottom: '32px' },
-  title: { fontSize: '28px', fontWeight: '900', letterSpacing: '-0.5px' },
-  subtitle: { color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' },
-  
-  filterBar: { 
-    display: 'flex', 
-    flexWrap: 'wrap', 
-    gap: '20px', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-end', 
-    marginBottom: '24px' 
+  container: {
+    padding: '32px 24px',
+    maxWidth: '1280px',
+    margin: '0 auto',
+    color: 'var(--text-primary)',
   },
-  searchContainer: { flex: '1 1 300px', maxWidth: '450px' },
-  search: { width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 16px', color: '#fff', fontSize: '14px', outline: 'none' },
-  
-  filtersContainer: { display: 'flex', gap: '12px', flexWrap: 'wrap' },
-  filterGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-  filterLabel: { fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  select: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 16px', color: '#fff', fontSize: '13px', outline: 'none', minWidth: '150px', cursor: 'pointer' },
-  
-  tableCard: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' },
-  empty: { padding: '50px', textAlign: 'center', color: 'var(--text-muted)' },
-  tableResponsive: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid var(--border)' },
-  tr: { borderBottom: '1px solid var(--border)', transition: 'background 0.2s' },
-  td: { padding: '16px 24px', fontSize: '14px', verticalAlign: 'middle' },
-  
-  userInfo: { display: 'flex', flexDirection: 'column', gap: '2px' },
-  badge: { display: 'inline-block', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px' },
-  statusIndicator: { display: 'inline-block', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#fff' },
-  
-  actions: { display: 'flex', gap: '6px', flexWrap: 'nowrap' },
-  btnRole: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.1)', color: '#a855f7', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
-  btnPassword: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
-  btnActivar: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)', color: '#22c55e', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
-  btnSuspender: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(249,115,22,0.3)', background: 'rgba(249,115,22,0.1)', color: '#f97316', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
-  btnEscuela: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
-  btnEliminar: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
-
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)' },
-  modal: { background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '24px', width: '450px', maxWidth: '90vw', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', overflow: 'hidden' },
-  modalHeader: { padding: '24px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { fontSize: '18px', fontWeight: '800', color: '#fff', margin: 0 },
-  modalSubtitle: { fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' },
-  btnClose: { background: 'none', border: 'none', fontSize: '24px', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' },
-  modalBody: { padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' },
-  inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  label: { fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' },
-  input: { width: '100%', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px 14px', color: '#fff', fontSize: '14px', outline: 'none' },
-  modalFooter: { padding: '20px 24px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'flex-end', gap: '12px' },
-  btnCancel: { background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '12px', padding: '12px 20px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
-  btnSubmit: { background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }
+  loadingContainer: {
+    padding: '80px 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spinner: {
+    width: '36px',
+    height: '36px',
+    border: '3px solid var(--border)',
+    borderTopColor: 'var(--accent-blue)',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '28px',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  headerIconBadge: {
+    width: '38px',
+    height: '38px',
+    borderRadius: '10px',
+    background: 'var(--accent-blue-bg)',
+    border: '1px solid rgba(59, 130, 246, 0.25)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  title: {
+    fontSize: '26px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: 0,
+    letterSpacing: '-0.3px',
+  },
+  subtitle: {
+    color: 'var(--text-muted)',
+    fontSize: '14px',
+    marginTop: '4px',
+  },
+  filterBar: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+  },
+  searchWrapper: {
+    position: 'relative',
+    minWidth: '220px',
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: '14px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: 'var(--text-muted)',
+    pointerEvents: 'none',
+  },
+  search: {
+    width: '100%',
+    padding: '9px 14px 9px 38px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '80px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+    fontFamily: 'inherit',
+    outline: 'none',
+    transition: 'all 0.25s ease',
+    boxSizing: 'border-box',
+  },
+  counterText: {
+    fontSize: '13px',
+    color: 'var(--text-muted)',
+    fontWeight: '600',
+  },
+  tableCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    boxShadow: 'var(--shadow-md)',
+  },
+  empty: {
+    padding: '60px 20px',
+    textAlign: 'center',
+    color: 'var(--text-muted)',
+    fontSize: '14px',
+  },
+  tableResponsive: {
+    overflowX: 'auto',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+  },
+  th: {
+    padding: '14px 20px',
+    textAlign: 'left',
+    fontSize: '11.5px',
+    fontWeight: '700',
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    background: 'var(--bg-primary)',
+    borderBottom: '1px solid var(--border)',
+    whiteSpace: 'nowrap',
+  },
+  tr: {
+    borderBottom: '1px solid var(--border)',
+    transition: 'background 0.15s ease',
+  },
+  td: {
+    padding: '14px 20px',
+    fontSize: '13px',
+    verticalAlign: 'middle',
+  },
+  userInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  userName: {
+    fontWeight: '700',
+    color: 'var(--text-primary)',
+    fontSize: '14px',
+  },
+  userEmail: {
+    fontSize: '11.5px',
+    color: 'var(--text-muted)',
+  },
+  schoolInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  schoolName: {
+    fontWeight: '600',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+  },
+  schoolMeta: {
+    fontSize: '11.5px',
+    color: 'var(--text-muted)',
+  },
+  badge: {
+    display: 'inline-block',
+    padding: '4px 10px',
+    borderRadius: '20px',
+    fontSize: '11px',
+    fontWeight: '700',
+    letterSpacing: '0.4px',
+  },
+  actions: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+  },
+  btnActionBlue: {
+    background: 'rgba(59, 130, 246, 0.1)',
+    color: 'var(--accent-blue)',
+    border: 'none',
+    borderRadius: '8px',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnActionYellow: {
+    background: 'rgba(245, 158, 11, 0.1)',
+    color: 'var(--accent-yellow)',
+    border: 'none',
+    borderRadius: '8px',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnActionPurple: {
+    background: 'rgba(168, 85, 247, 0.1)',
+    color: '#a855f7',
+    border: 'none',
+    borderRadius: '8px',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnActionGreen: {
+    background: 'rgba(16, 185, 129, 0.1)',
+    color: 'var(--accent-green)',
+    border: 'none',
+    borderRadius: '8px',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnActionRed: {
+    background: 'rgba(239, 68, 68, 0.1)',
+    color: 'var(--accent-red)',
+    border: 'none',
+    borderRadius: '8px',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.7)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '20px',
+  },
+  modal: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '20px',
+    width: '100%',
+    maxWidth: '480px',
+    boxShadow: 'var(--shadow-xl)',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: '20px 24px',
+    borderBottom: '1px solid var(--border)',
+  },
+  modalTitle: {
+    fontSize: '18px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: 0,
+  },
+  modalSubtitle: {
+    fontSize: '13px',
+    color: 'var(--text-muted)',
+    marginTop: '4px',
+    marginBottom: 0,
+  },
+  btnClose: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--text-muted)',
+    cursor: 'pointer',
+    padding: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '6px',
+  },
+  modalBody: {
+    padding: '20px 24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  label: {
+    fontSize: '12.5px',
+    fontWeight: '700',
+    color: 'var(--text-secondary)',
+  },
+  input: {
+    padding: '10px 14px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+    fontFamily: 'inherit',
+    outline: 'none',
+  },
+  selectModal: {
+    padding: '10px 14px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+    fontFamily: 'inherit',
+    outline: 'none',
+    cursor: 'pointer',
+  },
+  modalFooter: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    padding: '16px 24px',
+    borderTop: '1px solid var(--border)',
+    background: 'var(--bg-primary)',
+  },
+  btnSecondary: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    padding: '9px 16px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  },
+  btnPrimary: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'var(--accent-blue)',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '9px 18px',
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#fff',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    boxShadow: 'var(--shadow-glow-blue)',
+  },
 };

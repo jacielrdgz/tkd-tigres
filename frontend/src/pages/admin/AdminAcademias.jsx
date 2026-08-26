@@ -3,6 +3,17 @@ import api from '../../api/axios';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 import { Link } from 'react-router-dom';
+import {
+  FiShield,
+  FiSearch,
+  FiEye,
+  FiCheckCircle,
+  FiSlash,
+  FiTrash2,
+  FiUsers,
+  FiClock,
+  FiCalendar
+} from 'react-icons/fi';
 
 export default function AdminAcademias() {
   const [academias, setAcademias] = useState([]);
@@ -32,6 +43,7 @@ export default function AdminAcademias() {
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, suspender',
+      cancelButtonText: 'Cancelar',
       confirmButtonColor: 'var(--accent-red)',
       background: 'var(--bg-secondary)',
       color: 'var(--text-primary)',
@@ -65,6 +77,7 @@ export default function AdminAcademias() {
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, borrar todo',
+      cancelButtonText: 'Cancelar',
       confirmButtonColor: 'var(--accent-red)',
       background: 'var(--bg-secondary)',
       color: 'var(--text-primary)',
@@ -81,7 +94,7 @@ export default function AdminAcademias() {
     });
   };
 
-  const filtered = academias.filter(a =>
+  const filtered = academias.filter((a) =>
     a.nombre.toLowerCase().includes(search.toLowerCase()) ||
     a.owner_name.toLowerCase().includes(search.toLowerCase()) ||
     a.owner_email.toLowerCase().includes(search.toLowerCase())
@@ -89,41 +102,74 @@ export default function AdminAcademias() {
 
   const getStatusBadge = (estado, isSuspended) => {
     if (isSuspended || estado === 'suspendida') {
-      return <span style={{ ...styles.badge, background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>SUSPENDIDA</span>;
+      return (
+        <span style={{ ...styles.badge, background: 'var(--accent-red-bg)', color: 'var(--accent-red)' }}>
+          SUSPENDIDA
+        </span>
+      );
     }
     const badges = {
-      trial: { bg: 'rgba(59,130,246,0.1)', color: '#3b82f6', text: 'TRIAL' },
-      activa: { bg: 'rgba(34,197,94,0.1)', color: '#22c55e', text: 'ACTIVA' },
-      cancelada: { bg: 'rgba(100,116,139,0.1)', color: '#64748b', text: 'VENCIDA' },
+      trial: { bg: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', text: 'TRIAL' },
+      activa: { bg: 'var(--accent-green-bg)', color: 'var(--accent-green)', text: 'ACTIVA' },
+      cancelada: { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', text: 'VENCIDA' },
     };
-    const b = badges[estado] || { bg: 'rgba(255,255,255,0.05)', color: '#fff', text: estado.toUpperCase() };
+    const b = badges[estado] || { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', text: estado.toUpperCase() };
     return <span style={{ ...styles.badge, background: b.bg, color: b.color }}>{b.text}</span>;
   };
 
   return (
     <div style={styles.container}>
+      {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Gestión de Academias</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={styles.headerIconBadge}>
+              <FiShield size={22} color="var(--accent-blue)" />
+            </div>
+            <h1 style={styles.title}>Gestión de Academias</h1>
+          </div>
           <p style={styles.subtitle}>Supervisa, activa, suspende o elimina escuelas asociadas</p>
         </div>
       </div>
 
+      {/* Filter / Search Bar */}
       <div style={styles.filterBar}>
-        <input
-          style={styles.search}
-          placeholder="🔍 Buscar por escuela, dueño o correo..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+        <div style={styles.searchWrapper}>
+          <FiSearch size={15} style={styles.searchIcon} />
+          <input
+            style={styles.search}
+            placeholder="Buscar por escuela, dueño o correo..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--accent-blue)';
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+              e.currentTarget.style.boxShadow = '0 0 12px rgba(59, 130, 246, 0.3)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.background = 'var(--bg-secondary)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          />
+        </div>
+        <span style={styles.counterText}>
+          {filtered.length} academia{filtered.length === 1 ? '' : 's'}
+        </span>
       </div>
 
+      {/* Table Card */}
       {loading ? (
-        <div style={styles.loading}>Cargando academias del sistema...</div>
+        <div style={styles.loadingContainer}>
+          <div style={styles.spinner} />
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '12px' }}>
+            Cargando academias del sistema...
+          </p>
+        </div>
       ) : (
         <div style={styles.tableCard}>
           {filtered.length === 0 ? (
-            <div style={styles.empty}>No se encontraron academias.</div>
+            <div style={styles.empty}>No se encontraron academias asociadas.</div>
           ) : (
             <div style={styles.tableResponsive}>
               <table style={styles.table}>
@@ -131,48 +177,88 @@ export default function AdminAcademias() {
                   <tr>
                     <th style={styles.th}>Academia</th>
                     <th style={styles.th}>Dueño / Contacto</th>
-                    <th style={styles.th}>Estado</th>
-                    <th style={styles.th}>Alumnos</th>
+                    <th style={{ ...styles.th, textAlign: 'center' }}>Estado</th>
+                    <th style={{ ...styles.th, textAlign: 'center' }}>Alumnos</th>
                     <th style={styles.th}>Último Acceso</th>
-                    <th style={styles.th}>Acciones</th>
+                    <th style={{ ...styles.th, textAlign: 'center' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(a => (
-                    <tr key={a.id} style={styles.tr}>
+                  {filtered.map((a) => (
+                    <tr
+                      key={a.id}
+                      style={styles.tr}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
                       <td style={styles.td}>
                         <div style={styles.schoolInfo}>
-                          <strong>{a.nombre}</strong>
-                          <span>ID: {a.id} · Registro: {a.fecha_registro}</span>
+                          <span style={styles.schoolName}>{a.nombre}</span>
+                          <span style={styles.schoolMeta}>
+                            ID: #{a.id} · Registro: {a.fecha_registro}
+                          </span>
                         </div>
                       </td>
                       <td style={styles.td}>
                         <div style={styles.schoolInfo}>
-                          <strong>{a.owner_name}</strong>
-                          <span>{a.owner_email}</span>
+                          <span style={styles.ownerName}>{a.owner_name}</span>
+                          <span style={styles.ownerEmail}>{a.owner_email}</span>
                         </div>
                       </td>
-                      <td style={styles.td}>{getStatusBadge(a.suscripcion_estado, a.is_suspended)}</td>
-                      <td style={styles.td}>👥 {a.alumnos_registrados}</td>
-                      <td style={styles.td}>
-                        {a.ultimo_acceso ? new Date(a.ultimo_acceso).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Sin ingresos'}
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
+                        {getStatusBadge(a.suscripcion_estado, a.is_suspended)}
+                      </td>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
+                        <span style={styles.alumnosBadge}>
+                          <FiUsers size={12} />
+                          {a.alumnos_registrados}
+                        </span>
                       </td>
                       <td style={styles.td}>
+                        <span style={styles.dateMeta}>
+                          {a.ultimo_acceso
+                            ? new Date(a.ultimo_acceso).toLocaleString('es-MX', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Sin ingresos'}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
                         <div style={styles.actions}>
-                          <Link to={`/admin/academias/${a.id}`} style={styles.btnLink} title="Ver detalle">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                          <Link
+                            to={`/admin/academias/${a.id}`}
+                            style={styles.btnActionBlue}
+                            title="Ver detalle de academia"
+                          >
+                            <FiEye size={15} />
                           </Link>
                           {a.is_suspended || a.suscripcion_estado === 'suspendida' ? (
-                            <button onClick={() => handleActivar(a.id)} style={styles.btnActivar} title="Reactivar">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                            <button
+                              onClick={() => handleActivar(a.id)}
+                              style={styles.btnActionGreen}
+                              title="Reactivar academia"
+                            >
+                              <FiCheckCircle size={15} />
                             </button>
                           ) : (
-                            <button onClick={() => handleSuspender(a.id, a.nombre)} style={styles.btnSuspender} title="Suspender">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+                            <button
+                              onClick={() => handleSuspender(a.id, a.nombre)}
+                              style={styles.btnActionYellow}
+                              title="Suspender acceso temporalmente"
+                            >
+                              <FiSlash size={15} />
                             </button>
                           )}
-                          <button onClick={() => handleEliminar(a.id, a.nombre)} style={styles.btnDelete} title="Eliminar permanentemente">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                          <button
+                            onClick={() => handleEliminar(a.id, a.nombre)}
+                            style={styles.btnActionRed}
+                            title="Eliminar permanentemente"
+                          >
+                            <FiTrash2 size={15} />
                           </button>
                         </div>
                       </td>
@@ -189,25 +275,242 @@ export default function AdminAcademias() {
 }
 
 const styles = {
-  container: { padding: '32px 24px', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' },
-  loading: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
-  header: { marginBottom: '32px' },
-  title: { fontSize: '28px', fontWeight: '900', letterSpacing: '-0.5px' },
-  subtitle: { color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' },
-  filterBar: { marginBottom: '24px' },
-  search: { width: '100%', maxWidth: '400px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 16px', color: '#fff', fontSize: '14px', outline: 'none', transition: 'border-color 0.2s' },
-  tableCard: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' },
-  empty: { padding: '40px', textAlign: 'center', color: 'var(--text-muted)' },
-  tableResponsive: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid var(--border)' },
-  tr: { borderBottom: '1px solid var(--border)', transition: 'background 0.2s' },
-  td: { padding: '16px 24px', fontSize: '14px', verticalAlign: 'middle' },
-  schoolInfo: { display: 'flex', flexDirection: 'column', gap: '3px' },
-  badge: { display: 'inline-block', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px' },
-  actions: { display: 'flex', gap: '10px' },
-  btnLink: { background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', color: '#fff' },
-  btnActivar: { background: 'rgba(34,197,94,0.1)', border: 'none', color: '#22c55e', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  btnSuspender: { background: 'rgba(245,158,11,0.1)', border: 'none', color: '#f59e0b', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  btnDelete: { background: 'rgba(239,68,68,0.1)', border: 'none', color: '#ef4444', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  container: {
+    padding: '32px 24px',
+    maxWidth: '1280px',
+    margin: '0 auto',
+    color: 'var(--text-primary)',
+  },
+  loadingContainer: {
+    padding: '80px 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spinner: {
+    width: '36px',
+    height: '36px',
+    border: '3px solid var(--border)',
+    borderTopColor: 'var(--accent-blue)',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '28px',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  headerIconBadge: {
+    width: '38px',
+    height: '38px',
+    borderRadius: '10px',
+    background: 'var(--accent-blue-bg)',
+    border: '1px solid rgba(59, 130, 246, 0.25)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  title: {
+    fontSize: '26px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: 0,
+    letterSpacing: '-0.3px',
+  },
+  subtitle: {
+    color: 'var(--text-muted)',
+    fontSize: '14px',
+    marginTop: '4px',
+  },
+  filterBar: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+  },
+  searchWrapper: {
+    position: 'relative',
+    flex: 1,
+    maxWidth: '380px',
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: '16px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: 'var(--text-muted)',
+    pointerEvents: 'none',
+  },
+  search: {
+    width: '100%',
+    padding: '10px 16px 10px 42px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '80px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+    fontFamily: 'inherit',
+    outline: 'none',
+    transition: 'all 0.25s ease',
+    boxSizing: 'border-box',
+  },
+  counterText: {
+    fontSize: '13px',
+    color: 'var(--text-muted)',
+    fontWeight: '600',
+  },
+  tableCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    boxShadow: 'var(--shadow-md)',
+  },
+  empty: {
+    padding: '60px 20px',
+    textAlign: 'center',
+    color: 'var(--text-muted)',
+    fontSize: '14px',
+  },
+  tableResponsive: {
+    overflowX: 'auto',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+  },
+  th: {
+    padding: '14px 20px',
+    textAlign: 'left',
+    fontSize: '11.5px',
+    fontWeight: '700',
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    background: 'var(--bg-primary)',
+    borderBottom: '1px solid var(--border)',
+    whiteSpace: 'nowrap',
+  },
+  tr: {
+    borderBottom: '1px solid var(--border)',
+    transition: 'background 0.15s ease',
+  },
+  td: {
+    padding: '14px 20px',
+    fontSize: '13px',
+    verticalAlign: 'middle',
+  },
+  schoolInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  schoolName: {
+    fontWeight: '700',
+    color: 'var(--text-primary)',
+    fontSize: '14px',
+  },
+  schoolMeta: {
+    fontSize: '11.5px',
+    color: 'var(--text-muted)',
+  },
+  ownerName: {
+    fontWeight: '600',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+  },
+  ownerEmail: {
+    fontSize: '11.5px',
+    color: 'var(--text-muted)',
+  },
+  badge: {
+    display: 'inline-block',
+    padding: '4px 10px',
+    borderRadius: '20px',
+    fontSize: '11px',
+    fontWeight: '700',
+    letterSpacing: '0.4px',
+  },
+  alumnosBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    background: 'var(--bg-tertiary)',
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '700',
+    color: 'var(--text-secondary)',
+    border: '1px solid var(--border)',
+  },
+  dateMeta: {
+    fontSize: '12.5px',
+    color: 'var(--text-secondary)',
+  },
+  actions: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+  },
+  btnActionBlue: {
+    background: 'rgba(59, 130, 246, 0.1)',
+    color: 'var(--accent-blue)',
+    border: 'none',
+    borderRadius: '8px',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    transition: 'all 0.15s ease',
+  },
+  btnActionGreen: {
+    background: 'rgba(16, 185, 129, 0.1)',
+    color: 'var(--accent-green)',
+    border: 'none',
+    borderRadius: '8px',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnActionYellow: {
+    background: 'rgba(245, 158, 11, 0.1)',
+    color: 'var(--accent-yellow)',
+    border: 'none',
+    borderRadius: '8px',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnActionRed: {
+    background: 'rgba(239, 68, 68, 0.1)',
+    color: 'var(--accent-red)',
+    border: 'none',
+    borderRadius: '8px',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
 };
