@@ -24,6 +24,16 @@ return new class extends Migration
                     'tenant_id' => null,
                     'is_superadmin' => true,
                 ]);
+
+            // Sincronizar todos los tenants con sus nombres de escuela
+            if (Schema::hasTable('escuelas') && Schema::hasTable('tenants')) {
+                $escuelas = DB::table('escuelas')->get();
+                foreach ($escuelas as $esc) {
+                    if (!empty($esc->nombre) && !empty($esc->tenant_id)) {
+                        DB::table('tenants')->where('id', $esc->tenant_id)->update(['nombre' => $esc->nombre]);
+                    }
+                }
+            }
         }
     }
 

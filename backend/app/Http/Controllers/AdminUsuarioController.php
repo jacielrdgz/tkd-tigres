@@ -13,7 +13,7 @@ class AdminUsuarioController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::with('tenant');
+        $query = User::withoutGlobalScopes()->with('tenant');
 
         if ($request->filled('role')) {
             $query->where('role', $request->role);
@@ -30,15 +30,16 @@ class AdminUsuarioController extends Controller
 
         $usuarios = $query->get()->map(function ($u) {
             return [
-                'id'             => $u->id,
-                'name'           => $u->name,
-                'email'          => $u->email,
-                'role'           => $u->role,
-                'is_superadmin'  => $u->is_superadmin,
-                'is_suspended'   => $u->is_suspended,
-                'last_login_at'  => $u->last_login_at,
-                'tenant_id'      => $u->tenant_id,
-                'escuela_nombre' => $u->tenant ? $u->tenant->nombre : ($u->is_superadmin ? 'Sistema / Global' : 'Pendiente'),
+                'id'                 => $u->id,
+                'name'               => $u->name,
+                'email'              => $u->email,
+                'role'               => $u->role,
+                'is_superadmin'      => $u->is_superadmin,
+                'is_suspended'       => $u->is_suspended,
+                'last_login_at'      => $u->last_login_at,
+                'tenant_id'          => $u->tenant_id,
+                'escuela_solicitada' => $u->escuela_solicitada ?: 'No especificada',
+                'escuela_nombre'     => $u->tenant ? $u->tenant->nombre : ($u->is_superadmin ? 'Sistema / Global' : 'Sin asignar / Pendiente'),
             ];
         });
 

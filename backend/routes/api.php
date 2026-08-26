@@ -35,6 +35,16 @@ Route::get('/ejecutar-migraciones', function () {
             ->where('is_superadmin', true)
             ->update(['tenant_id' => null]);
 
+        // Sincronizar todos los tenants con sus escuelas
+        if (\Illuminate\Support\Facades\Schema::hasTable('escuelas') && \Illuminate\Support\Facades\Schema::hasTable('tenants')) {
+            $escuelas = \Illuminate\Support\Facades\DB::table('escuelas')->get();
+            foreach ($escuelas as $esc) {
+                if (!empty($esc->nombre) && !empty($esc->tenant_id)) {
+                    \Illuminate\Support\Facades\DB::table('tenants')->where('id', $esc->tenant_id)->update(['nombre' => $esc->nombre]);
+                }
+            }
+        }
+
         $outputSeed = '';
         try {
             \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);

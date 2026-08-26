@@ -36,6 +36,16 @@ class EscuelaController extends Controller
                 ]
             );
 
+            // Sincronizar nombre y disciplina del tenant con los de la escuela si ya existen
+            if (!empty($escuela->nombre) && $tenant->nombre !== $escuela->nombre) {
+                $tenant->nombre = $escuela->nombre;
+                $tenant->save();
+            }
+            if (!empty($escuela->disciplina) && $tenant->disciplina !== $escuela->disciplina) {
+                $tenant->disciplina = $escuela->disciplina;
+                $tenant->save();
+            }
+
             $escuela->load('direccion');
 
             // Marcar como confirmado si ya contiene datos y el usuario visita la página

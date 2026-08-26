@@ -291,7 +291,8 @@ export default function AdminUsuarios() {
                 <thead>
                   <tr>
                     <th style={styles.th}>Usuario</th>
-                    <th style={styles.th}>Academia / Escuela</th>
+                    <th style={styles.th}>Escuela Solicitada</th>
+                    <th style={styles.th}>Escuela Actual</th>
                     <th style={styles.th}>Rol</th>
                     <th style={styles.th}>Estado</th>
                     <th style={styles.th}>Último Ingreso</th>
@@ -308,7 +309,12 @@ export default function AdminUsuarios() {
                         </div>
                       </td>
                       <td style={styles.td}>
-                        <span style={u.is_superadmin ? { color: 'var(--accent-purple)', fontWeight: 'bold' } : {}}>
+                        <span style={{ color: u.escuela_solicitada && u.escuela_solicitada !== 'No especificada' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '13px' }}>
+                          {u.escuela_solicitada}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={u.is_superadmin ? { color: 'var(--accent-purple)', fontWeight: 'bold' } : { fontWeight: '600' }}>
                           {u.escuela_nombre}
                         </span>
                       </td>

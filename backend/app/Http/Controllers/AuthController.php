@@ -73,6 +73,15 @@ class AuthController extends Controller
                     'message' => 'Tu solicitud de registro aún está pendiente de revisión y aprobación por el administrador global.'
                 ], 403);
             }
+
+            // Sincronizar tenant con escuela si existe
+            if ($user->tenant) {
+                $escuela = \App\Models\Escuela::where('tenant_id', $user->tenant->id)->first();
+                if ($escuela && !empty($escuela->nombre) && $escuela->nombre !== $user->tenant->nombre) {
+                    $user->tenant->nombre = $escuela->nombre;
+                    $user->tenant->save();
+                }
+            }
         }
 
         return response()->json([
@@ -112,6 +121,15 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Tu cuenta aún no tiene una escuela asignada.'
             ], 403);
+        }
+
+        // Sincronizar tenant con escuela si existe
+        if ($user->tenant) {
+            $escuela = \App\Models\Escuela::where('tenant_id', $user->tenant->id)->first();
+            if ($escuela && !empty($escuela->nombre) && $escuela->nombre !== $user->tenant->nombre) {
+                $user->tenant->nombre = $escuela->nombre;
+                $user->tenant->save();
+            }
         }
 
         return response()->json(
