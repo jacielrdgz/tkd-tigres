@@ -144,7 +144,7 @@ export function dibujarEncabezadoMembrete(doc, {
 
   // 3. Datos de la Escuela (Nombre, Dirección, Contacto)
   const textLeftX = logoX + logoSize + 6
-  let curY = 18
+  let curY = 17
 
   // Nombre de la escuela
   doc.setFont('helvetica', 'bold')
@@ -152,42 +152,51 @@ export function dibujarEncabezadoMembrete(doc, {
   doc.setTextColor(15, 23, 42) // #0f172a (slate-900)
   doc.text((escuelaInfo?.nombre || 'MI ESCUELA').toUpperCase(), textLeftX, curY)
 
-  // Dirección formateada
-  curY += 5.5
+  // Formateo de las 3 líneas descriptivas
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(100, 116, 139) // #64748b
 
-  let dirLine = ''
-  if (escuelaInfo?.direccion) {
-    const d = escuelaInfo.direccion
-    const partes = [
-      d.calle ? `${d.calle}${d.numero_exterior ? ' #' + d.numero_exterior : ''}` : '',
-      d.numero_interior ? `Int. ${d.numero_interior}` : '',
-      d.colonia ? `Col. ${d.colonia}` : '',
-      d.ciudad || '',
-      d.estado || '',
-      d.codigo_postal ? `C.P. ${d.codigo_postal}` : ''
-    ].filter(Boolean)
-    dirLine = partes.join(', ')
+  const d = escuelaInfo?.direccion
+
+  // Línea 1: Ciudad, Estado
+  const partesCiudadEstado = []
+  if (d?.ciudad) partesCiudadEstado.push(d.ciudad)
+  if (d?.estado) partesCiudadEstado.push(d.estado)
+  const linea1 = partesCiudadEstado.join(', ')
+
+  if (linea1) {
+    curY += 4.8
+    doc.text(linea1, textLeftX, curY)
   }
 
-  if (dirLine) {
-    // Si la dirección es muy larga, ajustarla al ancho disponible
-    const maxTextWidth = pageWidth - textLeftX - 70
-    const splitDir = doc.splitTextToSize(dirLine, maxTextWidth)
-    doc.text(splitDir, textLeftX, curY)
-    curY += (splitDir.length * 3.8)
+  // Línea 2: Calle y número, Colonia
+  const partesCalleCol = []
+  if (d?.calle) {
+    const num = d.numero_exterior ? ` #${d.numero_exterior}` : ''
+    const numInt = d.numero_interior ? ` Int. ${d.numero_interior}` : ''
+    partesCalleCol.push(`${d.calle}${num}${numInt}`)
+  }
+  if (d?.colonia) {
+    const colLimpia = d.colonia.replace(/^col\.?\s*/i, '')
+    partesCalleCol.push(colLimpia ? `Amp. ${colLimpia}`.replace(/^Amp\.\s*Amp\.\s*/i, 'Amp. ') : '')
+  }
+  const linea2 = partesCalleCol.filter(Boolean).join(' ')
+
+  if (linea2) {
+    curY += 4.2
+    doc.text(linea2, textLeftX, curY)
   }
 
-  // Contacto (Teléfono y Email)
+  // Línea 3: tel y Email
   const contactParts = []
-  if (escuelaInfo?.telefono) contactParts.push(`Tel: ${escuelaInfo.telefono}`)
-  if (escuelaInfo?.email) contactParts.push(`Email: ${escuelaInfo.email}`)
-  const contactLine = contactParts.join(' | ')
+  if (escuelaInfo?.telefono) contactParts.push(`tel ${escuelaInfo.telefono}`)
+  if (escuelaInfo?.email) contactParts.push(`Email ${escuelaInfo.email}`)
+  const linea3 = contactParts.join(' ')
 
-  if (contactLine) {
-    doc.text(contactLine, textLeftX, curY)
+  if (linea3) {
+    curY += 4.2
+    doc.text(linea3, textLeftX, curY)
   }
 
   // 4. Badge Azul a la derecha con el Tipo de Reporte
@@ -218,7 +227,7 @@ export function dibujarEncabezadoMembrete(doc, {
   }
 
   // Retorna la posición Y recomendada para iniciar la tabla o contenido principal
-  return 46
+  return 48
 }
 
 /**
