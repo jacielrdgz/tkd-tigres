@@ -368,7 +368,11 @@ function CardConfigurarEscuela() {
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
               {escuela?.logo_url ? (
-                <img src={`${import.meta.env.VITE_API_URL || ''}/storage/${escuela.logo_url}`} alt="Logo" style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover' }} />
+                <img 
+                  src={(escuela.logo_url.startsWith('data:') || escuela.logo_url.startsWith('http')) ? escuela.logo_url : `${import.meta.env.VITE_API_URL || ''}/storage/${escuela.logo_url}`} 
+                  alt="Logo" 
+                  style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover' }} 
+                />
               ) : (
                 <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <FiAward size={22} color="var(--accent-blue)" />

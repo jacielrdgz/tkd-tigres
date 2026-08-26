@@ -45,7 +45,9 @@ export default function DojoInfo() {
           }
         })
         if (data.logo_url) {
-          const url = data.logo_url.startsWith('data:') ? data.logo_url : `${import.meta.env.VITE_API_URL || ''}/storage/${data.logo_url}`
+          const url = (data.logo_url.startsWith('data:') || data.logo_url.startsWith('http')) 
+            ? data.logo_url 
+            : `${import.meta.env.VITE_API_URL || ''}/storage/${data.logo_url}`
           setFotoPreview(url)
         }
       })

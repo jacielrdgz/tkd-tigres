@@ -103,7 +103,9 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
   });
 
   const logoUrlFinal = user?.tenant?.logo
-    ? (user.tenant.logo.startsWith('data:') ? user.tenant.logo : `${import.meta.env.VITE_API_URL || ''}/storage/${user.tenant.logo}`)
+    ? ((user.tenant.logo.startsWith('data:') || user.tenant.logo.startsWith('http')) 
+        ? user.tenant.logo 
+        : `${import.meta.env.VITE_API_URL || ''}/storage/${user.tenant.logo}`)
     : logoImg;
 
   return (
