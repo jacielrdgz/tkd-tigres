@@ -77,9 +77,19 @@ class AuthController extends Controller
             // Sincronizar tenant con escuela si existe
             if ($user->tenant) {
                 $escuela = \App\Models\Escuela::where('tenant_id', $user->tenant->id)->first();
-                if ($escuela && !empty($escuela->nombre) && $escuela->nombre !== $user->tenant->nombre) {
-                    $user->tenant->nombre = $escuela->nombre;
-                    $user->tenant->save();
+                if ($escuela) {
+                    $cambios = false;
+                    if (!empty($escuela->nombre) && $escuela->nombre !== $user->tenant->nombre) {
+                        $user->tenant->nombre = $escuela->nombre;
+                        $cambios = true;
+                    }
+                    if (!empty($escuela->logo_url) && $escuela->logo_url !== $user->tenant->logo) {
+                        $user->tenant->logo = $escuela->logo_url;
+                        $cambios = true;
+                    }
+                    if ($cambios) {
+                        $user->tenant->save();
+                    }
                 }
             }
         }
@@ -126,9 +136,19 @@ class AuthController extends Controller
         // Sincronizar tenant con escuela si existe
         if ($user->tenant) {
             $escuela = \App\Models\Escuela::where('tenant_id', $user->tenant->id)->first();
-            if ($escuela && !empty($escuela->nombre) && $escuela->nombre !== $user->tenant->nombre) {
-                $user->tenant->nombre = $escuela->nombre;
-                $user->tenant->save();
+            if ($escuela) {
+                $cambios = false;
+                if (!empty($escuela->nombre) && $escuela->nombre !== $user->tenant->nombre) {
+                    $user->tenant->nombre = $escuela->nombre;
+                    $cambios = true;
+                }
+                if (!empty($escuela->logo_url) && $escuela->logo_url !== $user->tenant->logo) {
+                    $user->tenant->logo = $escuela->logo_url;
+                    $cambios = true;
+                }
+                if ($cambios) {
+                    $user->tenant->save();
+                }
             }
         }
 

@@ -37,14 +37,19 @@ class EscuelaController extends Controller
                 ]
             );
 
-            // Sincronizar nombre y disciplina del tenant con los de la escuela si ya existen
+            // Sincronizar nombre, disciplina y logo del tenant con los de la escuela si ya existen
+            $tenantUpdate = [];
             if (!empty($escuela->nombre) && $tenant->nombre !== $escuela->nombre) {
-                $tenant->nombre = $escuela->nombre;
-                $tenant->save();
+                $tenantUpdate['nombre'] = $escuela->nombre;
             }
             if (!empty($escuela->disciplina) && $tenant->disciplina !== $escuela->disciplina) {
-                $tenant->disciplina = $escuela->disciplina;
-                $tenant->save();
+                $tenantUpdate['disciplina'] = $escuela->disciplina;
+            }
+            if (!empty($escuela->logo_url) && $tenant->logo !== $escuela->logo_url) {
+                $tenantUpdate['logo'] = $escuela->logo_url;
+            }
+            if (!empty($tenantUpdate)) {
+                $tenant->update($tenantUpdate);
             }
 
             $escuela->load('direccion');
