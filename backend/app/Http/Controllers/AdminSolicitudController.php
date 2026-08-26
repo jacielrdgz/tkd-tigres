@@ -20,8 +20,10 @@ class AdminSolicitudController extends Controller
      */
     public function index()
     {
-        $solicitudes = User::whereNull('tenant_id')
+        $solicitudes = User::withoutGlobalScopes()
+            ->whereNull('tenant_id')
             ->where('is_superadmin', false)
+            ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json($solicitudes);

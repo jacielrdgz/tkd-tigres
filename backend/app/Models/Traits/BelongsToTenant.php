@@ -20,10 +20,12 @@ trait BelongsToTenant
         // Aplicar filtro automático en todas las queries
         static::addGlobalScope(new TenantScope);
 
-        // Asignar tenant_id automáticamente al crear un registro
+        // Asignar tenant_id automáticamente al crear un registro (solo si no es superadmin y el modelo no tiene tenant_id)
         static::creating(function ($model) {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $model->tenant_id = auth()->user()->tenant_id;
+            if (auth()->check() && !auth()->user()->isSuperAdmin() && auth()->user()->tenant_id) {
+                if (empty($model->tenant_id)) {
+                    $model->tenant_id = auth()->user()->tenant_id;
+                }
             }
         });
     }

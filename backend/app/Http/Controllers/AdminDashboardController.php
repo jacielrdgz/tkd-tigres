@@ -22,7 +22,7 @@ class AdminDashboardController extends Controller
             ->count();
 
         // 2. Total alumnos en todo el sistema
-        $totalAlumnos = Alumno::count();
+        $totalAlumnos = Alumno::withoutGlobalScopes()->count();
 
         // 3. Ingresos del mes actual (según historial de renovaciones de suscripción)
         $ingresosMes = SuscripcionHistorial::whereMonth('fecha_pago', $hoy->month)
@@ -35,7 +35,8 @@ class AdminDashboardController extends Controller
             ->count();
 
         // 5. Solicitudes pendientes de aprobación
-        $solicitudesPendientes = User::whereNull('tenant_id')
+        $solicitudesPendientes = User::withoutGlobalScopes()
+            ->whereNull('tenant_id')
             ->where('is_superadmin', false)
             ->count();
 

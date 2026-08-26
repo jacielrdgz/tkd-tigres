@@ -740,7 +740,7 @@ export default function Alumnos() {
       const doc = new jsPDF()
       doc.setFontSize(20)
       doc.setTextColor(20, 30, 40)
-      doc.text("Reporte de Alumnos - TKD Tigres", 14, 20)
+      doc.text(`Reporte de Alumnos - ${user?.tenant?.nombre || 'Escuela'}`, 14, 20)
 
       doc.setFontSize(10)
       doc.setTextColor(100)

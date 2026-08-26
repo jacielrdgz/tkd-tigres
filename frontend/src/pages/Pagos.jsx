@@ -309,7 +309,7 @@ export default function Pagos() {
     try {
       const doc = new jsPDF()
       doc.setFontSize(18)
-      doc.text("Reporte de Pagos - TKD Tigres", 14, 20)
+      doc.text(`Reporte de Pagos - ${user?.tenant?.nombre || 'Escuela'}`, 14, 20)
       doc.setFontSize(10)
       doc.setTextColor(100)
       doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 28)
@@ -1135,7 +1135,7 @@ export default function Pagos() {
               {formPago.tipo === 'inscripcion' && (
                  <div style={{ gridColumn: '1/-1' }}>
                     <div style={{ ...s.periodoBadge, marginBottom: '12px', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>
-                      🎟️ Concepto: Inscripción TKD Tigres
+                      🎟️ Concepto: Inscripción {user?.tenant?.nombre || 'Escuela'}
                     </div>
                  </div>
               )}

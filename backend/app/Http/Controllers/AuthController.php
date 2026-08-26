@@ -57,26 +57,25 @@ class AuthController extends Controller
         $user->last_login_at = now();
         $user->save();
 
-        $token = $user->createToken('tkd-token')->plainTextToken;
-
-        if (!$user->tenant_id || !$user->tenant) {
-            $tenant = \App\Models\Tenant::first();
-            if (!$tenant) {
-                $tenantName = $user->escuela_solicitada ?: 'Mi Escuela';
-                $tenant = \App\Models\Tenant::create([
-                    'nombre' => $tenantName,
-                    'slug' => 'escuela-' . time(),
-                    'plan' => 'pro',
-                    'suscripcion_estado' => 'activa',
-                ]);
+        // 4. Manejo de Tenant según tipo de usuario
+        if ($user->isSuperAdmin()) {
+            // El SuperAdmin no pertenece a ninguna escuela
+            if ($user->tenant_id !== null) {
+                $user->tenant_id = null;
+                $user->save();
             }
-            $user->tenant_id = $tenant->id;
-            $user->save();
+        } else {
+            // Usuario regular: verificar si su solicitud está pendiente de aprobación
+            if ($user->tenant_id === null) {
+                return response()->json([
+                    'message' => 'Tu solicitud de registro aún está pendiente de revisión y aprobación por el administrador global.'
+                ], 403);
+            }
         }
 
         return response()->json([
             'token'  => $token,
-            'user'   => $user->load('tenant'),
+            'user'   => $user->isSuperAdmin() ? $user : $user->load('tenant'),
         ]);
     }
 
@@ -98,19 +97,19 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         $user = $request->user();
-        if (!$user->tenant_id || !$user->tenant) {
-            $tenant = \App\Models\Tenant::first();
-            if (!$tenant) {
-                $tenantName = $user->escuela_solicitada ?: 'Mi Escuela';
-                $tenant = \App\Models\Tenant::create([
-                    'nombre' => $tenantName,
-                    'slug' => 'escuela-' . time(),
-                    'plan' => 'pro',
-                    'suscripcion_estado' => 'activa',
-                ]);
+
+        if ($user->isSuperAdmin()) {
+            if ($user->tenant_id !== null) {
+                $user->tenant_id = null;
+                $user->save();
             }
-            $user->tenant_id = $tenant->id;
-            $user->save();
+            return response()->json($user);
+        }
+
+        if ($user->tenant_id === null) {
+            return response()->json([
+                'message' => 'Tu cuenta aún no tiene una escuela asignada.'
+            ], 403);
         }
 
         return response()->json(

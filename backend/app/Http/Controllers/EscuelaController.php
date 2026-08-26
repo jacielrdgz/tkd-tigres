@@ -13,23 +13,7 @@ class EscuelaController extends Controller
     private function getTenant()
     {
         $user = auth()->user();
-        if (!$user) return null;
-
-        if (!$user->tenant_id || !$user->tenant) {
-            $tenant = \App\Models\Tenant::first();
-            if (!$tenant) {
-                $tenantName = $user->escuela_solicitada ?: 'Mi Escuela';
-                $tenant = \App\Models\Tenant::create([
-                    'nombre' => $tenantName,
-                    'slug' => 'escuela-' . time(),
-                    'plan' => 'pro',
-                    'suscripcion_estado' => 'activa',
-                ]);
-            }
-            $user->tenant_id = $tenant->id;
-            $user->save();
-            return $tenant;
-        }
+        if (!$user || $user->isSuperAdmin()) return null;
 
         return $user->tenant;
     }

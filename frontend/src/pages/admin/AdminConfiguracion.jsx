@@ -112,7 +112,7 @@ export default function AdminConfiguracion() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Configuración Global</h1>
-          <p style={styles.subtitle}>Ajustes y políticas para todo el ecosistema multi-tenant TKD Tigres</p>
+          <p style={styles.subtitle}>Ajustes y políticas para todo el ecosistema multi-tenant</p>
         </div>
       </div>
 

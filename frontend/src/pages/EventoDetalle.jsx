@@ -384,7 +384,7 @@ export default function EventoDetalle() {
     try {
       const doc = new jsPDF()
       doc.setFontSize(18)
-      doc.text(`Reporte de Inscritos - TKD Tigres`, 14, 20)
+      doc.text(`Reporte de Inscritos - ${user?.tenant?.nombre || 'Escuela'}`, 14, 20)
       doc.setFontSize(10)
       doc.setTextColor(100)
       doc.text(`Evento: ${evento.nombre} (${evento.tipo.toUpperCase()})`, 14, 28)

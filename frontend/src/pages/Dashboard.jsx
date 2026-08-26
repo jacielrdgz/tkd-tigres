@@ -35,7 +35,7 @@ export default function Dashboard() {
         })
       } catch (err) {
         console.error("Error Dashboard:", err)
-        setError('Error al conectar con el servidor de Tigres Do')
+        setError('Error al conectar con el servidor')
       } finally {
         setCargando(false)
       }

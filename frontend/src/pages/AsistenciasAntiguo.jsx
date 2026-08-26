@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react'
 import { useBlocker, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
 import { toast } from 'react-toastify'
@@ -31,6 +32,7 @@ const getDiaSemana = (fechaStr) => {
 }
 
 export default function Asistencias() {
+  const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [alumnos, setAlumnos] = useState([])
@@ -353,7 +355,7 @@ export default function Asistencias() {
     const doc = new jsPDF()
     doc.setFontSize(18)
     doc.setTextColor(20, 30, 40)
-    doc.text("Reporte de Asistencias - TKD Tigres", 14, 20)
+    doc.text(`Reporte de Asistencias - ${user?.tenant?.nombre || 'Escuela'}`, 14, 20)
     doc.setFontSize(10)
     doc.setTextColor(100)
     doc.text(`Fecha del pase de lista: ${fecha}`, 14, 28)

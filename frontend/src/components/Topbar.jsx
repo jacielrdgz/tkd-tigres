@@ -31,11 +31,16 @@ export default function Topbar({ onToggleSidebar }) {
   const menuRef = useRef(null);
 
   // Determinar título
-  let title = ROUTE_TITLES[location.pathname] || (user?.tenant?.nombre || 'Tigres');
-  if (location.pathname.startsWith('/eventos/')) {
-    title = 'Detalle de Evento';
-  } else if (location.pathname.startsWith('/admin/academias/')) {
-    title = 'Detalle de Academia';
+  const isSuperAdmin = user?.is_superadmin;
+  let title = '';
+  if (isSuperAdmin) {
+    title = ROUTE_TITLES[location.pathname] || 'Panel Global';
+    if (location.pathname.startsWith('/admin/academias/')) {
+      title = 'Detalle de Academia';
+    }
+  } else {
+    // Para escuelas se muestra siempre el nombre de la escuela actual
+    title = user?.tenant?.nombre || 'Mi Escuela';
   }
 
   // Cerrar menú al hacer clic fuera
@@ -82,7 +87,7 @@ export default function Topbar({ onToggleSidebar }) {
         <button style={styles.btnMenu} onClick={onToggleSidebar} aria-label="Menu principal">
           ☰
         </button>
-        <h1 style={styles.title}>{user?.tenant?.nombre || title}</h1>
+        <h1 style={styles.title}>{title}</h1>
       </div>
 
       <div style={styles.right} ref={menuRef}>
