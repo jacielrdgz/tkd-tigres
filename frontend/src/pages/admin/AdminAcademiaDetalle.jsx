@@ -18,6 +18,7 @@ import {
   FiTrash2,
   FiActivity
 } from 'react-icons/fi';
+import { formatearFechaNatural, formatearFechaHora } from '../../utils/dateHelper';
 
 export default function AdminAcademiaDetalle() {
   const { id } = useParams();
@@ -184,7 +185,7 @@ export default function AdminAcademiaDetalle() {
             </div>
             <div style={styles.infoItem}>
               <span style={styles.infoLabel}>Fecha de Registro:</span>
-              <span style={styles.infoValue}>{academia.created_at}</span>
+              <span style={styles.infoValue}>{formatearFechaNatural(academia.created_at)}</span>
             </div>
           </div>
         </div>
@@ -211,13 +212,7 @@ export default function AdminAcademiaDetalle() {
             <div style={styles.infoItem}>
               <span style={styles.infoLabel}>Próximo Vencimiento:</span>
               <span style={styles.infoValue}>
-                {academia.suscripcion_hasta
-                  ? new Date(academia.suscripcion_hasta).toLocaleDateString('es-MX', {
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric',
-                    })
-                  : 'Indefinido / Sin vencimiento'}
+                {formatearFechaNatural(academia.suscripcion_hasta)}
               </span>
             </div>
             <div style={styles.divider} />
@@ -238,15 +233,7 @@ export default function AdminAcademiaDetalle() {
             <div style={styles.infoItem}>
               <span style={styles.infoLabel}>Último Acceso:</span>
               <span style={styles.infoValue}>
-                {stats.ultimo_acceso
-                  ? new Date(stats.ultimo_acceso).toLocaleString('es-MX', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : 'Sin ingresos recientes'}
+                {formatearFechaHora(stats.ultimo_acceso)}
               </span>
             </div>
           </div>
@@ -286,8 +273,8 @@ export default function AdminAcademiaDetalle() {
                     <td style={{ ...styles.td, color: 'var(--accent-green)', fontWeight: '700' }}>
                       ${floatVal(h.monto).toLocaleString()} MXN
                     </td>
-                    <td style={styles.td}>{h.fecha_pago}</td>
-                    <td style={styles.td}>{h.valido_hasta}</td>
+                    <td style={styles.td}>{formatearFechaNatural(h.fecha_pago)}</td>
+                    <td style={styles.td}>{formatearFechaNatural(h.valido_hasta)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -2,6 +2,18 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../api/axios'
 import { toast } from 'react-toastify'
+import {
+  FiShield,
+  FiUser,
+  FiHome,
+  FiMail,
+  FiPhone,
+  FiLock,
+  FiSend,
+  FiCheckCircle,
+  FiArrowRight,
+  FiClock
+} from 'react-icons/fi'
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -19,8 +31,11 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.name || !form.email || !form.password || !form.escuela) {
-      return toast.error('Completa todos los campos')
+    if (!form.name.trim() || !form.email.trim() || !form.password || !form.escuela.trim()) {
+      return toast.error('Completa todos los campos obligatorios')
+    }
+    if (form.telefono && form.telefono.trim().replace(/\D/g, '').length < 10) {
+      return toast.error('El número de teléfono debe tener al menos 10 dígitos')
     }
     if (form.password.length < 6) {
       return toast.error('La contraseña debe tener al menos 6 caracteres')
@@ -56,62 +71,66 @@ export default function Register() {
         <div style={{ ...s.card, textAlign: 'center', maxWidth: '500px' }}>
           {/* Ícono animado */}
           <div style={s.successRing}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+            <FiCheckCircle size={40} color="var(--accent-green)" />
           </div>
 
           <h1 style={{ ...s.title, fontSize: '26px', marginBottom: '10px' }}>
             ¡Solicitud enviada!
           </h1>
           <p style={{ ...s.successText, marginBottom: '28px' }}>
-            Tu cuenta fue registrada. Recibirás un correo de confirmación
-            y el administrador la activará asignándote tu escuela.
+            Tu cuenta fue registrada exitosamente. El administrador revisará los datos de tu academia
+            para activarla y te llegará una confirmación a tu correo.
           </p>
 
           {/* Pasos */}
           <div style={s.stepsBox}>
             <div style={s.step}>
-              <div style={{ ...s.stepDot, background: '#22c55e' }}>✓</div>
+              <div style={{ ...s.stepDot, background: 'var(--accent-green)' }}>
+                <FiCheckCircle size={14} color="#fff" />
+              </div>
               <div style={s.stepText}>
                 <strong>Solicitud recibida</strong>
-                <span>Tu información fue guardada</span>
+                <span>Tu información fue guardada en el sistema</span>
               </div>
             </div>
             <div style={s.stepLine} />
             <div style={s.step}>
-              <div style={{ ...s.stepDot, background: 'var(--accent-blue)' }}>2</div>
+              <div style={{ ...s.stepDot, background: 'var(--accent-blue)' }}>
+                <FiClock size={14} color="#fff" />
+              </div>
               <div style={s.stepText}>
                 <strong>Revisión del administrador</strong>
-                <span>Validará tu solicitud</span>
+                <span>Validación y alta de tu academia</span>
               </div>
             </div>
             <div style={s.stepLine} />
             <div style={s.step}>
-              <div style={{ ...s.stepDot, background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>3</div>
+              <div style={{ ...s.stepDot, background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+                <FiShield size={14} />
+              </div>
               <div style={s.stepText}>
                 <strong>Cuenta activada</strong>
-                <span>Recibirás confirmación por correo</span>
+                <span>Acceso completo a tu panel de control</span>
               </div>
             </div>
           </div>
 
           <Link
             to="/login"
-            style={{ ...s.btnPrimary, marginTop: '8px', display: 'block' }}
+            style={{ ...s.btnPrimary, marginTop: '8px', display: 'flex', textDecoration: 'none' }}
             id="go-to-login-after-register"
           >
-            Ir al inicio de sesión
+            <span>Ir al inicio de sesión</span>
+            <FiArrowRight size={16} />
           </Link>
 
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>
-            ¿Problemas? Contacta al administrador directamente.
+            ¿Tienes dudas? Puedes contactar directamente a la administración.
           </p>
         </div>
       </div>
     )
   }
-
 
   // ─── Formulario ────────────────────────────────────────────────────────────
   return (
@@ -120,20 +139,22 @@ export default function Register() {
 
       <div style={s.card}>
         <div style={s.brand}>
-          <div style={s.logoCircle}>🥋</div>
+          <div style={s.logoCircle}>
+            <FiShield size={28} color="#ffffff" />
+          </div>
           <h1 style={s.title}>Registrarse</h1>
           <p style={s.subtitle}>
-            Crea tu cuenta y espera la activación del administrador
+            Crea tu cuenta y solicita el alta de tu academia
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={s.form}>
           <div>
-            <label style={s.label}>Tu nombre completo</label>
+            <label style={s.label}>Tu nombre</label>
             <input
               id="register-name"
               style={s.input}
-              placeholder="Ej. Juan Pérez"
+              placeholder=""
               value={form.name}
               onChange={e => update('name', e.target.value)}
               autoFocus
@@ -141,11 +162,11 @@ export default function Register() {
           </div>
 
           <div>
-            <label style={s.label}>Nombre de tu escuela / dojo</label>
+            <label style={s.label}>Nombre de tu escuela / academia</label>
             <input
               id="register-escuela"
               style={s.input}
-              placeholder="Ej. Leones TKD, Dragon Gym…"
+              placeholder=""
               value={form.escuela}
               onChange={e => update('escuela', e.target.value)}
             />
@@ -169,7 +190,7 @@ export default function Register() {
                 id="register-telefono"
                 style={s.input}
                 type="tel"
-                placeholder="Ej. 6251234567"
+                placeholder="Mínimo 10 dígitos"
                 value={form.telefono}
                 onChange={e => update('telefono', e.target.value)}
               />
@@ -207,7 +228,8 @@ export default function Register() {
             style={{ ...s.btnPrimary, opacity: cargando ? 0.7 : 1 }}
             disabled={cargando}
           >
-            {cargando ? 'Enviando solicitud…' : '📨 Enviar solicitud'}
+            <FiSend size={15} />
+            <span>{cargando ? 'Enviando solicitud…' : 'Enviar solicitud'}</span>
           </button>
         </form>
 
@@ -233,7 +255,7 @@ const s = {
     alignItems: 'center',
     justifyContent: 'center',
     background: 'var(--bg-primary)',
-    padding: '20px',
+    padding: '24px 16px',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -242,14 +264,24 @@ const s = {
     width: '600px',
     height: '600px',
     borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)',
-    bottom: '-200px',
-    left: '-200px',
+    background: 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)',
+    top: '-200px',
+    right: '-200px',
+    pointerEvents: 'none',
+  },
+  bgGlow2: {
+    position: 'absolute',
+    width: '500px',
+    height: '500px',
+    borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%)',
+    bottom: '-150px',
+    left: '-150px',
     pointerEvents: 'none',
   },
   card: {
     width: '100%',
-    maxWidth: '460px',
+    maxWidth: '520px',
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border)',
     borderRadius: '20px',
@@ -260,154 +292,85 @@ const s = {
   },
   brand: {
     textAlign: 'center',
-    marginBottom: '28px',
+    marginBottom: '26px',
   },
   logoCircle: {
-    width: '56px',
-    height: '56px',
+    width: '60px',
+    height: '60px',
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, var(--accent-purple), var(--accent-blue))',
+    background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '24px',
     margin: '0 auto 14px',
-    boxShadow: '0 8px 30px rgba(139, 92, 246, 0.3)',
+    boxShadow: '0 8px 24px rgba(59, 130, 246, 0.35)',
   },
   title: {
-    fontSize: '22px',
+    fontSize: '24px',
     fontWeight: '800',
     color: 'var(--text-primary)',
     margin: '0 0 4px',
+    letterSpacing: '-0.4px',
   },
   subtitle: {
-    fontSize: '13px',
+    fontSize: '13.5px',
     color: 'var(--text-muted)',
     margin: 0,
-    lineHeight: 1.5,
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
   },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '14px',
+  },
   label: {
     display: 'block',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: 'var(--text-muted)',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    color: 'var(--text-secondary)',
     marginBottom: '6px',
   },
   input: {
     width: '100%',
-    padding: '12px 14px',
+    padding: '11px 14px',
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     borderRadius: '10px',
     color: 'var(--text-primary)',
-    fontSize: '14px',
-    fontFamily: 'Inter, sans-serif',
+    fontSize: '13.5px',
+    fontFamily: 'inherit',
     outline: 'none',
-    transition: 'border-color 0.2s',
     boxSizing: 'border-box',
-  },
-  grid2: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px',
+    transition: 'all 0.15s ease',
   },
   btnPrimary: {
-    display: 'block',
     width: '100%',
-    padding: '14px',
+    padding: '13px',
     background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
     color: '#fff',
     border: 'none',
     borderRadius: '10px',
-    fontSize: '15px',
+    fontSize: '14.5px',
     fontWeight: '700',
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'inherit',
     cursor: 'pointer',
-    boxShadow: '0 8px 30px rgba(59, 130, 246, 0.25)',
-    transition: 'all 0.2s',
-    textAlign: 'center',
-    textDecoration: 'none',
-    marginTop: '4px',
-  },
-  bgGlow2: {
-    position: 'absolute',
-    width: '500px',
-    height: '500px',
-    borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%)',
-    top: '-150px',
-    right: '-150px',
-    pointerEvents: 'none',
-  },
-  successRing: {
-    width: '80px',
-    height: '80px',
-    borderRadius: '50%',
-    background: 'rgba(34,197,94,0.12)',
-    border: '2px solid rgba(34,197,94,0.3)',
+    marginTop: '6px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    margin: '0 auto 24px',
-    boxShadow: '0 0 30px rgba(34,197,94,0.2)',
-  },
-  successText: {
-    fontSize: '15px',
-    color: 'var(--text-secondary)',
-    lineHeight: 1.7,
-    textAlign: 'center',
-  },
-  stepsBox: {
-    background: 'var(--bg-primary)',
-    borderRadius: '14px',
-    border: '1px solid var(--border)',
-    padding: '20px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0',
-    marginBottom: '24px',
-    textAlign: 'left',
-  },
-  step: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-  },
-  stepDot: {
-    width: '28px',
-    height: '28px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '12px',
-    fontWeight: '800',
-    color: '#fff',
-    flexShrink: 0,
-  },
-  stepText: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1px',
-    fontSize: '13px',
-    color: 'var(--text-primary)',
-  },
-  stepLine: {
-    width: '1px',
-    height: '16px',
-    background: 'var(--border)',
-    margin: '4px 0 4px 13px',
+    gap: '8px',
+    boxShadow: '0 6px 20px rgba(59, 130, 246, 0.25)',
+    transition: 'all 0.2s ease',
   },
   divider: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    margin: '24px 0 16px',
+    margin: '22px 0 16px',
   },
   dividerLine: {
     flex: 1,
@@ -418,17 +381,71 @@ const s = {
     fontSize: '12px',
     color: 'var(--text-muted)',
     whiteSpace: 'nowrap',
+    fontWeight: '600',
   },
   linkLogin: {
     display: 'block',
     width: '100%',
-    padding: '12px',
+    padding: '11px',
     textAlign: 'center',
-    color: 'var(--accent-purple)',
-    background: 'var(--accent-purple-bg)',
+    color: 'var(--accent-blue)',
+    background: 'var(--accent-blue-bg)',
     borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
+    fontSize: '13.5px',
+    fontWeight: '700',
     textDecoration: 'none',
+    transition: 'background 0.2s',
+    boxSizing: 'border-box',
+  },
+  successRing: {
+    width: '68px',
+    height: '68px',
+    borderRadius: '50%',
+    background: 'var(--accent-green-bg)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 20px',
+    border: '1px solid rgba(34, 197, 94, 0.3)',
+  },
+  successText: {
+    fontSize: '14px',
+    color: 'var(--text-secondary)',
+    lineHeight: '1.6',
+  },
+  stepsBox: {
+    background: 'var(--bg-primary)',
+    borderRadius: '14px',
+    border: '1px solid var(--border)',
+    padding: '18px',
+    marginBottom: '24px',
+    textAlign: 'left',
+  },
+  step: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  stepDot: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '12px',
+    fontWeight: '700',
+    flexShrink: 0,
+  },
+  stepText: {
+    display: 'flex',
+    flexDirection: 'column',
+    fontSize: '12.5px',
+  },
+  stepLine: {
+    width: '2px',
+    height: '14px',
+    background: 'var(--border)',
+    margin: '3px 0 3px 13px',
   },
 }

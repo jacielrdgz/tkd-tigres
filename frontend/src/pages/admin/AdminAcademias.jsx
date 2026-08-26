@@ -14,6 +14,7 @@ import {
   FiClock,
   FiCalendar
 } from 'react-icons/fi';
+import { formatearFechaNatural, formatearFechaHora } from '../../utils/dateHelper';
 
 export default function AdminAcademias() {
   const [academias, setAcademias] = useState([]);
@@ -195,7 +196,7 @@ export default function AdminAcademias() {
                         <div style={styles.schoolInfo}>
                           <span style={styles.schoolName}>{a.nombre}</span>
                           <span style={styles.schoolMeta}>
-                            ID: #{a.id} · Registro: {a.fecha_registro}
+                            ID: #{a.id} · Registro: {formatearFechaNatural(a.fecha_registro)}
                           </span>
                         </div>
                       </td>
@@ -216,15 +217,7 @@ export default function AdminAcademias() {
                       </td>
                       <td style={styles.td}>
                         <span style={styles.dateMeta}>
-                          {a.ultimo_acceso
-                            ? new Date(a.ultimo_acceso).toLocaleString('es-MX', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : 'Sin ingresos'}
+                          {formatearFechaHora(a.ultimo_acceso)}
                         </span>
                       </td>
                       <td style={{ ...styles.td, textAlign: 'center' }}>

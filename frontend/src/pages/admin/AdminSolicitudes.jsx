@@ -13,6 +13,7 @@ import {
   FiSearch,
   FiLayers
 } from 'react-icons/fi';
+import { formatearFechaNatural } from '../../utils/dateHelper';
 
 export default function AdminSolicitudes() {
   const [solicitudes, setSolicitudes] = useState([]);
@@ -236,13 +237,7 @@ export default function AdminSolicitudes() {
                       </td>
                       <td style={styles.td}>
                         <span style={styles.dateMeta}>
-                          {s.created_at
-                            ? new Date(s.created_at).toLocaleDateString('es-MX', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                            : 'Reciente'}
+                          {formatearFechaNatural(s.created_at)}
                         </span>
                       </td>
                       <td style={{ ...styles.td, textAlign: 'center' }}>

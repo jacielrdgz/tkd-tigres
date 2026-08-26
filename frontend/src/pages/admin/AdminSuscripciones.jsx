@@ -12,6 +12,7 @@ import {
   FiClock,
   FiSearch
 } from 'react-icons/fi';
+import { formatearFechaNatural } from '../../utils/dateHelper';
 import CustomDropdown from '../../components/Common/CustomDropdown';
 
 export default function AdminSuscripciones() {
@@ -269,11 +270,7 @@ export default function AdminSuscripciones() {
                       <td style={styles.td}>
                         <span style={styles.dateMeta}>
                           {item.suscripcion_vence
-                            ? new Date(item.suscripcion_vence).toLocaleDateString('es-MX', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
+                            ? formatearFechaNatural(item.suscripcion_vence)
                             : 'Ilimitado / Sin vencimiento'}
                         </span>
                       </td>

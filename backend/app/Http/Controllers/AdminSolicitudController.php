@@ -80,7 +80,7 @@ class AdminSolicitudController extends Controller
                     'telefono'           => $user->telefono ?? null,
                     'plan'               => 'free',
                     'suscripcion_estado' => 'trial',
-                    'suscripcion_hasta'  => now()->addDays($diasTrial)->toDateString(),
+                    'suscripcion_hasta'  => now()->addMonthsNoOverflow(1)->toDateString(),
                     'suscripcion_monto'  => $precioPlan,
                 ]);
 
