@@ -59,6 +59,21 @@ class AuthController extends Controller
 
         $token = $user->createToken('tkd-token')->plainTextToken;
 
+        if (!$user->tenant_id || !$user->tenant) {
+            $tenant = \App\Models\Tenant::first();
+            if (!$tenant) {
+                $tenantName = $user->escuela_solicitada ?: 'Mi Escuela';
+                $tenant = \App\Models\Tenant::create([
+                    'nombre' => $tenantName,
+                    'slug' => 'escuela-' . time(),
+                    'plan' => 'pro',
+                    'suscripcion_estado' => 'activa',
+                ]);
+            }
+            $user->tenant_id = $tenant->id;
+            $user->save();
+        }
+
         return response()->json([
             'token'  => $token,
             'user'   => $user->load('tenant'),
@@ -82,8 +97,24 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
+        $user = $request->user();
+        if (!$user->tenant_id || !$user->tenant) {
+            $tenant = \App\Models\Tenant::first();
+            if (!$tenant) {
+                $tenantName = $user->escuela_solicitada ?: 'Mi Escuela';
+                $tenant = \App\Models\Tenant::create([
+                    'nombre' => $tenantName,
+                    'slug' => 'escuela-' . time(),
+                    'plan' => 'pro',
+                    'suscripcion_estado' => 'activa',
+                ]);
+            }
+            $user->tenant_id = $tenant->id;
+            $user->save();
+        }
+
         return response()->json(
-            $request->user()->load('tenant')
+            $user->load('tenant')
         );
     }
 }
