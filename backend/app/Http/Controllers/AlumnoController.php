@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAlumnoRequest;
 use App\Http\Requests\UpdateAlumnoRequest;
+use App\Services\SupabaseStorageService;
 use App\Models\Alumno;
 use App\Models\Asistencia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 use App\Models\HistorialGrado;
 use Illuminate\Support\Facades\Gate;
@@ -103,8 +105,8 @@ class AlumnoController extends Controller
         if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
             try {
                 $file = $request->file('foto');
-                $mime = $file->getMimeType() ?: 'image/jpeg';
-                $validated['foto'] = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
+                $customName = 'alumno_' . time() . '_' . Str::random(6) . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
+                $validated['foto'] = SupabaseStorageService::upload($file, 'alumnos', $customName);
             } catch (\Throwable $eFile) {
                 unset($validated['foto']);
             }
@@ -135,14 +137,20 @@ class AlumnoController extends Controller
         $validated = $request->validated();
 
         if ($request->has('eliminar_foto') && $request->eliminar_foto == '1') {
+            if ($alumno->foto) {
+                SupabaseStorageService::delete($alumno->foto);
+            }
             $validated['foto'] = null;
         }
 
         if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
             try {
+                if ($alumno->foto) {
+                    SupabaseStorageService::delete($alumno->foto);
+                }
                 $file = $request->file('foto');
-                $mime = $file->getMimeType() ?: 'image/jpeg';
-                $validated['foto'] = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
+                $customName = 'alumno_' . $alumno->id . '_' . time() . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
+                $validated['foto'] = SupabaseStorageService::upload($file, 'alumnos', $customName);
             } catch (\Throwable $eFile) {
                 unset($validated['foto']);
             }
@@ -157,11 +165,12 @@ class AlumnoController extends Controller
         Gate::authorize('update', $alumno);
 
         if ($alumno->foto) {
-            Storage::disk('public')->delete($alumno->foto);
+            SupabaseStorageService::delete($alumno->foto);
+            $alumno->foto = null;
+            $alumno->save();
         }
-        $alumno->update(['foto' => null]);
 
-        return response()->json($alumno);
+        return response()->json(['message' => 'Foto eliminada', 'foto' => null]);
     }
 
     public function destroy(Alumno $alumno)

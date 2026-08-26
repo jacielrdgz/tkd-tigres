@@ -86,7 +86,9 @@ export default function DojoInfo() {
     if (fotoFile) formData.append('foto', fotoFile)
 
     try {
-      const { data } = await api.post('/configuracion-escuela', formData)
+      const { data } = await api.post('/configuracion-escuela', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
       setEscuela({
         ...data,
         redes_sociales: data.redes_sociales || { facebook: '', instagram: '', whatsapp: '' },
@@ -95,6 +97,10 @@ export default function DojoInfo() {
           colonia: '', ciudad: '', estado: '', codigo_postal: '', referencias: ''
         }
       })
+      if (data.logo_url || data.logo_base64) {
+        setFotoPreview(data.logo_url || data.logo_base64)
+      }
+      setFotoFile(null)
       await refreshUser()
       toast.success('Información actualizada correctamente')
     } catch (err) {

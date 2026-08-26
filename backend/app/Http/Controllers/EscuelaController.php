@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 use App\Models\Escuela;
 use App\Models\DireccionEscuela;
+use App\Services\SupabaseStorageService;
 use Illuminate\Support\Facades\Storage;
 
 class EscuelaController extends Controller
@@ -57,27 +58,8 @@ class EscuelaController extends Controller
                 }
             }
 
-            // Logo base64: si ya es base64 lo usamos directamente, si no intentamos leerlo del storage
-            $logoBase64 = null;
-            if ($escuela->logo_url) {
-                if (str_starts_with($escuela->logo_url, 'data:')) {
-                    $logoBase64 = $escuela->logo_url;
-                } else {
-                    try {
-                        if (Storage::disk('public')->exists($escuela->logo_url)) {
-                            $path = Storage::disk('public')->path($escuela->logo_url);
-                            if (file_exists($path)) {
-                                $type = pathinfo($path, PATHINFO_EXTENSION);
-                                $data = file_get_contents($path);
-                                $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
-                            }
-                        }
-                    } catch (\Throwable $ex) {
-                        $logoBase64 = null;
-                    }
-                }
-            }
-            $escuela->logo_base64 = $logoBase64;
+            // Logo URL
+            $escuela->logo_base64 = $escuela->logo_url ?: $tenant->logo;
 
             return response()->json($escuela);
         } catch (\Throwable $e) {
@@ -110,7 +92,7 @@ class EscuelaController extends Controller
                 'telefono_contacto' => 'nullable|string|max:50',
                 'email_contacto'    => 'nullable|email|max:255',
                 'redes_sociales'    => 'nullable|array',
-                'foto'              => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:10240',
+                'foto'              => 'nullable',
                 
                 // Campos de dirección
                 'calle'             => 'nullable|string|max:255',
@@ -145,17 +127,17 @@ class EscuelaController extends Controller
                 }
             }
 
-            // Manejar logo (almacenamiento en Base64 directo a Supabase)
+            // Manejar logo con Supabase Storage (o fallback inteligente)
             if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
                 try {
                     $file = $request->file('foto');
-                    $mime = $file->getMimeType() ?: 'image/jpeg';
-                    $base64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
+                    $customName = 'logo_tenant_' . $tenant->id . '_' . time() . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
+                    $logoUrl = SupabaseStorageService::upload($file, 'logos', $customName);
 
-                    $escuela->update(['logo_url' => $base64]);
-                    $tenant->update(['logo' => $base64]);
+                    $escuela->update(['logo_url' => $logoUrl]);
+                    $tenant->update(['logo' => $logoUrl]);
                 } catch (\Throwable $eFile) {
-                    \Illuminate\Support\Facades\Log::error("Error guardando logo Base64: " . $eFile->getMessage());
+                    \Illuminate\Support\Facades\Log::error("Error guardando logo con Supabase: " . $eFile->getMessage());
                 }
             }
 

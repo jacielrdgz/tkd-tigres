@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -128,23 +129,28 @@ class UserController extends Controller
     public function uploadAvatar(Request $request)
     {
         $request->validate([
-            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
         $user = auth()->user();
 
         // Borrar avatar anterior si existe
         if ($user->avatar) {
-            Storage::disk('public')->delete($user->avatar);
+            SupabaseStorageService::delete($user->avatar);
         }
 
-        $path = $request->file('avatar')->store('avatars', 'public');
-        $user->avatar = $path;
+        $avatarUrl = SupabaseStorageService::upload(
+            $request->file('avatar'), 
+            'avatars', 
+            'avatar_user_' . $user->id . '_' . time() . '.' . ($request->file('avatar')->getClientOriginalExtension() ?: 'jpg')
+        );
+
+        $user->avatar = $avatarUrl;
         $user->save();
 
         return response()->json([
             'message' => 'Foto de perfil actualizada',
-            'avatar'  => $path,
+            'avatar'  => $avatarUrl,
         ]);
     }
 
@@ -156,7 +162,7 @@ class UserController extends Controller
         $user = auth()->user();
 
         if ($user->avatar) {
-            Storage::disk('public')->delete($user->avatar);
+            SupabaseStorageService::delete($user->avatar);
             $user->avatar = null;
             $user->save();
         }

@@ -74,9 +74,13 @@ class User extends Authenticatable
      */
     public function getAvatarUrlAttribute(): ?string
     {
-        return $this->avatar
-            ? Storage::disk('public')->url($this->avatar)
-            : null;
+        if (!$this->avatar) {
+            return null;
+        }
+        if (str_starts_with($this->avatar, 'http://') || str_starts_with($this->avatar, 'https://') || str_starts_with($this->avatar, 'data:')) {
+            return $this->avatar;
+        }
+        return Storage::disk('public')->url($this->avatar);
     }
 
     protected $appends = ['avatar_url'];
