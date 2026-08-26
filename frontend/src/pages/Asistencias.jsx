@@ -170,7 +170,7 @@ export default function Asistencias() {
           `${a.pct}%`,
         ]),
         theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8, cellPadding: 2.8, halign: 'center' },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8, cellPadding: 2, halign: 'center' },
         styles: { fontSize: 7.8, cellPadding: 2.5, halign: 'center' },
         columnStyles: {
           0: { cellWidth: 8, halign: 'center' },
