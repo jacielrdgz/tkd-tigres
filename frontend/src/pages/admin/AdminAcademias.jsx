@@ -226,6 +226,18 @@ export default function AdminAcademias() {
                             to={`/admin/academias/${a.id}`}
                             style={styles.btnActionBlue}
                             title="Ver detalle de academia"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#3b82f6';
+                              e.currentTarget.style.color = '#ffffff';
+                              e.currentTarget.style.transform = 'scale(1.15)';
+                              e.currentTarget.style.boxShadow = '0 0 12px rgba(59, 130, 246, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                              e.currentTarget.style.color = 'var(--accent-blue)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
                           >
                             <FiEye size={15} />
                           </Link>
@@ -234,6 +246,18 @@ export default function AdminAcademias() {
                               onClick={() => handleActivar(a.id)}
                               style={styles.btnActionGreen}
                               title="Reactivar academia"
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#22c55e';
+                                e.currentTarget.style.color = '#ffffff';
+                                e.currentTarget.style.transform = 'scale(1.15)';
+                                e.currentTarget.style.boxShadow = '0 0 12px rgba(34, 197, 94, 0.4)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
+                                e.currentTarget.style.color = 'var(--accent-green)';
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = 'none';
+                              }}
                             >
                               <FiCheckCircle size={15} />
                             </button>
@@ -242,6 +266,18 @@ export default function AdminAcademias() {
                               onClick={() => handleSuspender(a.id, a.nombre)}
                               style={styles.btnActionYellow}
                               title="Suspender acceso temporalmente"
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#f59e0b';
+                                e.currentTarget.style.color = '#ffffff';
+                                e.currentTarget.style.transform = 'scale(1.15)';
+                                e.currentTarget.style.boxShadow = '0 0 12px rgba(245, 158, 11, 0.4)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)';
+                                e.currentTarget.style.color = 'var(--accent-yellow)';
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = 'none';
+                              }}
                             >
                               <FiSlash size={15} />
                             </button>
@@ -250,6 +286,18 @@ export default function AdminAcademias() {
                             onClick={() => handleEliminar(a.id, a.nombre)}
                             style={styles.btnActionRed}
                             title="Eliminar permanentemente"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#ef4444';
+                              e.currentTarget.style.color = '#ffffff';
+                              e.currentTarget.style.transform = 'scale(1.15)';
+                              e.currentTarget.style.boxShadow = '0 0 12px rgba(239, 68, 68, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                              e.currentTarget.style.color = 'var(--accent-red)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
                           >
                             <FiTrash2 size={15} />
                           </button>

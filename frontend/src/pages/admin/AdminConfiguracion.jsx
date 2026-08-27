@@ -290,6 +290,16 @@ export default function AdminConfiguracion() {
               ...styles.btnSave,
               opacity: saving ? 0.7 : 1,
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.55)';
+              e.currentTarget.style.filter = 'brightness(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.boxShadow = 'var(--shadow-glow-blue)';
+              e.currentTarget.style.filter = 'none';
+            }}
           >
             <FiSave size={16} />
             <span>{saving ? 'Guardando cambios...' : 'Guardar Configuración'}</span>

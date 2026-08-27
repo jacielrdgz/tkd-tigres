@@ -353,6 +353,18 @@ export default function AdminUsuarios() {
                             onClick={() => handleOpenPasswordModal(u)}
                             style={styles.btnActionBlue}
                             title="Forzar nueva contraseña"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#3b82f6';
+                              e.currentTarget.style.color = '#ffffff';
+                              e.currentTarget.style.transform = 'scale(1.15)';
+                              e.currentTarget.style.boxShadow = '0 0 12px rgba(59, 130, 246, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                              e.currentTarget.style.color = 'var(--accent-blue)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
                           >
                             <FiKey size={14} />
                           </button>
@@ -362,6 +374,18 @@ export default function AdminUsuarios() {
                                 onClick={() => handleOpenRoleModal(u)}
                                 style={styles.btnActionYellow}
                                 title="Cambiar rol"
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = '#f59e0b';
+                                  e.currentTarget.style.color = '#ffffff';
+                                  e.currentTarget.style.transform = 'scale(1.15)';
+                                  e.currentTarget.style.boxShadow = '0 0 12px rgba(245, 158, 11, 0.4)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)';
+                                  e.currentTarget.style.color = 'var(--accent-yellow)';
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                  e.currentTarget.style.boxShadow = 'none';
+                                }}
                               >
                                 <FiUserCheck size={14} />
                               </button>
@@ -369,6 +393,18 @@ export default function AdminUsuarios() {
                                 onClick={() => handleOpenEscuelaModal(u)}
                                 style={styles.btnActionPurple}
                                 title="Reasignar a otra escuela"
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = '#a855f7';
+                                  e.currentTarget.style.color = '#ffffff';
+                                  e.currentTarget.style.transform = 'scale(1.15)';
+                                  e.currentTarget.style.boxShadow = '0 0 12px rgba(168, 85, 247, 0.4)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)';
+                                  e.currentTarget.style.color = '#c084fc';
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                  e.currentTarget.style.boxShadow = 'none';
+                                }}
                               >
                                 <FiHome size={14} />
                               </button>
@@ -376,6 +412,24 @@ export default function AdminUsuarios() {
                                 onClick={() => handleToggleSuspension(u)}
                                 style={u.is_suspended ? styles.btnActionGreen : styles.btnActionRed}
                                 title={u.is_suspended ? 'Reactivar cuenta' : 'Suspender cuenta'}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = u.is_suspended ? '#22c55e' : '#ef4444';
+                                  e.currentTarget.style.color = '#ffffff';
+                                  e.currentTarget.style.transform = 'scale(1.15)';
+                                  e.currentTarget.style.boxShadow = u.is_suspended
+                                    ? '0 0 12px rgba(34, 197, 94, 0.4)'
+                                    : '0 0 12px rgba(239, 68, 68, 0.4)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = u.is_suspended
+                                    ? 'rgba(16, 185, 129, 0.1)'
+                                    : 'rgba(239, 68, 68, 0.1)';
+                                  e.currentTarget.style.color = u.is_suspended
+                                    ? 'var(--accent-green)'
+                                    : 'var(--accent-red)';
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                  e.currentTarget.style.boxShadow = 'none';
+                                }}
                               >
                                 {u.is_suspended ? <FiCheckCircle size={14} /> : <FiSlash size={14} />}
                               </button>

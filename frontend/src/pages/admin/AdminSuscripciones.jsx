@@ -280,6 +280,16 @@ export default function AdminSuscripciones() {
                             onClick={() => abrirRenovar(item)}
                             style={styles.btnRenovar}
                             title="Renovar meses de vigencia"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(16, 185, 129, 0.45)';
+                              e.currentTarget.style.filter = 'brightness(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'none';
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.25)';
+                              e.currentTarget.style.filter = 'none';
+                            }}
                           >
                             <FiRepeat size={13} />
                             <span>Renovar</span>
@@ -288,6 +298,20 @@ export default function AdminSuscripciones() {
                             onClick={() => abrirCambiarPlan(item)}
                             style={styles.btnPlan}
                             title="Ajustar plan o tarifa pactada"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'var(--bg-tertiary)';
+                              e.currentTarget.style.borderColor = 'var(--accent-blue)';
+                              e.currentTarget.style.color = 'var(--accent-blue)';
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59, 130, 246, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'var(--bg-primary)';
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                              e.currentTarget.style.color = 'var(--text-secondary)';
+                              e.currentTarget.style.transform = 'none';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
                           >
                             <FiSliders size={13} />
                             <span>Plan</span>
@@ -347,10 +371,40 @@ export default function AdminSuscripciones() {
               </div>
 
               <div style={styles.modalFooter}>
-                <button type="button" style={styles.btnSecondary} onClick={() => setShowRenovarModal(false)}>
+                <button
+                  type="button"
+                  style={styles.btnSecondary}
+                  onClick={() => setShowRenovarModal(false)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-tertiary)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                    e.currentTarget.style.borderColor = 'var(--accent-blue)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-primary)';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                >
                   Cancelar
                 </button>
-                <button type="submit" disabled={procesando} style={styles.btnPrimary}>
+                <button
+                  type="submit"
+                  disabled={procesando}
+                  style={styles.btnPrimary}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+                    e.currentTarget.style.filter = 'brightness(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-glow-blue)';
+                    e.currentTarget.style.filter = 'none';
+                  }}
+                >
                   <FiCheck size={15} />
                   <span>{procesando ? 'Guardando...' : 'Aplicar Renovación'}</span>
                 </button>
@@ -403,10 +457,40 @@ export default function AdminSuscripciones() {
               </div>
 
               <div style={styles.modalFooter}>
-                <button type="button" style={styles.btnSecondary} onClick={() => setShowPlanModal(false)}>
+                <button
+                  type="button"
+                  style={styles.btnSecondary}
+                  onClick={() => setShowPlanModal(false)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-tertiary)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                    e.currentTarget.style.borderColor = 'var(--accent-blue)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-primary)';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                >
                   Cancelar
                 </button>
-                <button type="submit" disabled={procesando} style={styles.btnPrimary}>
+                <button
+                  type="submit"
+                  disabled={procesando}
+                  style={styles.btnPrimary}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+                    e.currentTarget.style.filter = 'brightness(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-glow-blue)';
+                    e.currentTarget.style.filter = 'none';
+                  }}
+                >
                   <FiCheck size={15} />
                   <span>{procesando ? 'Guardando...' : 'Guardar Cambios'}</span>
                 </button>

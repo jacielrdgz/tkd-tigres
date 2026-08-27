@@ -120,12 +120,16 @@ export default function AdminAcademiaDetalle() {
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
           e.currentTarget.style.color = 'var(--text-primary)';
+          e.currentTarget.style.borderColor = 'var(--accent-blue)';
           e.currentTarget.style.transform = 'translateY(-1px)';
+          e.currentTarget.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.25)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
           e.currentTarget.style.color = 'var(--text-secondary)';
+          e.currentTarget.style.borderColor = 'var(--border)';
           e.currentTarget.style.transform = 'none';
+          e.currentTarget.style.boxShadow = 'none';
         }}
       >
         <FiArrowLeft size={16} />
@@ -334,6 +338,18 @@ export default function AdminAcademiaDetalle() {
                         onClick={() => handleDeleteUser(u)}
                         style={styles.btnActionRed}
                         title="Eliminar usuario"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#ef4444';
+                          e.currentTarget.style.color = '#ffffff';
+                          e.currentTarget.style.transform = 'scale(1.15)';
+                          e.currentTarget.style.boxShadow = '0 0 12px rgba(239, 68, 68, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                          e.currentTarget.style.color = 'var(--accent-red)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
                       >
                         <FiTrash2 size={14} />
                       </button>

@@ -247,6 +247,16 @@ export default function AdminSolicitudes() {
                             disabled={procesando === s.id}
                             style={styles.btnAprobar}
                             title="Aprobar y asignar escuela"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(16, 185, 129, 0.5)';
+                              e.currentTarget.style.filter = 'brightness(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'none';
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.25)';
+                              e.currentTarget.style.filter = 'none';
+                            }}
                           >
                             <FiCheck size={14} />
                             <span>{procesando === s.id ? 'Aprobando...' : 'Aprobar'}</span>
@@ -256,6 +266,16 @@ export default function AdminSolicitudes() {
                             disabled={procesando === s.id}
                             style={styles.btnRechazar}
                             title="Rechazar solicitud"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(239, 68, 68, 0.35)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+                              e.currentTarget.style.transform = 'none';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
                           >
                             <FiX size={14} />
                             <span>Rechazar</span>
@@ -371,7 +391,23 @@ export default function AdminSolicitudes() {
               </div>
 
               <div style={styles.modalFooter}>
-                <button type="button" style={styles.btnSecondary} onClick={() => setShowModal(false)}>
+                <button
+                  type="button"
+                  style={styles.btnSecondary}
+                  onClick={() => setShowModal(false)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-tertiary)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                    e.currentTarget.style.borderColor = 'var(--accent-blue)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-primary)';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                >
                   Cancelar
                 </button>
                 <button
@@ -380,6 +416,16 @@ export default function AdminSolicitudes() {
                   style={{
                     ...styles.btnPrimary,
                     opacity: procesando === selectedUser?.id ? 0.7 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+                    e.currentTarget.style.filter = 'brightness(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-glow-blue)';
+                    e.currentTarget.style.filter = 'none';
                   }}
                 >
                   <FiCheck size={15} />
