@@ -46,7 +46,14 @@ export default function Register() {
     } catch (err) {
       const errors = err.response?.data?.errors
       if (errors) {
-        const firstError = Object.values(errors)[0][0]
+        let firstError = Object.values(errors)[0][0]
+        if (typeof firstError === 'string') {
+          if (firstError.includes('validation.unique') || firstError.includes('unique')) {
+            firstError = 'Este correo electrónico ya está registrado. Por favor, usa otro o inicia sesión.'
+          } else if (firstError.includes('validation.required')) {
+            firstError = 'Por favor, completa todos los campos requeridos.'
+          }
+        }
         toast.error(firstError)
       } else {
         toast.error(err.response?.data?.message || 'Error al registrarse')

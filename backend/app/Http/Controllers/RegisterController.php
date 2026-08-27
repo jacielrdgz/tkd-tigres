@@ -20,6 +20,15 @@ class RegisterController extends Controller
             'telefono' => 'nullable|string|max:25',
             'password' => 'required|string|min:6|confirmed',
             'escuela'  => 'required|string|max:150',
+        ], [
+            'email.unique'        => 'Este correo electrónico ya está registrado. Si ya tienes cuenta, inicia sesión.',
+            'email.email'         => 'Ingresa un correo electrónico válido.',
+            'email.required'      => 'El correo electrónico es obligatorio.',
+            'name.required'       => 'Tu nombre es obligatorio.',
+            'password.required'   => 'La contraseña es obligatoria.',
+            'password.min'        => 'La contraseña debe tener al menos 6 caracteres.',
+            'password.confirmed'  => 'Las contraseñas no coinciden.',
+            'escuela.required'    => 'El nombre de tu escuela / academia es obligatorio.',
         ]);
 
         // Guardar el nombre de la escuela solicitada en el campo escuela_solicitada
