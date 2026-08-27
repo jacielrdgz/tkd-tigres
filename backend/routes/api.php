@@ -172,8 +172,10 @@ Route::middleware('auth:sanctum')->group(function () {
         // Módulo 5: Usuarios
         Route::get('/usuarios', [\App\Http\Controllers\AdminUsuarioController::class, 'index']);
         Route::post('/usuarios/{id}/reset-password', [\App\Http\Controllers\AdminUsuarioController::class, 'resetPassword']);
+        Route::post('/usuarios/{id}/forzar-password', [\App\Http\Controllers\AdminUsuarioController::class, 'resetPassword']);
         Route::post('/usuarios/{id}/toggle-suspension', [\App\Http\Controllers\AdminUsuarioController::class, 'toggleSuspension']);
         Route::post('/usuarios/{id}/role', [\App\Http\Controllers\AdminUsuarioController::class, 'cambiarRol']);
+        Route::post('/usuarios/{id}/cambiar-rol', [\App\Http\Controllers\AdminUsuarioController::class, 'cambiarRol']);
         Route::post('/usuarios/{id}/cambiar-escuela', [\App\Http\Controllers\AdminUsuarioController::class, 'cambiarEscuela']);
         Route::delete('/usuarios/{id}', [\App\Http\Controllers\AdminUsuarioController::class, 'destroy']);
 

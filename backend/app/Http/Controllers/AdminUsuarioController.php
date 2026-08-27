@@ -93,6 +93,11 @@ class AdminUsuarioController extends Controller
         ]);
 
         $user = User::findOrFail($id);
+
+        if ($user->is_superadmin) {
+            return response()->json(['message' => 'No puedes cambiar el rol de un SuperAdmin.'], 400);
+        }
+
         $user->role = $request->role;
         $user->save();
 

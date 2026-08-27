@@ -96,6 +96,37 @@ const router = createBrowserRouter([
           { path: "configuracion", element: <AdminConfiguracion /> },
         ]
       },
+      // Módulo Ajustes (accesible para todos los usuarios autenticados)
+      {
+        path: "ajustes",
+        element: <Outlet />,
+        children: [
+          { index: true, element: <Ajustes /> },
+          {
+            path: "configuracion",
+            element: (
+              <ProtectedRoute allowedRoles={['owner', 'secretario']} requireTenant={true}>
+                <AjustesEscuela />
+              </ProtectedRoute>
+            ),
+            children: [
+              { index: true, element: <Navigate to="general" replace /> },
+              { path: "general", element: <DojoInfo /> },
+              { path: "instructores", element: <InstructorManager /> },
+              { path: "horarios", element: <HorarioManager /> },
+              { path: "cintas", element: <CintasSettings isEmbedded /> },
+            ]
+          },
+          { 
+            path: "usuarios", 
+            element: (
+              <ProtectedRoute allowedRoles={['owner']} requireTenant={true}>
+                <UsuariosSettings />
+              </ProtectedRoute>
+            ) 
+          },
+        ]
+      },
       // Sub-árbol de Tenant / Escuela (protegido globalmente para que el superadmin no entre)
       {
         element: (
@@ -114,36 +145,6 @@ const router = createBrowserRouter([
           { path: "eventos/:id", element: <SetupGuard><EventoDetalle /></SetupGuard> },
           { path: "examenes", element: <SetupGuard><Examenes /></SetupGuard> },
           { path: "examenes/:id", element: <SetupGuard><ExamenDetalle /></SetupGuard> },
-          {
-            path: "ajustes",
-            element: <Outlet />,
-            children: [
-              { index: true, element: <Ajustes /> },
-              {
-                path: "configuracion",
-                element: (
-                  <ProtectedRoute allowedRoles={['owner', 'secretario']}>
-                    <AjustesEscuela />
-                  </ProtectedRoute>
-                ),
-                children: [
-                  { index: true, element: <Navigate to="general" replace /> },
-                  { path: "general", element: <DojoInfo /> },
-                  { path: "instructores", element: <InstructorManager /> },
-                  { path: "horarios", element: <HorarioManager /> },
-                  { path: "cintas", element: <CintasSettings isEmbedded /> },
-                ]
-              },
-              { 
-                path: "usuarios", 
-                element: (
-                  <ProtectedRoute allowedRoles={['owner']}>
-                    <UsuariosSettings />
-                  </ProtectedRoute>
-                ) 
-              },
-            ]
-          },
         ]
       }
     ]

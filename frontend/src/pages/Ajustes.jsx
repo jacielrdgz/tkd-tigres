@@ -4,23 +4,42 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { toast } from 'react-toastify'
-import { FiUser, FiSun, FiMoon, FiShield, FiUsers, FiAward, FiSliders } from 'react-icons/fi'
+import { FiUser, FiSun, FiMoon, FiShield, FiUsers, FiAward, FiSliders, FiCreditCard, FiSettings, FiGlobe, FiFileText } from 'react-icons/fi'
 
 export default function Ajustes() {
   const { user } = useAuth();
+  const isSuperadmin = user?.is_superadmin;
 
   return (
     <div style={s.container}>
       <header style={s.headerMain}>
-        <h1 style={s.titleMain}>Ajustes de la Escuela</h1>
-        <p style={s.subtitleMain}>Personaliza y gestiona las herramientas de tu academia.</p>
+        <h1 style={s.titleMain}>
+          {isSuperadmin ? 'Ajustes del Sistema' : 'Ajustes de la Escuela'}
+        </h1>
+        <p style={s.subtitleMain}>
+          {isSuperadmin
+            ? 'Personaliza tu perfil, apariencia y gestiona los parámetros globales de la plataforma.'
+            : 'Personaliza y gestiona las herramientas de tu academia.'}
+        </p>
       </header>
 
       <div style={s.gridCards}>
         <CardMiPerfil />
         <CardAppearance />
-        {((user?.role === 'owner' || user?.role === 'secretario') && !user?.is_superadmin) && <CardConfigurarEscuela />}
-        {(user?.role === 'owner' && !user?.is_superadmin) && <CardUsuarios />}
+        
+        {/* Tarjetas exclusivas para SuperAdmin */}
+        {isSuperadmin && (
+          <>
+            <CardConfiguracionGlobal />
+            <CardUsuariosGlobales />
+            <CardAcademiasGlobales />
+            <CardSuscripcionesGlobales />
+          </>
+        )}
+
+        {/* Tarjetas para Administradores de Escuela */}
+        {!isSuperadmin && (user?.role === 'owner' || user?.role === 'secretario') && <CardConfigurarEscuela />}
+        {!isSuperadmin && user?.role === 'owner' && <CardUsuarios />}
       </div>
     </div>
   )
@@ -478,6 +497,250 @@ function CardUsuarios() {
           }}
         >
           <FiUsers size={14} /> Ver Equipo
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function CardConfiguracionGlobal() {
+  return (
+    <div style={s.card}>
+      <div style={s.cardHeader}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ ...s.cardIcon, color: 'var(--accent-blue)', background: 'var(--accent-blue-bg)' }}>
+            <FiSliders size={18} />
+          </span>
+          <h3 style={s.cardTitle}>Configuración del Sistema</h3>
+        </div>
+        <Link
+          style={{ ...s.btnLink, transition: 'all 0.2s', display: 'inline-block' }}
+          to="/admin/configuracion"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateX(4px)'
+            e.currentTarget.style.color = '#60a5fa'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.color = 'var(--accent-blue)'
+          }}
+        >
+          Gestionar →
+        </Link>
+      </div>
+
+      <div style={s.cardBody}>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+          Ajustes globales de precios de suscripción mensual, periodos de prueba gratuitos (trial), plantillas automáticas de correos y activación del modo de mantenimiento del sistema.
+        </p>
+        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-blue)' }}></div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Parámetros de plataforma y costos
+          </span>
+        </div>
+      </div>
+
+      <div style={s.cardFooter}>
+        <span style={s.cardStats}>Ecosistema & Políticas</span>
+        <Link
+          style={{ ...s.btnAddQuick, display: 'inline-flex' }}
+          to="/admin/configuracion"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
+          }}
+        >
+          <FiSliders size={14} /> Personalizar
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function CardUsuariosGlobales() {
+  return (
+    <div style={s.card}>
+      <div style={s.cardHeader}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ ...s.cardIcon, color: '#a855f7', background: 'rgba(168, 85, 247, 0.12)' }}>
+            <FiUsers size={18} />
+          </span>
+          <h3 style={s.cardTitle}>Usuarios Globales</h3>
+        </div>
+        <Link
+          style={{ ...s.btnLink, transition: 'all 0.2s', display: 'inline-block' }}
+          to="/admin/usuarios"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateX(4px)'
+            e.currentTarget.style.color = '#c084fc'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.color = 'var(--accent-blue)'
+          }}
+        >
+          Gestionar →
+        </Link>
+      </div>
+
+      <div style={s.cardBody}>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+          Control centralizado de todas las cuentas registradas en el sistema. Modifica roles, fuerza cambio de contraseñas, transfiere cuentas entre academias o suspende accesos.
+        </p>
+        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#a855f7' }}></div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Roles: Administradores, Instructores y Secretarios
+          </span>
+        </div>
+      </div>
+
+      <div style={s.cardFooter}>
+        <span style={s.cardStats}>Seguridad y Accesos</span>
+        <Link
+          style={{ ...s.btnAddQuick, display: 'inline-flex' }}
+          to="/admin/usuarios"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
+          }}
+        >
+          <FiUsers size={14} /> Gestionar
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function CardAcademiasGlobales() {
+  return (
+    <div style={s.card}>
+      <div style={s.cardHeader}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ ...s.cardIcon, color: 'var(--accent-green)', background: 'var(--accent-green-bg)' }}>
+            <FiShield size={18} />
+          </span>
+          <h3 style={s.cardTitle}>Academias y Dojangs</h3>
+        </div>
+        <Link
+          style={{ ...s.btnLink, transition: 'all 0.2s', display: 'inline-block' }}
+          to="/admin/academias"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateX(4px)'
+            e.currentTarget.style.color = '#34d399'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.color = 'var(--accent-blue)'
+          }}
+        >
+          Gestionar →
+        </Link>
+      </div>
+
+      <div style={s.cardBody}>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+          Directorio global de todas las escuelas y dojangs. Activa o suspende academias, revisa directores, alumnos matriculados, estados de activación y configuración general.
+        </p>
+        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-green)' }}></div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Directorio y multi-tenancy
+          </span>
+        </div>
+      </div>
+
+      <div style={s.cardFooter}>
+        <span style={s.cardStats}>Escuelas & Tenants</span>
+        <Link
+          style={{ ...s.btnAddQuick, display: 'inline-flex' }}
+          to="/admin/academias"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
+          }}
+        >
+          <FiShield size={14} /> Ver Academias
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function CardSuscripcionesGlobales() {
+  return (
+    <div style={s.card}>
+      <div style={s.cardHeader}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ ...s.cardIcon, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.12)' }}>
+            <FiCreditCard size={18} />
+          </span>
+          <h3 style={s.cardTitle}>Suscripciones y Licencias</h3>
+        </div>
+        <Link
+          style={{ ...s.btnLink, transition: 'all 0.2s', display: 'inline-block' }}
+          to="/admin/suscripciones"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateX(4px)'
+            e.currentTarget.style.color = '#fbbf24'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.color = 'var(--accent-blue)'
+          }}
+        >
+          Gestionar →
+        </Link>
+      </div>
+
+      <div style={s.cardBody}>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+          Monitorea la vigencia de planes, renovación de licencias para escuelas, cambios de estado operativo, fechas de expiración y facturación global.
+        </p>
+        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }}></div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Planes: Trial, Activo, Vencido, Suspendido
+          </span>
+        </div>
+      </div>
+
+      <div style={s.cardFooter}>
+        <span style={s.cardStats}>Facturación & Planes</span>
+        <Link
+          style={{ ...s.btnAddQuick, display: 'inline-flex' }}
+          to="/admin/suscripciones"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
+          }}
+        >
+          <FiCreditCard size={14} /> Ver Planes
         </Link>
       </div>
     </div>
