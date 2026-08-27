@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
+import { getCache, setCache } from '../utils/cacheManager'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -9,33 +10,44 @@ export default function Dashboard() {
   if (user?.is_superadmin) {
     return <Navigate to="/admin/dashboard" replace />
   }
-  const [datos, setDatos] = useState({
-    alumnos_activos: 0,
-    pagos_al_corriente: 0,
-    pagos_pendientes: 0,
-    ingresos_mes: 0,
-    asistencias_hoy: 0,
-    eventos_proximos: []
+  const [datos, setDatos] = useState(() => {
+    const cached = getCache('dashboard_stats')
+    return cached?.data || {
+      alumnos_activos: 0,
+      pagos_al_corriente: 0,
+      pagos_pendientes: 0,
+      ingresos_mes: 0,
+      asistencias_hoy: 0,
+      eventos_proximos: []
+    }
   })
 
-  const [cargando, setCargando] = useState(true)
+  const [cargando, setCargando] = useState(() => {
+    const cached = getCache('dashboard_stats')
+    return !cached?.data
+  })
   const [error, setError] = useState(null)
 
   useEffect(() => {
     const obtenerDashboard = async () => {
       try {
         const res = await api.get('/dashboard')
-        setDatos({
+        const data = {
           alumnos_activos: Number(res.data.alumnos_activos) || 0,
           pagos_al_corriente: Number(res.data.pagos_al_corriente) || 0,
           pagos_pendientes: Number(res.data.pagos_pendientes) || 0,
           ingresos_mes: Number(res.data.ingresos_mes) || 0,
           asistencias_hoy: Number(res.data.asistencias_hoy) || 0,
           eventos_proximos: res.data.eventos_proximos || []
-        })
+        }
+        setDatos(data)
+        setCache('dashboard_stats', data)
       } catch (err) {
         console.error("Error Dashboard:", err)
-        setError('Error al conectar con el servidor')
+        const cached = getCache('dashboard_stats')
+        if (!cached?.data) {
+          setError('Error al conectar con el servidor')
+        }
       } finally {
         setCargando(false)
       }

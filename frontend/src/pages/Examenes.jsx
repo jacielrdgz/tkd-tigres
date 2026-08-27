@@ -4,6 +4,7 @@ import api from '../api/axios'
 import Swal from 'sweetalert2'
 import { FiAward, FiCalendar, FiMapPin, FiDollarSign, FiPlus, FiSearch, FiEdit2, FiTrash2, FiUsers } from 'react-icons/fi'
 import CustomDropdown from '../components/Common/CustomDropdown'
+import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 const VACIO = { nombre: '', tipo: 'examen', fecha: '', lugar: '', descripcion: '', costo: '' }
 const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -34,16 +35,31 @@ export default function Examenes() {
     return () => window.removeEventListener('keydown', handleEsc)
   }, [])
 
-  const cargarExamenes = async () => {
-    setCargando(true)
+  const cargarExamenes = async (force = false) => {
+    if (!force) {
+      const cached = getCache('examenes_lista')
+      if (cached && cached.data) {
+        setExamenes(cached.data)
+        setCargando(false)
+      } else {
+        setCargando(true)
+      }
+    } else {
+      setCargando(true)
+    }
+
     try {
       const res = await api.get('/eventos')
       // Filtrar únicamente eventos de tipo 'examen'
       const soloExamenes = res.data.filter(e => e.tipo === 'examen')
       soloExamenes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
       setExamenes(soloExamenes)
+      setCache('examenes_lista', soloExamenes)
     } catch (e) {
-      console.error(e)
+      const cached = getCache('examenes_lista')
+      if (!cached || !cached.data) {
+        console.error(e)
+      }
     } finally {
       setCargando(false)
     }
@@ -79,7 +95,9 @@ export default function Examenes() {
         await api.post('/eventos', payload)
       }
       setModalExamen(false)
-      cargarExamenes()
+      invalidateCache('examenes')
+      invalidateCache('eventos')
+      cargarExamenes(true)
     } catch (err) {
       alert('Error al guardar el examen.')
     }
@@ -101,7 +119,9 @@ export default function Examenes() {
       if (r.isConfirmed) {
         try {
           await api.delete(`/eventos/${id}`)
-          cargarExamenes()
+          invalidateCache('examenes')
+          invalidateCache('eventos')
+          cargarExamenes(true)
         } catch (err) {
           Swal.fire({
             title: 'Error',

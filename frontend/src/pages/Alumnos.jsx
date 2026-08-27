@@ -9,6 +9,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { FiDownload, FiChevronDown, FiUserPlus } from 'react-icons/fi'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
+import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 
 
@@ -312,19 +313,40 @@ export default function Alumnos() {
   const totalActivos = todosLosAlumnos.filter(a => a.estatus === 'activo').length
   const totalInactivos = todosLosAlumnos.filter(a => a.estatus === 'inactivo').length
 
-  const cargar = () => {
-    setCargando(true)
+  const cargar = (force = false) => {
+    const cacheKey = `alumnos_search_${busqueda || 'all'}`
+    if (!force) {
+      const cached = getCache(cacheKey)
+      if (cached && cached.data) {
+        setTodosLosAlumnos(cached.data)
+        setCargando(false)
+      } else {
+        setCargando(true)
+      }
+    } else {
+      setCargando(true)
+    }
+
     // Siempre traemos TODOS sin filtrar por estatus
     api.get('/alumnos', { params: { search: busqueda } })
-      .then(res => setTodosLosAlumnos(res.data))
+      .then(res => {
+        setTodosLosAlumnos(res.data)
+        setCache(cacheKey, res.data)
+      })
       .catch(() => {
-        setTodosLosAlumnos([])
-        toastError('No se pudieron cargar los alumnos')
+        const cached = getCache(cacheKey)
+        if (!cached || !cached.data) {
+          setTodosLosAlumnos([])
+          toastError('No se pudieron cargar los alumnos')
+        }
       })
       .finally(() => setCargando(false))
   }
 
   const alternarEstatus = async (alumno) => {
+    // Invalida la caché de alumnos
+    invalidateCache('alumnos')
+
     // Actualiza INMEDIATAMENTE sin esperar la API
     setTodosLosAlumnos(prev => prev.map(a =>
       a.id === alumno.id
@@ -352,15 +374,30 @@ export default function Alumnos() {
     }, 300)
     return () => clearTimeout(timer)
   }, [busquedaInput])
+
   const cargarCintas = () => {
+    const cached = getCache('cintas_config')
+    if (cached && cached.data) {
+      setCintasConfig(cached.data)
+    }
     api.get('/configuraciones-cintas')
-      .then(res => setCintasConfig(res.data))
+      .then(res => {
+        setCintasConfig(res.data)
+        setCache('cintas_config', res.data)
+      })
       .catch(err => console.error("Error cargando cintas", err))
   }
 
   const cargarHorarios = () => {
+    const cached = getCache('horarios_lista')
+    if (cached && cached.data) {
+      setHorarios(cached.data)
+    }
     api.get('/horarios')
-      .then(res => setHorarios(res.data))
+      .then(res => {
+        setHorarios(res.data)
+        setCache('horarios_lista', res.data)
+      })
       .catch(err => console.error("Error cargando horarios", err))
   }
 
@@ -476,8 +513,9 @@ export default function Alumnos() {
       await api.post(`/alumnos/${historialAlumno.id}/historial-manual`, formManual)
       toastSuccess('Historial registrado correctamente')
       setModalManual(false)
+      invalidateCache('alumnos')
       abrirHistorial(historialAlumno) // Recargar
-      cargar() // Recargar lista principal por si cambió la cinta
+      cargar(true) // Recargar lista principal por si cambió la cinta
     } catch (e) { toastError('Error al registrar historial') }
   }
 
@@ -551,8 +589,9 @@ export default function Alumnos() {
         })
         toastSuccess("Alumno creado")
       }
+      invalidateCache('alumnos')
       cerrar()
-      cargar()
+      cargar(true)
     } catch (err) {
       console.error('Detalles del error:', err.response?.data)
 
@@ -600,7 +639,8 @@ export default function Alumnos() {
       setEliminandoId(id)
       await api.delete(`/alumnos/${id}`)
       toastSuccess('Alumno eliminado correctamente 🗑️')
-      cargar()
+      invalidateCache('alumnos')
+      cargar(true)
     } catch (err) {
       toastError('No se pudo eliminar el alumno')
     } finally {

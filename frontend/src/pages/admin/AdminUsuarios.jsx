@@ -17,11 +17,21 @@ import {
   FiShield
 } from 'react-icons/fi';
 import CustomDropdown from '../../components/Common/CustomDropdown';
+import { getCache, setCache, invalidateCache } from '../../utils/cacheManager';
 
 export default function AdminUsuarios() {
-  const [usuarios, setUsuarios] = useState([]);
-  const [academias, setAcademias] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [usuarios, setUsuarios] = useState(() => {
+    const cached = getCache('admin_usuarios_all');
+    return cached || [];
+  });
+  const [academias, setAcademias] = useState(() => {
+    const cached = getCache('admin_academias_lista');
+    return cached || [];
+  });
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('admin_usuarios_all');
+    return !cached;
+  });
   const [search, setSearch] = useState('');
 
   // Filters
@@ -62,13 +72,17 @@ export default function AdminUsuarios() {
     try {
       const res = await api.get('/admin/academias');
       setAcademias(res.data);
+      setCache('admin_academias_lista', res.data);
     } catch (err) {
       console.error('Error al cargar academias para filtro:', err);
     }
   };
 
-  const fetchUsuarios = async () => {
-    setLoading(true);
+  const fetchUsuarios = async (force = false) => {
+    const currentKey = `admin_usuarios_${roleFilter}_${tenantFilter}_${statusFilter}`;
+    if (force || !getCache(currentKey)) {
+      setLoading(true);
+    }
     try {
       const params = {};
       if (roleFilter) params.role = roleFilter;
@@ -77,8 +91,15 @@ export default function AdminUsuarios() {
 
       const res = await api.get('/admin/usuarios', { params });
       setUsuarios(res.data);
+      setCache(currentKey, res.data);
+      if (!roleFilter && !tenantFilter && !statusFilter) {
+        setCache('admin_usuarios_all', res.data);
+      }
     } catch (err) {
-      toast.error('Error al cargar la lista de usuarios');
+      const cached = getCache(currentKey);
+      if (!cached?.data) {
+        toast.error('Error al cargar la lista de usuarios');
+      }
     } finally {
       setLoading(false);
     }
@@ -102,7 +123,8 @@ export default function AdminUsuarios() {
         try {
           const res = await api.post(`/admin/usuarios/${user.id}/toggle-suspension`);
           toast.success(res.data.message || `Usuario actualizado correctamente`);
-          fetchUsuarios();
+          invalidateCache('admin_');
+          fetchUsuarios(true);
         } catch (err) {
           toast.error(err.response?.data?.message || 'Error al cambiar estado de suspensión');
         }
@@ -151,7 +173,8 @@ export default function AdminUsuarios() {
       });
       toast.success(res.data.message || 'Rol actualizado');
       setShowRoleModal(false);
-      fetchUsuarios();
+      invalidateCache('admin_');
+      fetchUsuarios(true);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al cambiar rol');
     } finally {
@@ -178,7 +201,8 @@ export default function AdminUsuarios() {
       });
       toast.success(res.data.message || 'Escuela actualizada');
       setShowEscuelaModal(false);
-      fetchUsuarios();
+      invalidateCache('admin_');
+      fetchUsuarios(true);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al cambiar escuela');
     } finally {

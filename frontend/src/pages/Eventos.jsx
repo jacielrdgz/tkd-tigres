@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
 import CustomDropdown from '../components/Common/CustomDropdown'
+import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 const VACIO = { nombre: '', tipo: 'torneo', fecha: '', lugar: '', descripcion: '', costo: '' }
 
@@ -39,8 +40,19 @@ export default function Eventos() {
     return () => window.removeEventListener('keydown', handleEsc)
   }, [])
 
-  const cargarDatosBasicos = async () => {
-    setCargando(true)
+  const cargarDatosBasicos = async (force = false) => {
+    if (!force) {
+      const cached = getCache('eventos_lista')
+      if (cached && cached.data) {
+        setEventos(cached.data)
+        setCargando(false)
+      } else {
+        setCargando(true)
+      }
+    } else {
+      setCargando(true)
+    }
+
     try {
       const resE = await api.get('/eventos')
       // Excluir exámenes ya que tienen su propio módulo independiente
@@ -48,8 +60,15 @@ export default function Eventos() {
         .filter(e => e.tipo !== 'examen')
         .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
       setEventos(evs)
-    } catch (e) { console.error(e) } 
-    finally { setCargando(false) }
+      setCache('eventos_lista', evs)
+    } catch (e) {
+      const cached = getCache('eventos_lista')
+      if (!cached || !cached.data) {
+        console.error(e)
+      }
+    } finally {
+      setCargando(false)
+    }
   }
 
 
@@ -75,7 +94,8 @@ export default function Eventos() {
       if (editando) await api.put(`/eventos/${editando}`, formEvento)
       else await api.post('/eventos', formEvento)
       setModalEvento(false)
-      cargarDatosBasicos()
+      invalidateCache('eventos')
+      cargarDatosBasicos(true)
     } catch (err) { alert('Error al guardar.') }
   }
   const eliminarEvento = async (id, ev) => {
@@ -92,7 +112,8 @@ export default function Eventos() {
       if (r.isConfirmed) {
         try {
           await api.delete(`/eventos/${id}`)
-          cargarDatosBasicos()
+          invalidateCache('eventos')
+          cargarDatosBasicos(true)
         } catch (err) {
           Swal.fire({
             title: 'Error',

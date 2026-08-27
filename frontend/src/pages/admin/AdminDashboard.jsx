@@ -17,19 +17,26 @@ import {
   FiCheckCircle,
   FiArrowRight
 } from 'react-icons/fi';
+import { getCache, setCache } from '../../utils/cacheManager';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [metrics, setMetrics] = useState({
-    academias_activas: 0,
-    total_alumnos: 0,
-    ingresos_mes: 0,
-    academias_por_vencer: 0,
-    solicitudes_pendientes: 0,
-    nuevas_academias_este_mes: 0,
+  const [metrics, setMetrics] = useState(() => {
+    const cached = getCache('admin_dashboard_metrics');
+    return cached?.data || {
+      academias_activas: 0,
+      total_alumnos: 0,
+      ingresos_mes: 0,
+      academias_por_vencer: 0,
+      solicitudes_pendientes: 0,
+      nuevas_academias_este_mes: 0,
+    };
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('admin_dashboard_metrics');
+    return !cached?.data;
+  });
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -40,13 +47,17 @@ export default function AdminDashboard() {
     fetchMetrics();
   }, [user, navigate]);
 
-  const fetchMetrics = async () => {
-    setRefreshing(true);
+  const fetchMetrics = async (force = false) => {
+    if (force) setRefreshing(true);
     try {
       const res = await api.get('/admin/dashboard');
       setMetrics(res.data);
+      setCache('admin_dashboard_metrics', res.data);
     } catch (err) {
-      toast.error('Error al cargar métricas del sistema');
+      const cached = getCache('admin_dashboard_metrics');
+      if (!cached?.data) {
+        toast.error('Error al cargar métricas del sistema');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

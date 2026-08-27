@@ -14,11 +14,21 @@ import {
   FiLayers
 } from 'react-icons/fi';
 import { formatearFechaNatural } from '../../utils/dateHelper';
+import { getCache, setCache, invalidateCache } from '../../utils/cacheManager';
 
 export default function AdminSolicitudes() {
-  const [solicitudes, setSolicitudes] = useState([]);
-  const [tenants, setTenants] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [solicitudes, setSolicitudes] = useState(() => {
+    const cached = getCache('admin_solicitudes_lista');
+    return cached?.data || [];
+  });
+  const [tenants, setTenants] = useState(() => {
+    const cached = getCache('admin_tenants_lista');
+    return cached?.data || [];
+  });
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('admin_solicitudes_lista');
+    return !cached?.data;
+  });
   const [procesando, setProcesando] = useState(null);
   const [search, setSearch] = useState('');
 
@@ -45,12 +55,19 @@ export default function AdminSolicitudes() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
-  const fetchSolicitudes = async () => {
+  const fetchSolicitudes = async (force = false) => {
+    if (force || !getCache('admin_solicitudes_lista')) {
+      setLoading(true);
+    }
     try {
       const res = await api.get('/admin/solicitudes');
       setSolicitudes(res.data);
+      setCache('admin_solicitudes_lista', res.data);
     } catch {
-      toast.error('Error al cargar solicitudes');
+      const cached = getCache('admin_solicitudes_lista');
+      if (!cached?.data) {
+        toast.error('Error al cargar solicitudes');
+      }
     } finally {
       setLoading(false);
     }
@@ -60,9 +77,8 @@ export default function AdminSolicitudes() {
     try {
       const res = await api.get('/admin/academias');
       setTenants(res.data);
-    } catch (err) {
-      console.error(err);
-    }
+      setCache('admin_tenants_lista', res.data);
+    } catch {}
   };
 
   const abrirAprobar = (u) => {
@@ -90,9 +106,10 @@ export default function AdminSolicitudes() {
     setProcesando(selectedUser.id);
     try {
       await api.post(`/admin/solicitudes/${selectedUser.id}/aprobar`, form);
-      toast.success('¡Solicitud aprobada con éxito!');
+      toast.success('Academia aprobada exitosamente 🎉');
       setShowModal(false);
-      fetchSolicitudes();
+      invalidateCache('admin_');
+      fetchSolicitudes(true);
       fetchTenants();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al aprobar');
@@ -124,7 +141,8 @@ export default function AdminSolicitudes() {
             motivo: result.value || 'No se cumplieron los requisitos para la apertura de la cuenta.',
           });
           toast.info('Solicitud rechazada');
-          fetchSolicitudes();
+          invalidateCache('admin_');
+          fetchSolicitudes(true);
         } catch {
           toast.error('Error al rechazar');
         } finally {

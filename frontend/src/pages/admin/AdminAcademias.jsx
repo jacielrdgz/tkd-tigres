@@ -15,23 +15,36 @@ import {
   FiCalendar
 } from 'react-icons/fi';
 import { formatearFechaNatural, formatearFechaHora } from '../../utils/dateHelper';
+import { getCache, setCache, invalidateCache } from '../../utils/cacheManager';
 
 export default function AdminAcademias() {
-  const [academias, setAcademias] = useState([]);
+  const [academias, setAcademias] = useState(() => {
+    const cached = getCache('admin_academias_lista');
+    return cached?.data || [];
+  });
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('admin_academias_lista');
+    return !cached?.data;
+  });
 
   useEffect(() => {
     fetchAcademias();
   }, []);
 
-  const fetchAcademias = async () => {
-    setLoading(true);
+  const fetchAcademias = async (force = false) => {
+    if (force || !getCache('admin_academias_lista')) {
+      setLoading(true);
+    }
     try {
       const res = await api.get('/admin/academias');
       setAcademias(res.data);
+      setCache('admin_academias_lista', res.data);
     } catch (err) {
-      toast.error('Error al cargar la lista de academias');
+      const cached = getCache('admin_academias_lista');
+      if (!cached?.data) {
+        toast.error('Error al cargar la lista de academias');
+      }
     } finally {
       setLoading(false);
     }
@@ -53,7 +66,8 @@ export default function AdminAcademias() {
         try {
           await api.post(`/admin/academias/${id}/suspender`);
           toast.info('Academia suspendida');
-          fetchAcademias();
+          invalidateCache('admin_');
+          fetchAcademias(true);
         } catch {
           toast.error('Error al suspender');
         }
@@ -65,7 +79,8 @@ export default function AdminAcademias() {
     try {
       await api.post(`/admin/academias/${id}/activar`);
       toast.success('Academia reactivada');
-      fetchAcademias();
+      invalidateCache('admin_');
+      fetchAcademias(true);
     } catch {
       toast.error('Error al reactivar');
     }
@@ -87,7 +102,8 @@ export default function AdminAcademias() {
         try {
           await api.delete(`/admin/academias/${id}`);
           toast.success('Academia eliminada');
-          fetchAcademias();
+          invalidateCache('admin_');
+          fetchAcademias(true);
         } catch {
           toast.error('Error al eliminar');
         }

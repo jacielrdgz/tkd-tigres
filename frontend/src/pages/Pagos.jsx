@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes, formatearFechaNaturalPDF } from '../utils/pdfHelper'
 import CustomDropdown from '../components/Common/CustomDropdown'
 import BotonExportar from '../components/Common/BotonExportar'
+import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -131,8 +132,23 @@ export default function Pagos() {
   }, [pagosActivos, filtroMes])
   const [anioHistorial, setAnioHistorial] = useState(new Date().getFullYear()) // Año visible en el drawer
 
-  const cargar = async () => {
-    setCargando(true)
+  const cargar = async (force = false) => {
+    if (!force) {
+      const cached = getCache('pagos_main_data')
+      if (cached && cached.data) {
+        setAlumnos(cached.data.alumnos || [])
+        setPagosActivos(cached.data.pagos || [])
+        setCintas(cached.data.cintas || [])
+        setHorarios(cached.data.horarios || [])
+        setEscuelaInfo(cached.data.escuela || null)
+        setCargando(false)
+      } else {
+        setCargando(true)
+      }
+    } else {
+      setCargando(true)
+    }
+
     try {
       const [resAlumnos, resPagos, resCintas, resHorarios, resEscuela] = await Promise.all([
         api.get('/alumnos', { params: { estatus: 'activo' } }),
@@ -146,8 +162,22 @@ export default function Pagos() {
       setCintas(resCintas.data)
       setHorarios(resHorarios.data)
       setEscuelaInfo(resEscuela.data)
-    } catch { toast.error('Error al cargar datos') }
-    setCargando(false)
+
+      setCache('pagos_main_data', {
+        alumnos: resAlumnos.data,
+        pagos: resPagos.data,
+        cintas: resCintas.data,
+        horarios: resHorarios.data,
+        escuela: resEscuela.data
+      })
+    } catch {
+      const cached = getCache('pagos_main_data')
+      if (!cached || !cached.data) {
+        toast.error('Error al cargar datos')
+      }
+    } finally {
+      setCargando(false)
+    }
   }
 
   useEffect(() => { cargar() }, [])
@@ -629,7 +659,9 @@ export default function Pagos() {
           }
         })
       }
-      cargar()
+      invalidateCache('pagos')
+      invalidateCache('alumnos')
+      cargar(true)
       setModalPago(null)
       setPagoAEditar(null)
       if (historialAlumno) abrirHistorial(historialAlumno)
@@ -655,7 +687,9 @@ export default function Pagos() {
     if (result.isConfirmed) {
       await api.delete(`/pagos/${pagoId}`)
       toast.success('Pago eliminado')
-      cargar()
+      invalidateCache('pagos')
+      invalidateCache('alumnos')
+      cargar(true)
     }
   }
 

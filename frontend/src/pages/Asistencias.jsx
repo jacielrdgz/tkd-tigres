@@ -15,6 +15,7 @@ import ModalRegistrar from '../components/Asistencias/ModalRegistrar'
 import Swal from 'sweetalert2'
 import { useAuth } from '../context/AuthContext'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes } from '../utils/pdfHelper'
+import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 function mesActual() {
   const hoy = new Date()
@@ -52,39 +53,87 @@ export default function Asistencias() {
   const [fechaRegistroGuardada, setFechaRegistroGuardada] = useState('')
 
   // ── Cargar resumen (común a ambos tabs) ──────────────────────────────────
-  const cargarResumen = useCallback(async () => {
-    setCargandoResumen(true)
+  const cargarResumen = useCallback(async (force = false) => {
+    const key = `asistencias_resumen_${mes}`
+    if (!force) {
+      const cached = getCache(key)
+      if (cached && cached.data) {
+        setResumen(cached.data)
+        setCargandoResumen(false)
+      } else {
+        setCargandoResumen(true)
+      }
+    } else {
+      setCargandoResumen(true)
+    }
+
     try {
       const res = await api.get('/asistencias/resumen', { params: { mes } })
       setResumen(res.data)
+      setCache(key, res.data)
     } catch {
-      toast.error('Error al cargar resumen')
+      const cached = getCache(key)
+      if (!cached || !cached.data) {
+        toast.error('Error al cargar resumen')
+      }
     } finally {
       setCargandoResumen(false)
     }
   }, [mes])
 
   // ── Cargar datos tab Por Alumno ───────────────────────────────────────────
-  const cargarPorAlumno = useCallback(async () => {
-    setCargandoAlumnos(true)
+  const cargarPorAlumno = useCallback(async (force = false) => {
+    const key = `asistencias_alumno_${mes}`
+    if (!force) {
+      const cached = getCache(key)
+      if (cached && cached.data) {
+        setListaAlumnos(cached.data)
+        setCargandoAlumnos(false)
+      } else {
+        setCargandoAlumnos(true)
+      }
+    } else {
+      setCargandoAlumnos(true)
+    }
+
     try {
       const res = await api.get('/asistencias/por-alumno', { params: { mes } })
       setListaAlumnos(res.data)
+      setCache(key, res.data)
     } catch {
-      toast.error('Error al cargar asistencias por alumno')
+      const cached = getCache(key)
+      if (!cached || !cached.data) {
+        toast.error('Error al cargar asistencias por alumno')
+      }
     } finally {
       setCargandoAlumnos(false)
     }
   }, [mes])
 
   // ── Cargar datos tab Por Fecha ────────────────────────────────────────────
-  const cargarPorFecha = useCallback(async () => {
-    setCargandoFecha(true)
+  const cargarPorFecha = useCallback(async (force = false) => {
+    const key = `asistencias_fecha_${mes}`
+    if (!force) {
+      const cached = getCache(key)
+      if (cached && cached.data) {
+        setDatosPorFecha(cached.data)
+        setCargandoFecha(false)
+      } else {
+        setCargandoFecha(true)
+      }
+    } else {
+      setCargandoFecha(true)
+    }
+
     try {
       const res = await api.get('/asistencias/por-fecha', { params: { mes } })
       setDatosPorFecha(res.data)
+      setCache(key, res.data)
     } catch {
-      toast.error('Error al cargar asistencias por fecha')
+      const cached = getCache(key)
+      if (!cached || !cached.data) {
+        toast.error('Error al cargar asistencias por fecha')
+      }
     } finally {
       setCargandoFecha(false)
     }

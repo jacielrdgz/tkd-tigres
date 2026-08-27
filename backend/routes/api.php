@@ -20,9 +20,9 @@ use App\Http\Controllers\EventoAlumnoController;
 */
 
 Route::get('/ping', fn() => response()->json([
-    'status' => 'ok',
-    'app'    => 'DojoCloud',
-    'version' => '2.0.0',
+    'status'    => 'ok',
+    'app'       => 'GymCloud',
+    'timestamp' => now()->toIso8601String(),
 ]));
 
 Route::get('/ejecutar-migraciones', function () {

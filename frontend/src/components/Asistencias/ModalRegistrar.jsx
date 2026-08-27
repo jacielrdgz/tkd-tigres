@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx'
 import { useAuth } from '../../context/AuthContext'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF } from '../../utils/pdfHelper'
 import BotonExportar from '../Common/BotonExportar'
+import { invalidateCache } from '../../utils/cacheManager'
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -215,6 +216,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
         presente: presencias[a.alumno_id] || false,
       }))
       await api.post('/asistencias/registrar-dia', { fecha, asistencias: lista })
+      invalidateCache('asistencias')
       const presentesCount = lista.filter(x => x.presente).length
       toast.success(`Guardado: ${presentesCount} presentes para este horario.`, {
         position: "top-right",

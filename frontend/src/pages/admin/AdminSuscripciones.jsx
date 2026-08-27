@@ -14,10 +14,18 @@ import {
 } from 'react-icons/fi';
 import { formatearFechaNatural } from '../../utils/dateHelper';
 import CustomDropdown from '../../components/Common/CustomDropdown';
+import { getCache, setCache, invalidateCache } from '../../utils/cacheManager';
 
 export default function AdminSuscripciones() {
-  const [suscripciones, setSuscripciones] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `admin_suscripciones_${filterEstado}_${filterMes}`;
+  const [suscripciones, setSuscripciones] = useState(() => {
+    const cached = getCache('admin_suscripciones_all');
+    return cached?.data || [];
+  });
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('admin_suscripciones_all');
+    return !cached?.data;
+  });
   const [filterEstado, setFilterEstado] = useState('');
   const [filterMes, setFilterMes] = useState('');
   const [search, setSearch] = useState('');
@@ -47,8 +55,11 @@ export default function AdminSuscripciones() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
-  const fetchSuscripciones = async () => {
-    setLoading(true);
+  const fetchSuscripciones = async (force = false) => {
+    const currentKey = `admin_suscripciones_${filterEstado}_${filterMes}`;
+    if (force || !getCache(currentKey)) {
+      setLoading(true);
+    }
     try {
       const res = await api.get('/admin/suscripciones', {
         params: {
@@ -57,8 +68,15 @@ export default function AdminSuscripciones() {
         },
       });
       setSuscripciones(res.data);
+      setCache(currentKey, res.data);
+      if (!filterEstado && !filterMes) {
+        setCache('admin_suscripciones_all', res.data);
+      }
     } catch {
-      toast.error('Error al cargar suscripciones');
+      const cached = getCache(currentKey);
+      if (!cached?.data) {
+        toast.error('Error al cargar suscripciones');
+      }
     } finally {
       setLoading(false);
     }
@@ -80,7 +98,8 @@ export default function AdminSuscripciones() {
       await api.post(`/admin/suscripciones/${selectedAcademia.id}/renovar`, renovarForm);
       toast.success('Suscripción renovada correctamente');
       setShowRenovarModal(false);
-      fetchSuscripciones();
+      invalidateCache('admin_');
+      fetchSuscripciones(true);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al renovar');
     } finally {
@@ -104,7 +123,8 @@ export default function AdminSuscripciones() {
       await api.post(`/admin/suscripciones/${selectedAcademia.id}/plan`, planForm);
       toast.success('Plan y costo actualizados');
       setShowPlanModal(false);
-      fetchSuscripciones();
+      invalidateCache('admin_');
+      fetchSuscripciones(true);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al actualizar plan');
     } finally {
