@@ -30,6 +30,22 @@ const menu = [
   { path: '/eventos', label: 'Eventos', icon: <FiCalendar size={18} /> },
 ];
 
+const mobileBottomMenuTenant = [
+  { path: '/alumnos', label: 'Alumnos', icon: <FiUsers size={20} /> },
+  { path: '/asistencias', label: 'Asistencias', icon: <FiClipboard size={20} /> },
+  { path: '/pagos', label: 'Pagos', icon: <FiCreditCard size={20} /> },
+  { path: '/examenes', label: 'Exámenes', icon: <FiAward size={20} /> },
+  { path: '/eventos', label: 'Eventos', icon: <FiCalendar size={20} /> },
+];
+
+const mobileBottomMenuSuperAdmin = [
+  { path: '/admin/dashboard', label: 'Dashboard', icon: <FiGlobe size={20} /> },
+  { path: '/admin/academias', label: 'Academias', icon: <FiShield size={20} /> },
+  { path: '/admin/solicitudes', label: 'Solicitudes', icon: <FiFileText size={20} /> },
+  { path: '/admin/suscripciones', label: 'Planes', icon: <FiCreditCard size={20} /> },
+  { path: '/admin/usuarios', label: 'Usuarios', icon: <FiUsers size={20} /> },
+];
+
 const menuAjustes = { path: '/ajustes', label: 'Ajustes', icon: <FiSettings size={18} /> };
 
 const menuSuperAdmin = [
@@ -544,18 +560,23 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
       {/* Mobile bottom navigation */}
       {isMobile && !mobileOpen && (
         <nav style={styles.bottomNav}>
-          {filteredMenu.map(item => (
+          {(isSuperAdmin ? mobileBottomMenuSuperAdmin : mobileBottomMenuTenant).map(item => (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.path === '/'}
               style={({ isActive }) => ({
                 ...styles.bottomNavItem,
-                color: isActive ? '#60a5fa' : '#64748b',
+                color: isActive ? '#3b82f6' : '#64748b',
+                background: isActive ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
               })}
             >
-              <span style={{ fontSize: '20px' }}>{item.icon}</span>
-              <span style={{ fontSize: '9px', fontWeight: 600 }}>{item.label}</span>
+              <span style={{ fontSize: '20px', display: 'flex', alignItems: 'center' }}>
+                {item.icon}
+              </span>
+              <span style={{ fontSize: '10.5px', fontWeight: '700', letterSpacing: '0.2px' }}>
+                {item.label}
+              </span>
             </NavLink>
           ))}
         </nav>
@@ -572,30 +593,14 @@ const styles = {
     borderRight: '1px solid var(--border)',
     display: 'flex',
     flexDirection: 'column',
+    justifyContent: 'space-between',
+    padding: '0 0 16px 0',
     position: 'fixed',
     top: 0,
-    left: 0,
     bottom: 0,
+    left: 0,
     zIndex: 200,
     transition: 'transform 0.3s ease',
-  },
-  hamburger: {
-    position: 'fixed',
-    top: '16px',
-    left: '16px',
-    zIndex: 150,
-    width: '42px',
-    height: '42px',
-    borderRadius: '10px',
-    background: 'var(--bg-secondary)',
-    border: '1px solid var(--border)',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '4px',
-    cursor: 'pointer',
-    boxShadow: 'var(--shadow-md)',
   },
   hamburgerLine: {
     width: '18px',
@@ -750,22 +755,27 @@ const styles = {
     bottom: 0,
     left: 0,
     right: 0,
-    height: '65px',
+    height: '66px',
     background: 'var(--bg-secondary)',
     borderTop: '1px solid var(--border)',
-    display: 'flex',
-    justifyContent: 'space-around',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, 1fr)',
     alignItems: 'center',
     zIndex: 100,
     paddingBottom: 'env(safe-area-inset-bottom)',
+    boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)',
   },
   bottomNavItem: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '2px',
+    justifyContent: 'center',
+    gap: '3px',
     textDecoration: 'none',
-    padding: '6px 12px',
-    transition: 'color 0.15s',
+    padding: '8px 2px',
+    borderRadius: '10px',
+    margin: '0 3px',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
   },
-};;
+};

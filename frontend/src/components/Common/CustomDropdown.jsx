@@ -8,7 +8,9 @@ export default function CustomDropdown({
   onChange,
   minWidth = '160px',
   isMobile = false,
-  customStyle = {}
+  customStyle = {},
+  icon = null,
+  alignRight = false,
 }) {
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef(null)
@@ -33,6 +35,7 @@ export default function CustomDropdown({
         display: 'inline-block',
         width: isMobile ? '100%' : minWidth,
         maxWidth: isMobile ? '100%' : minWidth,
+        minWidth: 0,
         ...customStyle
       }}
       ref={dropdownRef}
@@ -43,15 +46,15 @@ export default function CustomDropdown({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '7px',
+          gap: isMobile ? '4px' : '7px',
           width: '100%',
-          padding: '9px 14px',
+          padding: isMobile ? '8px 8px' : '9px 14px',
           background: open ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
           border: '1px solid',
           borderColor: open ? 'var(--accent-blue)' : 'var(--border)',
           borderRadius: '10px',
-          color: 'var(--text-secondary)',
-          fontSize: '13px',
+          color: (selectedOption && selectedOption.value !== '') ? 'var(--text-primary)' : 'var(--text-secondary)',
+          fontSize: isMobile ? '11.5px' : '13px',
           fontWeight: '600',
           fontFamily: 'inherit',
           cursor: 'pointer',
@@ -76,6 +79,11 @@ export default function CustomDropdown({
           }
         }}
       >
+        {icon && (
+          <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0, color: 'var(--text-muted)' }}>
+            {icon}
+          </span>
+        )}
         <span
           style={{
             flex: 1,
@@ -84,14 +92,14 @@ export default function CustomDropdown({
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             textAlign: 'left',
-            marginRight: '6px',
+            marginRight: '4px',
           }}
           title={displayLabel}
         >
           {displayLabel}
         </span>
         <FiChevronDown
-          size={13}
+          size={isMobile ? 11 : 13}
           style={{
             transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s ease',
@@ -106,7 +114,7 @@ export default function CustomDropdown({
           style={{
             position: 'absolute',
             top: 'calc(100% + 6px)',
-            left: 0,
+            ...(alignRight ? { right: 0 } : { left: 0 }),
             minWidth: '100%',
             width: 'max-content',
             maxWidth: '280px',

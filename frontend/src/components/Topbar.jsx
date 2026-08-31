@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { FiBell, FiMoreVertical } from 'react-icons/fi';
 
 const ROUTE_TITLES = {
   '/': 'Dashboard',
@@ -30,7 +31,7 @@ export default function Topbar({ onToggleSidebar }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Determinar título
+  // Determinar título y plan
   const isSuperAdmin = user?.is_superadmin;
   let title = '';
   if (isSuperAdmin) {
@@ -39,9 +40,16 @@ export default function Topbar({ onToggleSidebar }) {
       title = 'Detalle de Academia';
     }
   } else {
-    // Para escuelas se muestra siempre el nombre de la escuela actual
     title = user?.tenant?.nombre || 'Mi Escuela';
   }
+
+  const planLabel = isSuperAdmin ? 'ADMIN' : (user?.tenant?.plan?.toUpperCase() || 'PRO');
+
+  const logoUrlFinal = user?.tenant?.logo
+    ? ((user.tenant.logo.startsWith('data:') || user.tenant.logo.startsWith('http')) 
+        ? user.tenant.logo 
+        : `${import.meta.env.VITE_API_URL || ''}/storage/${user.tenant.logo}`)
+    : null;
 
   // Cerrar menú al hacer clic fuera
   useEffect(() => {
@@ -54,7 +62,7 @@ export default function Topbar({ onToggleSidebar }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Mostrar el menú de 3 puntos (⋮) solo en ciertas páginas que tienen exportaciones u otras opciones
+  // Mostrar el menú de opciones en ciertas páginas que tienen exportaciones
   const showOptions = ['/alumnos', '/pagos', '/asistencias'].includes(location.pathname);
 
   // Ejecutar acciones de exportación buscando los botones del DOM
@@ -73,7 +81,6 @@ export default function Topbar({ onToggleSidebar }) {
         : buttons.find(b => b.innerText.toLowerCase().includes('pdf') || b.title?.toLowerCase().includes('pdf'));
       if (btn) btn.click();
     } else if (location.pathname === '/asistencias') {
-      // Asistencias tiene botones en AsistenciasTopbar con ids específicos
       const btn = type === 'excel'
         ? document.querySelector('#btn-exportar-excel')
         : document.querySelector('#btn-exportar-pdf');
@@ -87,27 +94,62 @@ export default function Topbar({ onToggleSidebar }) {
         <button style={styles.btnMenu} onClick={onToggleSidebar} aria-label="Menu principal">
           ☰
         </button>
-        <h1 style={styles.title}>{title}</h1>
+
+        {/* Logo / Avatar de la academia */}
+        <div style={styles.logoBadge}>
+          {logoUrlFinal ? (
+            <img src={logoUrlFinal} alt="logo" style={styles.logoImg} />
+          ) : (
+            <span style={styles.logoIcon}>🥋</span>
+          )}
+        </div>
+
+        {/* Nombre de la escuela */}
+        <span style={styles.title}>{title}</span>
+
+        {/* Badge de Plan */}
+        <span style={styles.planBadge}>{planLabel}</span>
       </div>
 
       <div style={styles.right} ref={menuRef}>
-        {showOptions && (
-          <div style={{ position: 'relative' }}>
-            <button style={styles.btnOptions} onClick={() => setMenuOpen(!menuOpen)} aria-label="Opciones">
-              ⋮
-            </button>
-            {menuOpen && (
-              <div style={styles.dropdown}>
-                <button style={styles.dropdownItem} onClick={() => handleAction('excel')}>
-                  📊 Exportar a Excel
-                </button>
-                <button style={styles.dropdownItem} onClick={() => handleAction('pdf')}>
-                  📄 Exportar a PDF
-                </button>
+        <div style={{ position: 'relative' }}>
+          <button 
+            style={styles.btnBell} 
+            onClick={() => setMenuOpen(!menuOpen)} 
+            aria-label="Notificaciones y opciones"
+          >
+            <FiBell size={20} />
+            <span style={styles.notificationDot} />
+          </button>
+          {menuOpen && (
+            <div style={styles.dropdown}>
+              <div style={styles.dropdownHeader}>
+                <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>
+                  {title}
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--accent-blue)', fontWeight: '600' }}>
+                  Plan {planLabel}
+                </span>
               </div>
-            )}
-          </div>
-        )}
+              {showOptions && (
+                <>
+                  <button style={styles.dropdownItem} onClick={() => handleAction('excel')}>
+                    📊 Exportar a Excel
+                  </button>
+                  <button style={styles.dropdownItem} onClick={() => handleAction('pdf')}>
+                    📄 Exportar a PDF
+                  </button>
+                </>
+              )}
+              <button 
+                style={styles.dropdownItem} 
+                onClick={() => { setMenuOpen(false); navigate('/ajustes'); }}
+              >
+                ⚙️ Ajustes de Escuela
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -126,72 +168,134 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '0 16px',
+    padding: '0 14px',
     zIndex: 100,
     boxShadow: 'var(--shadow-sm)',
   },
   left: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '10px',
+    minWidth: 0,
+    flex: 1,
   },
   btnMenu: {
     background: 'none',
     border: 'none',
     color: 'var(--text-primary)',
-    fontSize: '24px',
+    fontSize: '22px',
     cursor: 'pointer',
-    padding: '4px 8px',
+    padding: '4px 6px',
     borderRadius: '6px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+  },
+  logoBadge: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    background: 'var(--accent-blue-bg)',
+    border: '1.5px solid rgba(59, 130, 246, 0.3)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  logoImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  logoIcon: {
+    fontSize: '16px',
   },
   title: {
-    fontSize: '18px',
-    fontWeight: '800',
+    fontSize: '16px',
+    fontWeight: '700',
     color: 'var(--text-primary)',
     margin: 0,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxWidth: '140px',
+  },
+  planBadge: {
+    fontSize: '10px',
+    fontWeight: '800',
+    letterSpacing: '0.5px',
+    padding: '2px 7px',
+    borderRadius: '6px',
+    background: 'rgba(59, 130, 246, 0.15)',
+    color: 'var(--accent-blue)',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
+    flexShrink: 0,
   },
   right: {
     display: 'flex',
     alignItems: 'center',
+    flexShrink: 0,
   },
-  btnOptions: {
+  btnBell: {
     background: 'none',
     border: 'none',
-    color: 'var(--text-primary)',
-    fontSize: '24px',
+    color: 'var(--text-secondary)',
     cursor: 'pointer',
-    padding: '4px 8px',
-    borderRadius: '6px',
+    padding: '6px 8px',
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: '6px',
+    right: '8px',
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    background: 'var(--accent-blue)',
+    boxShadow: '0 0 6px var(--accent-blue)',
   },
   dropdown: {
     position: 'absolute',
-    top: '40px',
+    top: '44px',
     right: '0',
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border)',
-    borderRadius: '10px',
-    width: '180px',
-    boxShadow: 'var(--shadow-md)',
+    borderRadius: '12px',
+    width: '210px',
+    boxShadow: 'var(--shadow-lg)',
     zIndex: 110,
     overflow: 'hidden',
+    padding: '4px',
+  },
+  dropdownHeader: {
+    padding: '10px 12px',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    marginBottom: '4px',
   },
   dropdownItem: {
     width: '100%',
-    padding: '12px 16px',
+    padding: '10px 12px',
     background: 'none',
     border: 'none',
     color: 'var(--text-primary)',
     textAlign: 'left',
-    fontSize: '14px',
+    fontSize: '13px',
     cursor: 'pointer',
     transition: 'background 0.15s',
     fontFamily: 'Inter, sans-serif',
     fontWeight: '500',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   },
 };

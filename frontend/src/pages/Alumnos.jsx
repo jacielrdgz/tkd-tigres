@@ -7,12 +7,24 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { FiDownload, FiChevronDown, FiUserPlus } from 'react-icons/fi'
+import {
+  FiDownload,
+  FiChevronDown,
+  FiUserPlus,
+  FiSearch,
+  FiAward,
+  FiUsers,
+  FiClock,
+  FiEye,
+  FiEdit2,
+  FiTrash2,
+  FiFileText,
+  FiCheck,
+  FiFilter,
+} from 'react-icons/fi'
+import CustomDropdown from '../components/Common/CustomDropdown'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
-
-
-
 
 const limpiarDato = (val) => {
   if (val === null || val === undefined || val === 'null' || val === 'NULL' || val === '') return '-'
@@ -83,158 +95,6 @@ const VACIO = {
   configuracion_cinta_id: '',
   horario_id: '',
   estatus: 'activo',
-}
-
-function CustomDropdown({ label, options, value, onChange, minWidth = '160px', isMobile }) {
-  const [open, setOpen] = useState(false)
-  const dropdownRef = useRef(null)
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const selectedOption = options.find(o => String(o.value) === String(value))
-  const displayLabel = selectedOption ? selectedOption.label : label
-
-  return (
-    <div
-      style={{
-        position: 'relative',
-        display: 'inline-block',
-        width: isMobile ? '100%' : minWidth,
-        maxWidth: isMobile ? '100%' : minWidth,
-      }}
-      ref={dropdownRef}
-    >
-      <button
-        type="button"
-        style={{
-          ...s.btnSecundario,
-          width: '100%',
-          justifyContent: 'space-between',
-          borderColor: open ? 'var(--accent-blue)' : 'var(--border)',
-          backgroundColor: open ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
-          color: 'var(--text-secondary)',
-          transform: open ? 'translateY(-1px)' : 'none',
-          padding: '9px 12px',
-          boxSizing: 'border-box',
-          overflow: 'hidden',
-        }}
-        onClick={() => setOpen(v => !v)}
-        onMouseEnter={e => {
-          if (!open) {
-            e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
-            e.currentTarget.style.borderColor = 'var(--accent-blue)'
-            e.currentTarget.style.transform = 'translateY(-1px)'
-          }
-        }}
-        onMouseLeave={e => {
-          if (!open) {
-            e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'
-            e.currentTarget.style.borderColor = 'var(--border)'
-            e.currentTarget.style.transform = 'none'
-          }
-        }}
-      >
-        <span
-          style={{
-            flex: 1,
-            minWidth: 0,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            textAlign: 'left',
-            marginRight: '6px',
-          }}
-          title={displayLabel}
-        >
-          {displayLabel}
-        </span>
-        <FiChevronDown
-          size={13}
-          style={{
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.2s ease',
-            color: open ? 'var(--accent-blue)' : 'var(--text-muted)',
-            flexShrink: 0,
-          }}
-        />
-      </button>
-
-      {open && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            left: 0,
-            minWidth: '100%',
-            width: 'max-content',
-            maxWidth: '280px',
-            maxHeight: '260px',
-            overflowY: 'auto',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            padding: '6px',
-            zIndex: 100,
-            boxShadow: 'var(--shadow-lg)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
-          }}
-        >
-          {options.map((opt) => {
-            const isSelected = String(opt.value) === String(value)
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                style={{
-                  flexShrink: 0,
-                  background: isSelected ? 'var(--accent-blue-bg)' : 'transparent',
-                  color: isSelected ? 'var(--accent-blue)' : 'var(--text-primary)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '6px 10px',
-                  fontSize: '13px',
-                  lineHeight: '1.3',
-                  fontWeight: isSelected ? '700' : '500',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-                onClick={() => {
-                  onChange(opt.value)
-                  setOpen(false)
-                }}
-                onMouseEnter={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.background = 'var(--bg-tertiary)'
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.background = 'transparent'
-                  }
-                }}
-              >
-                {opt.label}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
 }
 
 export default function Alumnos() {
@@ -857,25 +717,30 @@ export default function Alumnos() {
         )}
       </div>
 
-      <div style={s.barraAcciones}>
-        <input
-          style={s.search}
-          placeholder="Buscar por nombre..."
-          value={busquedaInput}
-          onChange={e => setBusquedaInput(e.target.value)}
-          onFocus={e => {
-            e.currentTarget.style.borderColor = 'var(--accent-blue)'
-            e.currentTarget.style.background = 'var(--bg-tertiary)'
-            e.currentTarget.style.boxShadow = '0 0 12px rgba(59, 130, 246, 0.3)'
-          }}
-          onBlur={e => {
-            e.currentTarget.style.borderColor = 'var(--border)'
-            e.currentTarget.style.background = 'var(--bg-secondary)'
-            e.currentTarget.style.boxShadow = 'none'
-          }}
-        />
-        {/* Contador de resultados */}
-        {!cargando && (
+      {/* BARRA DE BÚSQUEDA Y CONTADOR */}
+      <div style={isMobile ? s.searchRowMobile : s.barraAcciones}>
+        <div style={isMobile ? s.searchWrapperMobile : s.searchWrapperDesktop}>
+          <FiSearch style={s.searchIcon} size={17} />
+          <input
+            style={s.search}
+            placeholder="Buscar por nombre..."
+            value={busquedaInput}
+            onChange={e => setBusquedaInput(e.target.value)}
+            onFocus={e => {
+              e.currentTarget.style.borderColor = 'var(--accent-blue)'
+              e.currentTarget.style.background = 'var(--bg-tertiary)'
+              e.currentTarget.style.boxShadow = '0 0 12px rgba(59, 130, 246, 0.3)'
+            }}
+            onBlur={e => {
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.background = 'var(--bg-secondary)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
+          />
+        </div>
+
+        {/* Contador de resultados en desktop */}
+        {!isMobile && !cargando && (
           <div style={{
             fontSize: '14px',
             color: hayFiltrosActivos ? '#60a5fa' : '#647fa5ff',
@@ -896,68 +761,100 @@ export default function Alumnos() {
             }
           </div>
         )}
-        <div style={s.tabs}>
+
+        {/* Tabs de estatus en Desktop */}
+        {!isMobile && (
+          <div style={s.tabs}>
+            <button
+              style={estatusFiltro === 'todos' ? s.tabActiveAzul : (tabHover === 'todos' ? s.tabHover : s.tab)}
+              onClick={() => setEstatusFiltro('todos')}
+              onMouseEnter={e => {
+                setTabHover('todos')
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                setTabHover(null)
+                e.currentTarget.style.transform = 'none'
+              }}
+            >
+              Todos ({cargando ? '--' : totalTodos})
+            </button>
+            <button
+              style={estatusFiltro === 'activo' ? s.tabActiveVerde : (tabHover === 'activo' ? s.tabHover : s.tab)}
+              onClick={() => setEstatusFiltro('activo')}
+              onMouseEnter={e => {
+                setTabHover('activo')
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                setTabHover(null)
+                e.currentTarget.style.transform = 'none'
+              }}
+            >
+              Activos ({cargando ? '--' : totalActivos})
+            </button>
+            <button
+              style={estatusFiltro === 'inactivo' ? s.tabActiveRojo : (tabHover === 'inactivo' ? s.tabHover : s.tab)}
+              onClick={() => setEstatusFiltro('inactivo')}
+              onMouseEnter={e => {
+                setTabHover('inactivo')
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                setTabHover(null)
+                e.currentTarget.style.transform = 'none'
+              }}
+            >
+              Inactivos ({cargando ? '--' : totalInactivos})
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs de estatus en Móvil (3 columnas) */}
+      {isMobile && (
+        <div style={s.tabsMobile}>
           <button
-            style={estatusFiltro === 'todos' ? s.tabActiveAzul : (tabHover === 'todos' ? s.tabHover : s.tab)}
+            style={estatusFiltro === 'todos' ? s.tabActiveAzulMobile : s.tabInactiveMobile}
             onClick={() => setEstatusFiltro('todos')}
-            onMouseEnter={e => {
-              setTabHover('todos')
-              e.currentTarget.style.transform = 'translateY(-1px)'
-            }}
-            onMouseLeave={e => {
-              setTabHover(null)
-              e.currentTarget.style.transform = 'none'
-            }}
           >
             Todos ({cargando ? '--' : totalTodos})
           </button>
           <button
-            style={estatusFiltro === 'activo' ? s.tabActiveVerde : (tabHover === 'activo' ? s.tabHover : s.tab)}
+            style={estatusFiltro === 'activo' ? s.tabActiveVerdeMobile : s.tabVerdeInactiveMobile}
             onClick={() => setEstatusFiltro('activo')}
-            onMouseEnter={e => {
-              setTabHover('activo')
-              e.currentTarget.style.transform = 'translateY(-1px)'
-            }}
-            onMouseLeave={e => {
-              setTabHover(null)
-              e.currentTarget.style.transform = 'none'
-            }}
           >
             Activos ({cargando ? '--' : totalActivos})
           </button>
           <button
-            style={estatusFiltro === 'inactivo' ? s.tabActiveRojo : (tabHover === 'inactivo' ? s.tabHover : s.tab)}
+            style={estatusFiltro === 'inactivo' ? s.tabActiveRojoMobile : s.tabInactiveMobile}
             onClick={() => setEstatusFiltro('inactivo')}
-            onMouseEnter={e => {
-              setTabHover('inactivo')
-              e.currentTarget.style.transform = 'translateY(-1px)'
-            }}
-            onMouseLeave={e => {
-              setTabHover(null)
-              e.currentTarget.style.transform = 'none'
-            }}
           >
             Inactivos ({cargando ? '--' : totalInactivos})
           </button>
         </div>
-      </div>
+      )}
 
-      <div style={s.filtrosSecundarios}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+      {/* FILTROS SECUNDARIOS */}
+      <div style={isMobile ? s.filtrosSecundariosMobile : s.filtrosSecundarios}>
+        {/* Fila de Dropdowns (3 en 1 fila en móvil) */}
+        <div style={isMobile ? s.filtrosGridMobile : { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <CustomDropdown
             label="Todas las cintas"
+            icon={<FiAward size={12} />}
             options={[
               { value: '', label: 'Todas las cintas' },
               ...cintasConfig.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
             ]}
             value={cintaFiltro}
             onChange={val => setCintaFiltro(val)}
-            minWidth="170px"
+            minWidth={isMobile ? '100%' : '170px'}
             isMobile={isMobile}
           />
 
           <CustomDropdown
             label="Todas las edades"
+            icon={<FiUsers size={12} />}
             options={[
               { value: '', label: 'Todas las edades' },
               { value: 'infantil', label: 'Infantil (3-11)' },
@@ -967,12 +864,13 @@ export default function Alumnos() {
             ]}
             value={edadFiltro}
             onChange={val => setEdadFiltro(val)}
-            minWidth="170px"
+            minWidth={isMobile ? '100%' : '170px'}
             isMobile={isMobile}
           />
 
           <CustomDropdown
             label="Todos los horarios"
+            icon={<FiClock size={12} />}
             options={[
               { value: '', label: 'Todos los horarios' },
               ...horarios.map(h => ({
@@ -982,12 +880,17 @@ export default function Alumnos() {
             ]}
             value={horarioFiltro}
             onChange={val => setHorarioFiltro(val)}
-            minWidth="175px"
+            minWidth={isMobile ? '100%' : '175px'}
+            alignRight={isMobile}
             isMobile={isMobile}
           />
+        </div>
 
+        {/* Fila 2 de Orden y Exportar */}
+        <div style={isMobile ? s.rowOrdenExportMobile : { display: 'flex', gap: '12px', alignItems: 'center' }}>
           <CustomDropdown
             label="Ordenar por ID"
+            icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
             options={[
               { value: 'id', label: 'Ordenar por ID' },
               { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
@@ -998,100 +901,109 @@ export default function Alumnos() {
             ]}
             value={orden}
             onChange={val => setOrden(val)}
-            minWidth="170px"
+            minWidth={isMobile ? '100%' : '170px'}
+            customStyle={isMobile ? { flex: 1 } : {}}
             isMobile={isMobile}
           />
 
-          <div style={{ visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) ? 'visible' : 'hidden', display: 'inline-block' }}>
-            <button
-              style={s.btnLimpiar}
-              onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'
-                e.currentTarget.style.borderColor = 'var(--accent-red)'
-                e.currentTarget.style.color = 'var(--accent-red)'
-                e.currentTarget.style.transform = 'translateY(-1px)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'var(--bg-secondary)'
-                e.currentTarget.style.borderColor = 'var(--border)'
-                e.currentTarget.style.color = 'var(--text-secondary)'
-                e.currentTarget.style.transform = 'none'
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-              </svg>
-              <span>Limpiar</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Exportar con dropdown */}
-        <div style={{ position: 'relative' }} ref={exportRef} className="mobile-hide">
-          <button
-            style={{
-              ...s.btnSecundario,
-              borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
-              boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none'
-            }}
-            onClick={() => setExportOpen(v => !v)}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'var(--bg-tertiary)'
-              e.currentTarget.style.borderColor = 'var(--accent-blue)'
-              e.currentTarget.style.transform = 'translateY(-1px)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'var(--bg-secondary)'
-              e.currentTarget.style.borderColor = exportOpen ? 'var(--accent-blue)' : 'var(--border)'
-              e.currentTarget.style.transform = 'none'
-            }}
-          >
-            <FiDownload size={15} />
-            Exportar
-            <FiChevronDown
-              size={13}
-              style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
-            />
-          </button>
-
-          {exportOpen && (
-            <div style={s.dropdownExport}>
-              <button
-                style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
-                onClick={() => { exportarExcel(); setExportOpen(false) }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)'
-                  e.currentTarget.style.filter = 'brightness(1.1)'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'none'
-                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)'
-                  e.currentTarget.style.filter = 'none'
-                }}
-              >
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                Excel
+          {/* Bloque Exportar en móvil */}
+          {isMobile ? (
+            <div style={s.exportBoxMobile}>
+              <span style={s.exportLabelMobile}>
+                <FiDownload size={13} /> Exportar
+              </span>
+              <button style={s.btnMiniExcel} onClick={exportarExcel} title="Descargar Excel">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7.5 14h-2v-4.5H7V11h2.5V6.5h2V11H14v1.5h-2.5V17z"/></svg>
               </button>
-              <button
-                style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
-                onClick={() => { exportarPDF(); setExportOpen(false) }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.5)'
-                  e.currentTarget.style.filter = 'brightness(1.1)'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'none'
-                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.3)'
-                  e.currentTarget.style.filter = 'none'
-                }}
-              >
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                PDF
+              <button style={s.btnMiniPdf} onClick={exportarPDF} title="Descargar PDF">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v4zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5z"/></svg>
               </button>
             </div>
+          ) : (
+            <>
+              <div style={{ visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) ? 'visible' : 'hidden', display: 'inline-block' }}>
+                <button
+                  style={s.btnLimpiar}
+                  onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'
+                    e.currentTarget.style.borderColor = 'var(--accent-red)'
+                    e.currentTarget.style.color = 'var(--accent-red)'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'var(--bg-secondary)'
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                    e.currentTarget.style.color = 'var(--text-secondary)'
+                    e.currentTarget.style.transform = 'none'
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                  </svg>
+                  <span>Limpiar</span>
+                </button>
+              </div>
+
+              {/* Exportar con dropdown en Desktop */}
+              <div style={{ position: 'relative' }} ref={exportRef}>
+                <button
+                  style={{
+                    ...s.btnSecundario,
+                    borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
+                    boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none'
+                  }}
+                  onClick={() => setExportOpen(v => !v)}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'var(--bg-tertiary)'
+                    e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'var(--bg-secondary)'
+                    e.currentTarget.style.borderColor = exportOpen ? 'var(--accent-blue)' : 'var(--border)'
+                    e.currentTarget.style.transform = 'none'
+                  }}
+                >
+                  <FiDownload size={15} />
+                  Exportar
+                  <FiChevronDown
+                    size={13}
+                    style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
+                  />
+                </button>
+
+                {exportOpen && (
+                  <div style={s.dropdownExport}>
+                    <button
+                      style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
+                      onClick={() => { exportarExcel(); setExportOpen(false) }}
+                    >
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                      Excel
+                    </button>
+                    <button
+                      style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
+                      onClick={() => { exportarPDF(); setExportOpen(false) }}
+                    >
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                      PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Boton Limpiar en móvil */}
+          {isMobile && (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) && (
+            <button
+              style={s.btnLimpiarMobile}
+              onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
+              title="Limpiar filtros"
+            >
+              ✕
+            </button>
           )}
         </div>
       </div>
@@ -1110,7 +1022,7 @@ export default function Alumnos() {
             {cargando ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} style={s.cardItemLoader}>
-                  <SkeletonCircle size={40} />
+                  <SkeletonCircle size={44} />
                   <div style={{ flex: 1, textAlign: 'left', marginLeft: '12px' }}>
                     <SkeletonBlock w="180px" h={14} />
                     <div style={{ height: '6px' }} />
@@ -1127,86 +1039,84 @@ export default function Alumnos() {
                 <div
                   key={a.id}
                   style={{
-                    ...s.cardItem,
-                    borderLeft: `4px solid ${a.cinta_config?.color_hex || 'var(--border)'}`,
+                    ...s.cardItemMobile,
                     background: rowHover === a.id ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
                   }}
                   onClick={() => navigate(`/alumnos/${a.id}`)}
                   onMouseEnter={() => setRowHover(a.id)}
                   onMouseLeave={() => setRowHover(null)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
-                      <div style={{ position: 'relative', width: '40px', height: '40px', flexShrink: 0 }}>
-                        {tieneFoto(a.foto_url) ? (
-                          <img
-                            src={limpiarUrl(a.foto_url)}
-                            alt="foto"
-                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
-                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
-                          />
-                        ) : null}
-                        <div style={{ ...s.fotoVacia, width: '100%', height: '100%', display: tieneFoto(a.foto_url) ? 'none' : 'flex', borderRadius: '50%', position: 'absolute', top: 0, left: 0 }}>
-                          {obtenerIniciales(a.nombre, a.apellido_paterno)}
-                        </div>
-                      </div>
-
-                      <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
-                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
-                        </div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          #{idx + 1} · {a.edad} años
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' }}>
-                          <span style={{
-                            padding: '3px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
-                            background: a.cinta_config?.color_hex || 'var(--bg-tertiary)',
-                            color: a.cinta_config?.color_texto || 'var(--text-primary)'
-                          }}>
-                            {a.cinta_config?.nombre_nivel || 'Sin cinta'}
-                          </span>
-                          <span style={{
-                            padding: '3px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
-                            background: a.estatus === 'activo' ? s.statusActivoBg : s.statusInactivoBg,
-                            color: a.estatus === 'activo' ? s.statusActivoText : s.statusInactivoText
-                          }}>
-                            {capitalizar(a.estatus)}
-                          </span>
-                        </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                    {/* Avatar circular con foto o iniciales */}
+                    <div style={s.avatarBoxMobile}>
+                      {tieneFoto(a.foto_url) ? (
+                        <img
+                          src={limpiarUrl(a.foto_url)}
+                          alt="foto"
+                          style={s.avatarImgMobile}
+                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+                        />
+                      ) : null}
+                      <div style={{ ...s.avatarInicialesMobile, display: tieneFoto(a.foto_url) ? 'none' : 'flex' }}>
+                        {obtenerIniciales(a.nombre, a.apellido_paterno)}
                       </div>
                     </div>
 
-                    {/* Acciones */}
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                      <a
-                        href={'https://wa.me/52' + a.telefono_tutor?.replace(/\s+/g, '')}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ ...s.btnIcon, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', textDecoration: 'none', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}
-                        title="WhatsApp"
+                    {/* Información del alumno */}
+                    <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                      <div style={s.cardNombreMobile}>
+                        {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
+                      </div>
+                      <div style={s.cardSubMobile}>
+                        {a.edad} años • {a.email || (a.telefono_tutor ? `Tel. ${a.telefono_tutor}` : 'Sin contacto')}
+                      </div>
+                      <div style={s.cardBadgesRow}>
+                        <span style={{
+                          ...s.cintaBadgeMobile,
+                          background: a.cinta_config?.color_hex || 'var(--bg-tertiary)',
+                          color: a.cinta_config?.color_texto || 'var(--text-primary)'
+                        }}>
+                          {a.cinta_config?.nombre_nivel || 'Sin cinta'}
+                        </span>
+                        <span style={{
+                          ...s.statusBadgeMobile,
+                          background: a.estatus === 'activo' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: a.estatus === 'activo' ? '#10b981' : '#ef4444',
+                          border: a.estatus === 'activo' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)'
+                        }}>
+                          {capitalizar(a.estatus)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Acciones en línea a la derecha (Ver, Editar, Borrar) */}
+                  <div style={s.cardActionsMobile} onClick={e => e.stopPropagation()}>
+                    <button
+                      style={s.btnCardActionVer}
+                      onClick={() => abrirVer(a)}
+                      title="Ver información"
+                    >
+                      <FiEye size={15} />
+                    </button>
+                    {user?.role !== 'instructor' && (
+                      <button
+                        style={s.btnCardActionEdit}
+                        onClick={() => abrirEditar(a)}
+                        title="Editar alumno"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.185-.573c.948.517 2.011.808 3.146.809 3.181 0 5.767-2.584 5.768-5.764 0-3.18-2.586-5.763-5.768-5.763zm4.52 8.161c-.199.557-1.162 1.058-1.597 1.115-.41.054-.935.086-1.503-.099-.345-.113-.775-.262-1.328-.489-2.315-.953-3.82-3.308-3.936-3.461-.116-.155-.945-1.258-.945-2.399 0-1.141.594-1.701.806-1.933.211-.231.462-.29.616-.29.154 0 .308.001.442.008.14.007.33-.053.516.39.186.444.636 1.547.692 1.659.056.111.093.242.019.39-.074.148-.112.241-.223.37-.111.13-.233.29-.333.389-.111.111-.228.232-.098.455.13.223.577.95 1.24 1.54.853.759 1.567.994 1.79.1.223-.112.455-.228.678-.541.222-.314.185-.537.408-.65s.445-.074.743.074c.297.149 1.874.883 2.196 1.043.322.16.537.241.616.37.079.13.079.752-.12 1.309z" /></svg>
-                      </a>
-                      {user?.role !== 'instructor' && (
-                        <button
-                          style={s.btnEdit}
-                          onClick={() => abrirEditar(a)}
-                          title="Editar"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                        </button>
-                      )}
-                      {user?.role === 'owner' && (
-                        <button
-                          style={s.btnDel}
-                          onClick={() => abrirEliminar(a)}
-                          title="Borrar"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                        </button>
-                      )}
-                    </div>
+                        <FiEdit2 size={14} />
+                      </button>
+                    )}
+                    {user?.role === 'owner' && (
+                      <button
+                        style={s.btnCardActionDel}
+                        onClick={() => abrirEliminar(a)}
+                        title="Borrar alumno"
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -1854,14 +1764,38 @@ const s = {
   titulo: { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' },
   sub: { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px' },
   barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '16px' },
-  search: { flex: 1, maxWidth: '395px', padding: '10px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '80px', color: 'var(--text-primary)', outline: 'none', transition: 'all 0.3s ease' },
+  searchRowMobile: { display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px', width: '100%' },
+  searchWrapperDesktop: { position: 'relative', flex: 1, maxWidth: '395px' },
+  searchWrapperMobile: { position: 'relative', width: '100%' },
+  searchIcon: { position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' },
+  search: { width: '100%', padding: '10px 16px 10px 40px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', outline: 'none', transition: 'all 0.3s ease', boxSizing: 'border-box', fontSize: '13.5px' },
   tabs: { display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', flexShrink: 0 },
+  tabsMobile: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px', width: '100%' },
   tab: { padding: '8px 16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
   tabHover: { padding: '8px 16px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
   tabActiveVerde: { padding: '8px 20px', background: 'var(--accent-green)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-green)', transition: 'all 0.2s' },
   tabActiveRojo: { padding: '8px 20px', background: 'var(--accent-red)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-red)', transition: 'all 0.2s' },
   tabActiveAzul: { padding: '8px 20px', background: 'var(--accent-blue)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-blue)', transition: 'all 0.2s' },
+
+  // Mobile segmented tabs
+  tabActiveAzulMobile: { padding: '9px 4px', background: 'var(--accent-blue)', border: 'none', color: '#fff', borderRadius: '10px', fontWeight: '700', fontSize: '12.5px', textAlign: 'center', boxShadow: '0 2px 10px rgba(59, 130, 246, 0.4)', transition: 'all 0.15s ease', cursor: 'pointer' },
+  tabActiveVerdeMobile: { padding: '9px 4px', background: 'var(--accent-green)', border: 'none', color: '#fff', borderRadius: '10px', fontWeight: '700', fontSize: '12.5px', textAlign: 'center', boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)', transition: 'all 0.15s ease', cursor: 'pointer' },
+  tabActiveRojoMobile: { padding: '9px 4px', background: 'var(--accent-red)', border: 'none', color: '#fff', borderRadius: '10px', fontWeight: '700', fontSize: '12.5px', textAlign: 'center', boxShadow: '0 2px 10px rgba(239, 68, 68, 0.4)', transition: 'all 0.15s ease', cursor: 'pointer' },
+  tabInactiveMobile: { padding: '9px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: '10px', fontWeight: '600', fontSize: '12.5px', textAlign: 'center', transition: 'all 0.15s ease', cursor: 'pointer' },
+  tabVerdeInactiveMobile: { padding: '9px 4px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', color: 'var(--accent-green)', borderRadius: '10px', fontWeight: '600', fontSize: '12.5px', textAlign: 'center', transition: 'all 0.15s ease', cursor: 'pointer' },
+
   filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
+  filtrosSecundariosMobile: { display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', width: '100%' },
+  filtrosGridMobile: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', width: '100%' },
+  rowOrdenExportMobile: { display: 'flex', alignItems: 'center', gap: '8px', width: '100%' },
+
+  // Mobile export container
+  exportBoxMobile: { display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '5px 8px', flexShrink: 0 },
+  exportLabelMobile: { fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' },
+  btnMiniExcel: { width: '28px', height: '28px', borderRadius: '6px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)', flexShrink: 0 },
+  btnMiniPdf: { width: '28px', height: '28px', borderRadius: '6px', background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)', flexShrink: 0 },
+  btnLimpiarMobile: { width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: '13px', fontWeight: '700' },
+
   selectFiltro: {
     padding: '9px 32px 9px 14px',
     backgroundColor: 'var(--bg-secondary)',
@@ -1973,8 +1907,6 @@ const s = {
   btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
 
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
-
   // MODAL HISTORIAL (Estilo Pagos.jsx)
   modalHistorial: { background: 'var(--bg-secondary)', borderRadius: '16px', width: '580px', maxWidth: '95vw', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' },
   modalHistorialHeader: { padding: '24px 28px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' },
@@ -2038,7 +1970,134 @@ const s = {
     transition: 'all 0.2s',
     background: 'var(--bg-tertiary)',
   },
-  cardsGrid: { display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '20px' },
+  cardsGrid: { display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '20px' },
   cardItem: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', cursor: 'pointer', transition: 'all 0.15s ease' },
-  cardItemLoader: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' },
+  cardItemLoader: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '14px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' },
+
+  // MOBILE CARD STYLES
+  cardItemMobile: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '14px',
+    padding: '12px 14px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+  },
+  avatarBoxMobile: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    flexShrink: 0,
+    overflow: 'hidden',
+    position: 'relative',
+    border: '2px solid rgba(59, 130, 246, 0.25)',
+  },
+  avatarImgMobile: {
+    width: '100%',
+    height: '100%',
+    borderRadius: '50%',
+    objectFit: 'cover',
+  },
+  avatarInicialesMobile: {
+    width: '100%',
+    height: '100%',
+    background: 'rgba(59, 130, 246, 0.15)',
+    color: '#3b82f6',
+    fontWeight: '800',
+    fontSize: '15px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '50%',
+  },
+  cardNombreMobile: {
+    fontSize: '14px',
+    fontWeight: '700',
+    color: 'var(--text-primary)',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    lineHeight: '1.25',
+  },
+  cardSubMobile: {
+    fontSize: '11.5px',
+    color: 'var(--text-muted)',
+    marginTop: '2px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  cardBadgesRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginTop: '6px',
+    flexWrap: 'wrap',
+  },
+  cintaBadgeMobile: {
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '10.5px',
+    fontWeight: '700',
+    letterSpacing: '0.2px',
+    display: 'inline-block',
+  },
+  statusBadgeMobile: {
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '10.5px',
+    fontWeight: '700',
+    letterSpacing: '0.2px',
+    display: 'inline-block',
+  },
+  cardActionsMobile: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    flexShrink: 0,
+  },
+  btnCardActionVer: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-secondary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnCardActionEdit: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    background: 'rgba(59, 130, 246, 0.15)',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
+    color: '#3b82f6',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnCardActionDel: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    background: 'rgba(239, 68, 68, 0.15)',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
+    color: '#ef4444',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
 }
