@@ -836,80 +836,70 @@ export default function Alumnos() {
       )}
 
       {/* FILTROS SECUNDARIOS */}
-      <div style={isMobile ? s.filtrosSecundariosMobile : s.filtrosSecundarios}>
-        {/* Fila de Dropdowns (3 en 1 fila en móvil) */}
-        <div style={isMobile ? s.filtrosGridMobile : { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <CustomDropdown
-            label={isMobile ? 'Cintas' : 'Todas las cintas'}
-            icon={<FiAward size={12} />}
-            options={[
-              { value: '', label: isMobile ? 'Cintas' : 'Todas las cintas' },
-              ...cintasConfig.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
-            ]}
-            value={cintaFiltro}
-            onChange={val => setCintaFiltro(val)}
-            minWidth={isMobile ? '100%' : '170px'}
-            isMobile={isMobile}
-          />
+      {!isMobile ? (
+        <div style={s.filtrosSecundarios}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <CustomDropdown
+              label="Todas las cintas"
+              icon={<FiAward size={13} />}
+              options={[
+                { value: '', label: 'Todas las cintas' },
+                ...cintasConfig.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
+              ]}
+              value={cintaFiltro}
+              onChange={val => setCintaFiltro(val)}
+              minWidth="175px"
+            />
 
-          <CustomDropdown
-            label={isMobile ? 'Edades' : 'Todas las edades'}
-            icon={<FiUsers size={12} />}
-            options={[
-              { value: '', label: isMobile ? 'Edades' : 'Todas las edades' },
-              { value: 'infantil', label: 'Infantil (3-11)' },
-              { value: 'cadete', label: 'Cadete (12-14)' },
-              { value: 'juvenil', label: 'Juvenil (15-17)' },
-              { value: 'adultos', label: 'Adultos (+18)' },
-            ]}
-            value={edadFiltro}
-            onChange={val => setEdadFiltro(val)}
-            minWidth={isMobile ? '100%' : '170px'}
-            isMobile={isMobile}
-          />
+            <CustomDropdown
+              label="Todas las edades"
+              icon={<FiUsers size={13} />}
+              options={[
+                { value: '', label: 'Todas las edades' },
+                { value: 'infantil', label: 'Infantil (3-11)' },
+                { value: 'cadete', label: 'Cadete (12-14)' },
+                { value: 'juvenil', label: 'Juvenil (15-17)' },
+                { value: 'adultos', label: 'Adultos (+18)' },
+              ]}
+              value={edadFiltro}
+              onChange={val => setEdadFiltro(val)}
+              minWidth="175px"
+            />
 
-          <CustomDropdown
-            label={isMobile ? 'Horarios' : 'Todos los horarios'}
-            icon={<FiClock size={12} />}
-            options={[
-              { value: '', label: isMobile ? 'Horarios' : 'Todos los horarios' },
-              ...horarios.map(h => ({
-                value: String(h.id),
-                label: `${h.nombre} (${formatHora(h.hora_inicio)} - ${formatHora(h.hora_fin)})`
-              }))
-            ]}
-            value={horarioFiltro}
-            onChange={val => setHorarioFiltro(val)}
-            minWidth={isMobile ? '100%' : '175px'}
-            alignRight={isMobile}
-            isMobile={isMobile}
-          />
-        </div>
+            <CustomDropdown
+              label="Todos los horarios"
+              icon={<FiClock size={13} />}
+              options={[
+                { value: '', label: 'Todos los horarios' },
+                ...horarios.map(h => ({
+                  value: String(h.id),
+                  label: `${h.nombre} (${formatHora(h.hora_inicio)} - ${formatHora(h.hora_fin)})`
+                }))
+              ]}
+              value={horarioFiltro}
+              onChange={val => setHorarioFiltro(val)}
+              minWidth="185px"
+            />
 
-        {/* Fila 2 de Orden y Exportar */}
-        <div style={isMobile ? s.rowOrdenExportMobile : { display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <CustomDropdown
-            label={isMobile ? 'Ordenar' : 'Ordenar por ID'}
-            icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
-            options={[
-              { value: 'id', label: isMobile ? 'Ordenar' : 'Ordenar por ID' },
-              { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
-              { value: 'cinta_asc', label: 'Cinta (Menor a mayor)' },
-              { value: 'edad_asc', label: 'Edad (Menor a mayor)' },
-              { value: 'edad_desc', label: 'Edad (Mayor a menor)' },
-              { value: 'horario_asc', label: 'Horario (Temprano a tarde)' },
-            ]}
-            value={orden}
-            onChange={val => setOrden(val)}
-            minWidth={isMobile ? '100%' : '170px'}
-            customStyle={isMobile ? { flex: 1 } : {}}
-            isMobile={isMobile}
-          />
+            <CustomDropdown
+              label="Ordenar por ID"
+              icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
+              options={[
+                { value: 'id', label: 'Ordenar por ID' },
+                { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
+                { value: 'cinta_asc', label: 'Cinta (Menor a mayor)' },
+                { value: 'edad_asc', label: 'Edad (Menor a mayor)' },
+                { value: 'edad_desc', label: 'Edad (Mayor a menor)' },
+                { value: 'horario_asc', label: 'Horario (Temprano a tarde)' },
+              ]}
+              value={orden}
+              onChange={val => setOrden(val)}
+              minWidth="175px"
+            />
 
-          {/* Boton Limpiar en Desktop */}
-          {!isMobile && (
-            <div style={{ visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) ? 'visible' : 'hidden', display: 'inline-block' }}>
+            {(cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) && (
               <button
+                type="button"
                 style={s.btnLimpiar}
                 onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
                 onMouseEnter={e => {
@@ -930,21 +920,17 @@ export default function Alumnos() {
                 </svg>
                 <span>Limpiar</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Exportar con dropdown (Para móvil y desktop) */}
+          {/* Exportar con dropdown en Desktop */}
           <div style={{ position: 'relative' }} ref={exportRef}>
             <button
               type="button"
               style={{
                 ...s.btnSecundario,
-                height: isMobile ? '36px' : 'auto',
                 borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
-                boxShadow: exportOpen ? '0 0 10px rgba(59, 130, 246, 0.25)' : 'none',
-                padding: isMobile ? '0 12px' : '9px 16px',
-                fontSize: isMobile ? '11.5px' : '13px',
-                gap: isMobile ? '5px' : '7px',
+                boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none'
               }}
               onClick={() => setExportOpen(v => !v)}
               onMouseEnter={e => {
@@ -958,8 +944,8 @@ export default function Alumnos() {
                 e.currentTarget.style.transform = 'none'
               }}
             >
-              <FiDownload size={13} />
-              <span>Exportar</span>
+              <FiDownload size={15} />
+              Exportar
               <FiChevronDown
                 size={13}
                 style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
@@ -967,8 +953,9 @@ export default function Alumnos() {
             </button>
 
             {exportOpen && (
-              <div style={{ ...s.dropdownExport, right: 0 }}>
+              <div style={s.dropdownExport}>
                 <button
+                  type="button"
                   style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
                   onClick={() => { exportarExcel(); setExportOpen(false) }}
                 >
@@ -976,6 +963,7 @@ export default function Alumnos() {
                   Excel
                 </button>
                 <button
+                  type="button"
                   style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
                   onClick={() => { exportarPDF(); setExportOpen(false) }}
                 >
@@ -985,19 +973,147 @@ export default function Alumnos() {
               </div>
             )}
           </div>
-
-          {/* Boton Limpiar en móvil */}
-          {isMobile && (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) && (
-            <button
-              style={s.btnLimpiarMobile}
-              onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
-              title="Limpiar filtros"
-            >
-              ✕
-            </button>
-          )}
         </div>
-      </div>
+      ) : (
+        /* Vista Móvil */
+        <div style={s.filtrosSecundariosMobile}>
+          {/* Fila 1: 3 columnas iguales */}
+          <div style={s.filtrosGridMobile}>
+            <CustomDropdown
+              label="Cintas"
+              icon={<FiAward size={12} />}
+              options={[
+                { value: '', label: 'Cintas' },
+                ...cintasConfig.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
+              ]}
+              value={cintaFiltro}
+              onChange={val => setCintaFiltro(val)}
+              minWidth="100%"
+              isMobile={true}
+            />
+
+            <CustomDropdown
+              label="Edades"
+              icon={<FiUsers size={12} />}
+              options={[
+                { value: '', label: 'Edades' },
+                { value: 'infantil', label: 'Infantil (3-11)' },
+                { value: 'cadete', label: 'Cadete (12-14)' },
+                { value: 'juvenil', label: 'Juvenil (15-17)' },
+                { value: 'adultos', label: 'Adultos (+18)' },
+              ]}
+              value={edadFiltro}
+              onChange={val => setEdadFiltro(val)}
+              minWidth="100%"
+              isMobile={true}
+            />
+
+            <CustomDropdown
+              label="Horarios"
+              icon={<FiClock size={12} />}
+              options={[
+                { value: '', label: 'Horarios' },
+                ...horarios.map(h => ({
+                  value: String(h.id),
+                  label: `${h.nombre} (${formatHora(h.hora_inicio)} - ${formatHora(h.hora_fin)})`
+                }))
+              ]}
+              value={horarioFiltro}
+              onChange={val => setHorarioFiltro(val)}
+              minWidth="100%"
+              alignRight={true}
+              isMobile={true}
+            />
+          </div>
+
+          {/* Fila 2: Ordenar compacto (no tan largo), Exportar y Limpiar */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <div style={{ width: '135px', flexShrink: 0 }}>
+              <CustomDropdown
+                label="Ordenar"
+                icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
+                options={[
+                  { value: 'id', label: 'Ordenar' },
+                  { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
+                  { value: 'cinta_asc', label: 'Cinta (Menor a mayor)' },
+                  { value: 'edad_asc', label: 'Edad (Menor a mayor)' },
+                  { value: 'edad_desc', label: 'Edad (Mayor a menor)' },
+                  { value: 'horario_asc', label: 'Horario (Temprano a tarde)' },
+                ]}
+                value={orden}
+                onChange={val => setOrden(val)}
+                minWidth="100%"
+                isMobile={true}
+              />
+            </div>
+
+            <div style={{ position: 'relative' }} ref={exportRef}>
+              <button
+                type="button"
+                style={{
+                  ...s.btnSecundario,
+                  height: '36px',
+                  borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
+                  boxShadow: exportOpen ? '0 0 10px rgba(59, 130, 246, 0.25)' : 'none',
+                  padding: '0 12px',
+                  fontSize: '11.5px',
+                  gap: '5px',
+                }}
+                onClick={() => setExportOpen(v => !v)}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-secondary)'
+                  e.currentTarget.style.borderColor = exportOpen ? 'var(--accent-blue)' : 'var(--border)'
+                  e.currentTarget.style.transform = 'none'
+                }}
+              >
+                <FiDownload size={13} />
+                <span>Exportar</span>
+                <FiChevronDown
+                  size={13}
+                  style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
+                />
+              </button>
+
+              {exportOpen && (
+                <div style={{ ...s.dropdownExport, left: 0, right: 'auto' }}>
+                  <button
+                    type="button"
+                    style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
+                    onClick={() => { exportarExcel(); setExportOpen(false) }}
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Excel
+                  </button>
+                  <button
+                    type="button"
+                    style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
+                    onClick={() => { exportarPDF(); setExportOpen(false) }}
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    PDF
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {(cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) && (
+              <button
+                type="button"
+                style={s.btnLimpiarMobile}
+                onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
+                title="Limpiar filtros"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Skeleton pulse animation */}
       <style>{`

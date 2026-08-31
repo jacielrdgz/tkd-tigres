@@ -34,9 +34,8 @@ export default function CustomDropdown({
       style={{
         position: 'relative',
         display: 'inline-block',
-        width: isMobile ? '100%' : minWidth,
-        maxWidth: isMobile ? '100%' : minWidth,
-        minWidth: 0,
+        width: isMobile ? '100%' : 'auto',
+        minWidth: isMobile ? '0' : minWidth,
         ...customStyle
       }}
       ref={dropdownRef}
