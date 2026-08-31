@@ -762,83 +762,27 @@ export default function Alumnos() {
           </div>
         )}
 
-        {/* Tabs de estatus en Desktop */}
-        {!isMobile && (
-          <div style={s.tabs}>
-            <button
-              style={estatusFiltro === 'todos' ? s.tabActiveAzul : (tabHover === 'todos' ? s.tabHover : s.tab)}
-              onClick={() => setEstatusFiltro('todos')}
-              onMouseEnter={e => {
-                setTabHover('todos')
-                e.currentTarget.style.transform = 'translateY(-1px)'
-              }}
-              onMouseLeave={e => {
-                setTabHover(null)
-                e.currentTarget.style.transform = 'none'
-              }}
-            >
-              Todos ({cargando ? '--' : totalTodos})
-            </button>
-            <button
-              style={estatusFiltro === 'activo' ? s.tabActiveVerde : (tabHover === 'activo' ? s.tabHover : s.tab)}
-              onClick={() => setEstatusFiltro('activo')}
-              onMouseEnter={e => {
-                setTabHover('activo')
-                e.currentTarget.style.transform = 'translateY(-1px)'
-              }}
-              onMouseLeave={e => {
-                setTabHover(null)
-                e.currentTarget.style.transform = 'none'
-              }}
-            >
-              Activos ({cargando ? '--' : totalActivos})
-            </button>
-            <button
-              style={estatusFiltro === 'inactivo' ? s.tabActiveRojo : (tabHover === 'inactivo' ? s.tabHover : s.tab)}
-              onClick={() => setEstatusFiltro('inactivo')}
-              onMouseEnter={e => {
-                setTabHover('inactivo')
-                e.currentTarget.style.transform = 'translateY(-1px)'
-              }}
-              onMouseLeave={e => {
-                setTabHover(null)
-                e.currentTarget.style.transform = 'none'
-              }}
-            >
-              Inactivos ({cargando ? '--' : totalInactivos})
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Tabs de estatus en Móvil (3 columnas) */}
-      {isMobile && (
-        <div style={s.tabsMobile}>
-          <button
-            style={estatusFiltro === 'todos' ? s.tabActiveAzulMobile : s.tabInactiveMobile}
-            onClick={() => setEstatusFiltro('todos')}
-          >
-            Todos ({cargando ? '--' : totalTodos})
-          </button>
-          <button
-            style={estatusFiltro === 'activo' ? s.tabActiveVerdeMobile : s.tabVerdeInactiveMobile}
-            onClick={() => setEstatusFiltro('activo')}
-          >
-            Activos ({cargando ? '--' : totalActivos})
-          </button>
-          <button
-            style={estatusFiltro === 'inactivo' ? s.tabActiveRojoMobile : s.tabInactiveMobile}
-            onClick={() => setEstatusFiltro('inactivo')}
-          >
-            Inactivos ({cargando ? '--' : totalInactivos})
-          </button>
-        </div>
-      )}
-
-      {/* FILTROS SECUNDARIOS */}
+      {/* FILTROS PRINCIPALES (6 BOTONES EN ORDEN) */}
       {!isMobile ? (
         <div style={s.filtrosSecundarios}>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* 1. Estatus (Todos, Activos, Inactivos) */}
+            <CustomDropdown
+              label="Estatus"
+              icon={<span style={{ width: '8px', height: '8px', borderRadius: '50%', background: estatusFiltro === 'activo' ? '#22c55e' : (estatusFiltro === 'inactivo' ? '#ef4444' : '#3b82f6'), display: 'inline-block' }} />}
+              options={[
+                { value: 'activo', label: `Activos (${cargando ? '--' : totalActivos})` },
+                { value: 'todos', label: `Todos (${cargando ? '--' : totalTodos})` },
+                { value: 'inactivo', label: `Inactivos (${cargando ? '--' : totalInactivos})` },
+              ]}
+              value={estatusFiltro}
+              onChange={val => setEstatusFiltro(val)}
+              minWidth="145px"
+            />
+
+            {/* 2. Cintas */}
             <CustomDropdown
               label="Todas las cintas"
               icon={<FiAward size={13} />}
@@ -851,6 +795,7 @@ export default function Alumnos() {
               minWidth="175px"
             />
 
+            {/* 3. Edades */}
             <CustomDropdown
               label="Todas las edades"
               icon={<FiUsers size={13} />}
@@ -866,6 +811,7 @@ export default function Alumnos() {
               minWidth="175px"
             />
 
+            {/* 4. Horarios */}
             <CustomDropdown
               label="Todos los horarios"
               icon={<FiClock size={13} />}
@@ -881,6 +827,7 @@ export default function Alumnos() {
               minWidth="185px"
             />
 
+            {/* 5. Ordenar */}
             <CustomDropdown
               label="Ordenar por ID"
               icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
@@ -897,11 +844,12 @@ export default function Alumnos() {
               minWidth="175px"
             />
 
-            {(cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) && (
+            {/* Botón Limpiar */}
+            {(cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || estatusFiltro !== 'activo' || busqueda) && (
               <button
                 type="button"
                 style={s.btnLimpiar}
-                onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
+                onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setEstatusFiltro('activo'); setBusquedaInput(''); setBusqueda('') }}
                 onMouseEnter={e => {
                   e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'
                   e.currentTarget.style.borderColor = 'var(--accent-red)'
@@ -923,7 +871,7 @@ export default function Alumnos() {
             )}
           </div>
 
-          {/* Exportar con dropdown en Desktop */}
+          {/* 6. Exportar con dropdown en Desktop */}
           <div style={{ position: 'relative' }} ref={exportRef}>
             <button
               type="button"
@@ -975,10 +923,31 @@ export default function Alumnos() {
           </div>
         </div>
       ) : (
-        /* Vista Móvil */
-        <div style={s.filtrosSecundariosMobile}>
-          {/* Fila 1: 3 columnas iguales */}
-          <div style={s.filtrosGridMobile}>
+        /* Vista Móvil: Grid 3x2 con los 6 botones alineados de igual ancho */
+        <div style={{ width: '100%', marginBottom: '16px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '8px',
+            width: '100%',
+          }}>
+            {/* 1. Estatus */}
+            <CustomDropdown
+              label="Estatus"
+              icon={<span style={{ width: '6px', height: '6px', borderRadius: '50%', background: estatusFiltro === 'activo' ? '#22c55e' : (estatusFiltro === 'inactivo' ? '#ef4444' : '#3b82f6'), display: 'inline-block' }} />}
+              options={[
+                { value: 'activo', label: `Activos (${cargando ? '--' : totalActivos})` },
+                { value: 'todos', label: `Todos (${cargando ? '--' : totalTodos})` },
+                { value: 'inactivo', label: `Inactivos (${cargando ? '--' : totalInactivos})` },
+              ]}
+              value={estatusFiltro}
+              onChange={val => setEstatusFiltro(val)}
+              minWidth="100%"
+              isMobile={true}
+              alignRight={false}
+            />
+
+            {/* 2. Cintas */}
             <CustomDropdown
               label="Cintas"
               icon={<FiAward size={12} />}
@@ -990,8 +959,10 @@ export default function Alumnos() {
               onChange={val => setCintaFiltro(val)}
               minWidth="100%"
               isMobile={true}
+              alignRight={false}
             />
 
+            {/* 3. Edades */}
             <CustomDropdown
               label="Edades"
               icon={<FiUsers size={12} />}
@@ -1006,8 +977,10 @@ export default function Alumnos() {
               onChange={val => setEdadFiltro(val)}
               minWidth="100%"
               isMobile={true}
+              alignRight={true}
             />
 
+            {/* 4. Horarios */}
             <CustomDropdown
               label="Horarios"
               icon={<FiClock size={12} />}
@@ -1021,43 +994,45 @@ export default function Alumnos() {
               value={horarioFiltro}
               onChange={val => setHorarioFiltro(val)}
               minWidth="100%"
-              alignRight={true}
               isMobile={true}
+              alignRight={false}
             />
-          </div>
 
-          {/* Fila 2: Ordenar compacto (no tan largo), Exportar y Limpiar */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-start' }}>
-            <div style={{ width: '135px', flexShrink: 0 }}>
-              <CustomDropdown
-                label="Ordenar"
-                icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
-                options={[
-                  { value: 'id', label: 'Ordenar' },
-                  { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
-                  { value: 'cinta_asc', label: 'Cinta (Menor a mayor)' },
-                  { value: 'edad_asc', label: 'Edad (Menor a mayor)' },
-                  { value: 'edad_desc', label: 'Edad (Mayor a menor)' },
-                  { value: 'horario_asc', label: 'Horario (Temprano a tarde)' },
-                ]}
-                value={orden}
-                onChange={val => setOrden(val)}
-                minWidth="100%"
-                isMobile={true}
-              />
-            </div>
+            {/* 5. Ordenar */}
+            <CustomDropdown
+              label="Ordenar"
+              icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
+              options={[
+                { value: 'id', label: 'Ordenar' },
+                { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
+                { value: 'cinta_asc', label: 'Cinta (Menor a mayor)' },
+                { value: 'edad_asc', label: 'Edad (Menor a mayor)' },
+                { value: 'edad_desc', label: 'Edad (Mayor a menor)' },
+                { value: 'horario_asc', label: 'Horario (Temprano a tarde)' },
+              ]}
+              value={orden}
+              onChange={val => setOrden(val)}
+              minWidth="100%"
+              isMobile={true}
+              alignRight={false}
+            />
 
-            <div style={{ position: 'relative' }} ref={exportRef}>
+            {/* 6. Exportar */}
+            <div style={{ position: 'relative', width: '100%' }} ref={exportRef}>
               <button
                 type="button"
                 style={{
                   ...s.btnSecundario,
+                  width: '100%',
                   height: '36px',
                   borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
                   boxShadow: exportOpen ? '0 0 10px rgba(59, 130, 246, 0.25)' : 'none',
-                  padding: '0 12px',
+                  padding: '0 8px',
                   fontSize: '11.5px',
-                  gap: '5px',
+                  gap: '4px',
+                  justifyContent: 'space-between',
+                  boxSizing: 'border-box',
+                  borderRadius: '10px'
                 }}
                 onClick={() => setExportOpen(v => !v)}
                 onMouseEnter={e => {
@@ -1071,16 +1046,18 @@ export default function Alumnos() {
                   e.currentTarget.style.transform = 'none'
                 }}
               >
-                <FiDownload size={13} />
-                <span>Exportar</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
+                  <FiDownload size={12} style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Exportar</span>
+                </span>
                 <FiChevronDown
-                  size={13}
-                  style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
+                  size={12}
+                  style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s', flexShrink: 0 }}
                 />
               </button>
 
               {exportOpen && (
-                <div style={{ ...s.dropdownExport, left: 0, right: 'auto' }}>
+                <div style={{ ...s.dropdownExport, right: 0, left: 'auto', minWidth: '130px', zIndex: 1000 }}>
                   <button
                     type="button"
                     style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
@@ -1100,18 +1077,32 @@ export default function Alumnos() {
                 </div>
               )}
             </div>
+          </div>
 
-            {(cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) && (
+          {/* Badge para Limpiar filtros activos en móvil */}
+          {(cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || estatusFiltro !== 'activo' || busqueda) && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
               <button
                 type="button"
-                style={s.btnLimpiarMobile}
-                onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
-                title="Limpiar filtros"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  borderRadius: '20px',
+                  color: '#ef4444',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  padding: '4px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer'
+                }}
+                onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setEstatusFiltro('activo'); setBusquedaInput(''); setBusqueda('') }}
               >
-                ✕
+                <span>✕ Limpiar filtros activos</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 

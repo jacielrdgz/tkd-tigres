@@ -27,7 +27,7 @@ export default function CustomDropdown({
 
   const selectedOption = options.find((o) => String(o.value) === String(value))
   const displayLabel = selectedOption ? selectedOption.label : label
-  const isFilterActive = selectedOption && selectedOption.value !== '' && selectedOption.value !== 'id'
+  const isFilterActive = selectedOption && selectedOption.value !== '' && selectedOption.value !== 'id' && selectedOption.value !== 'activo'
 
   return (
     <div
