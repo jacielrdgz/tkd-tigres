@@ -34,8 +34,9 @@ export default function CustomDropdown({
       style={{
         position: 'relative',
         display: 'inline-block',
-        width: isMobile ? '100%' : 'auto',
-        minWidth: isMobile ? '0' : minWidth,
+        width: isMobile ? '100%' : (minWidth || '170px'),
+        minWidth: isMobile ? '0' : (minWidth || '170px'),
+        maxWidth: isMobile ? '100%' : (minWidth || '170px'),
         ...customStyle
       }}
       ref={dropdownRef}
@@ -54,7 +55,7 @@ export default function CustomDropdown({
           border: '1px solid',
           borderColor: open ? 'var(--accent-blue)' : 'var(--border)',
           borderRadius: '10px',
-          color: isFilterActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+          color: 'var(--text-secondary)',
           fontSize: isMobile ? '11.5px' : '13px',
           fontWeight: '600',
           fontFamily: 'inherit',

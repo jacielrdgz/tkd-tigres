@@ -881,11 +881,11 @@ export default function Alumnos() {
             />
 
             {/* Botón Limpiar */}
-            {(cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || estatusFiltro !== 'activo' || busqueda) && (
+            <div style={{ ...s.btnLimpiarWrapper, visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) ? 'visible' : 'hidden' }}>
               <button
                 type="button"
                 style={s.btnLimpiar}
-                onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setEstatusFiltro('activo'); setBusquedaInput(''); setBusqueda('') }}
+                onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
                 onMouseEnter={e => {
                   e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'
                   e.currentTarget.style.borderColor = 'var(--accent-red)'
@@ -904,7 +904,7 @@ export default function Alumnos() {
                 </svg>
                 <span>Limpiar</span>
               </button>
-            )}
+            </div>
           </div>
 
           {/* 6. Exportar con dropdown en Desktop */}

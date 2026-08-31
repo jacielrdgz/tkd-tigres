@@ -5,19 +5,27 @@ import { useAuth } from '../context/AuthContext'
 import { toast } from 'react-toastify'
 import { getCache, setCache } from '../utils/cacheManager'
 
+const getSavedSetupStatus = () => {
+  try {
+    const raw = localStorage.getItem('school_setup_status')
+    if (raw) return JSON.parse(raw)
+  } catch (e) {}
+  return null
+}
+
 export default function SetupGuard({ children }) {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const cachedStatus = getCache('school_setup_status')?.data
-  const [status, setStatus] = useState(cachedStatus || null)
-  const [loading, setLoading] = useState(cachedStatus?.configurado ? false : true)
+  const saved = getSavedSetupStatus() || getCache('school_setup_status')?.data
+  const [status, setStatus] = useState(saved || (user?.is_superadmin ? { configurado: true } : null))
+  const [loading, setLoading] = useState(saved?.configurado || user?.is_superadmin ? false : true)
   const [confirming, setConfirming] = useState(null)
 
   const fetchStatus = (force = false) => {
     if (!force) {
-      const cached = getCache('school_setup_status')?.data
-      if (cached?.configurado) {
-        setStatus(cached)
+      const current = getSavedSetupStatus() || getCache('school_setup_status')?.data
+      if (current?.configurado) {
+        setStatus(current)
         setLoading(false)
         return
       }
@@ -26,10 +34,14 @@ export default function SetupGuard({ children }) {
       .then(res => {
         setStatus(res.data)
         setCache('school_setup_status', res.data)
+        if (res.data?.configurado) {
+          try { localStorage.setItem('school_setup_status', JSON.stringify(res.data)) } catch (e) {}
+        }
       })
       .catch(() => {
         setStatus({ configurado: true })
         setCache('school_setup_status', { configurado: true })
+        try { localStorage.setItem('school_setup_status', JSON.stringify({ configurado: true })) } catch (e) {}
       })
       .finally(() => setLoading(false))
   }
