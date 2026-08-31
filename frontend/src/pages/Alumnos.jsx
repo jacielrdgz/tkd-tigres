@@ -840,10 +840,10 @@ export default function Alumnos() {
         {/* Fila de Dropdowns (3 en 1 fila en móvil) */}
         <div style={isMobile ? s.filtrosGridMobile : { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <CustomDropdown
-            label="Todas las cintas"
+            label={isMobile ? 'Cintas' : 'Todas las cintas'}
             icon={<FiAward size={12} />}
             options={[
-              { value: '', label: 'Todas las cintas' },
+              { value: '', label: isMobile ? 'Cintas' : 'Todas las cintas' },
               ...cintasConfig.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
             ]}
             value={cintaFiltro}
@@ -853,10 +853,10 @@ export default function Alumnos() {
           />
 
           <CustomDropdown
-            label="Todas las edades"
+            label={isMobile ? 'Edades' : 'Todas las edades'}
             icon={<FiUsers size={12} />}
             options={[
-              { value: '', label: 'Todas las edades' },
+              { value: '', label: isMobile ? 'Edades' : 'Todas las edades' },
               { value: 'infantil', label: 'Infantil (3-11)' },
               { value: 'cadete', label: 'Cadete (12-14)' },
               { value: 'juvenil', label: 'Juvenil (15-17)' },
@@ -869,10 +869,10 @@ export default function Alumnos() {
           />
 
           <CustomDropdown
-            label="Todos los horarios"
+            label={isMobile ? 'Horarios' : 'Todos los horarios'}
             icon={<FiClock size={12} />}
             options={[
-              { value: '', label: 'Todos los horarios' },
+              { value: '', label: isMobile ? 'Horarios' : 'Todos los horarios' },
               ...horarios.map(h => ({
                 value: String(h.id),
                 label: `${h.nombre} (${formatHora(h.hora_inicio)} - ${formatHora(h.hora_fin)})`
@@ -889,10 +889,10 @@ export default function Alumnos() {
         {/* Fila 2 de Orden y Exportar */}
         <div style={isMobile ? s.rowOrdenExportMobile : { display: 'flex', gap: '12px', alignItems: 'center' }}>
           <CustomDropdown
-            label="Ordenar por ID"
+            label={isMobile ? 'Ordenar' : 'Ordenar por ID'}
             icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
             options={[
-              { value: 'id', label: 'Ordenar por ID' },
+              { value: 'id', label: isMobile ? 'Ordenar' : 'Ordenar por ID' },
               { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
               { value: 'cinta_asc', label: 'Cinta (Menor a mayor)' },
               { value: 'edad_asc', label: 'Edad (Menor a mayor)' },
@@ -906,94 +906,82 @@ export default function Alumnos() {
             isMobile={isMobile}
           />
 
-          {/* Bloque Exportar en móvil */}
-          {isMobile ? (
-            <div style={s.exportBoxMobile}>
-              <span style={s.exportLabelMobile}>
-                <FiDownload size={13} /> Exportar
-              </span>
-              <button style={s.btnMiniExcel} onClick={exportarExcel} title="Descargar Excel">
-                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7.5 14h-2v-4.5H7V11h2.5V6.5h2V11H14v1.5h-2.5V17z"/></svg>
-              </button>
-              <button style={s.btnMiniPdf} onClick={exportarPDF} title="Descargar PDF">
-                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v4zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5z"/></svg>
+          {/* Boton Limpiar en Desktop */}
+          {!isMobile && (
+            <div style={{ visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) ? 'visible' : 'hidden', display: 'inline-block' }}>
+              <button
+                style={s.btnLimpiar}
+                onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'
+                  e.currentTarget.style.borderColor = 'var(--accent-red)'
+                  e.currentTarget.style.color = 'var(--accent-red)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-secondary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                  e.currentTarget.style.transform = 'none'
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+                <span>Limpiar</span>
               </button>
             </div>
-          ) : (
-            <>
-              <div style={{ visibility: (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) ? 'visible' : 'hidden', display: 'inline-block' }}>
-                <button
-                  style={s.btnLimpiar}
-                  onClick={() => { setCintaFiltro(''); setEdadFiltro(''); setHorarioFiltro(''); setOrden('id'); setBusquedaInput(''); setBusqueda('') }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'
-                    e.currentTarget.style.borderColor = 'var(--accent-red)'
-                    e.currentTarget.style.color = 'var(--accent-red)'
-                    e.currentTarget.style.transform = 'translateY(-1px)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'var(--bg-secondary)'
-                    e.currentTarget.style.borderColor = 'var(--border)'
-                    e.currentTarget.style.color = 'var(--text-secondary)'
-                    e.currentTarget.style.transform = 'none'
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-                  </svg>
-                  <span>Limpiar</span>
-                </button>
-              </div>
-
-              {/* Exportar con dropdown en Desktop */}
-              <div style={{ position: 'relative' }} ref={exportRef}>
-                <button
-                  style={{
-                    ...s.btnSecundario,
-                    borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
-                    boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none'
-                  }}
-                  onClick={() => setExportOpen(v => !v)}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'var(--bg-tertiary)'
-                    e.currentTarget.style.borderColor = 'var(--accent-blue)'
-                    e.currentTarget.style.transform = 'translateY(-1px)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'var(--bg-secondary)'
-                    e.currentTarget.style.borderColor = exportOpen ? 'var(--accent-blue)' : 'var(--border)'
-                    e.currentTarget.style.transform = 'none'
-                  }}
-                >
-                  <FiDownload size={15} />
-                  Exportar
-                  <FiChevronDown
-                    size={13}
-                    style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
-                  />
-                </button>
-
-                {exportOpen && (
-                  <div style={s.dropdownExport}>
-                    <button
-                      style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
-                      onClick={() => { exportarExcel(); setExportOpen(false) }}
-                    >
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                      Excel
-                    </button>
-                    <button
-                      style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
-                      onClick={() => { exportarPDF(); setExportOpen(false) }}
-                    >
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                      PDF
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
           )}
+
+          {/* Exportar con dropdown (Para móvil y desktop) */}
+          <div style={{ position: 'relative' }} ref={exportRef}>
+            <button
+              style={{
+                ...s.btnSecundario,
+                borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
+                boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none',
+                padding: isMobile ? '8.5px 12px' : '9px 16px',
+                fontSize: isMobile ? '12px' : '13px',
+              }}
+              onClick={() => setExportOpen(v => !v)}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--bg-tertiary)'
+                e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--bg-secondary)'
+                e.currentTarget.style.borderColor = exportOpen ? 'var(--accent-blue)' : 'var(--border)'
+                e.currentTarget.style.transform = 'none'
+              }}
+            >
+              <FiDownload size={14} />
+              <span>Exportar</span>
+              <FiChevronDown
+                size={13}
+                style={{ transform: exportOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
+              />
+            </button>
+
+            {exportOpen && (
+              <div style={{ ...s.dropdownExport, right: 0 }}>
+                <button
+                  style={{ ...s.btnExportExcel, width: '100%', justifyContent: 'center' }}
+                  onClick={() => { exportarExcel(); setExportOpen(false) }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Excel
+                </button>
+                <button
+                  style={{ ...s.btnExportPdf, width: '100%', justifyContent: 'center' }}
+                  onClick={() => { exportarPDF(); setExportOpen(false) }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  PDF
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Boton Limpiar en móvil */}
           {isMobile && (cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id' || busqueda) && (
@@ -1040,6 +1028,7 @@ export default function Alumnos() {
                   key={a.id}
                   style={{
                     ...s.cardItemMobile,
+                    borderLeft: `4px solid ${a.cinta_config?.color_hex || 'var(--border)'}`,
                     background: rowHover === a.id ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
                   }}
                   onClick={() => navigate(`/alumnos/${a.id}`)}
