@@ -762,27 +762,63 @@ export default function Alumnos() {
           </div>
         )}
 
+        {/* Tabs de estatus en Desktop */}
+        {!isMobile && (
+          <div style={s.tabs}>
+            <button
+              type="button"
+              style={estatusFiltro === 'todos' ? s.tabActiveAzul : (tabHover === 'todos' ? s.tabHover : s.tab)}
+              onClick={() => setEstatusFiltro('todos')}
+              onMouseEnter={e => {
+                setTabHover('todos')
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                setTabHover(null)
+                e.currentTarget.style.transform = 'none'
+              }}
+            >
+              Todos ({cargando ? '--' : totalTodos})
+            </button>
+            <button
+              type="button"
+              style={estatusFiltro === 'activo' ? s.tabActiveVerde : (tabHover === 'activo' ? s.tabHover : s.tab)}
+              onClick={() => setEstatusFiltro('activo')}
+              onMouseEnter={e => {
+                setTabHover('activo')
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                setTabHover(null)
+                e.currentTarget.style.transform = 'none'
+              }}
+            >
+              Activos ({cargando ? '--' : totalActivos})
+            </button>
+            <button
+              type="button"
+              style={estatusFiltro === 'inactivo' ? s.tabActiveRojo : (tabHover === 'inactivo' ? s.tabHover : s.tab)}
+              onClick={() => setEstatusFiltro('inactivo')}
+              onMouseEnter={e => {
+                setTabHover('inactivo')
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                setTabHover(null)
+                e.currentTarget.style.transform = 'none'
+              }}
+            >
+              Inactivos ({cargando ? '--' : totalInactivos})
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* FILTROS PRINCIPALES (6 BOTONES EN ORDEN) */}
+      {/* FILTROS PRINCIPALES */}
       {!isMobile ? (
         <div style={s.filtrosSecundarios}>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* 1. Estatus (Todos, Activos, Inactivos) */}
-            <CustomDropdown
-              label="Estatus"
-              icon={<span style={{ width: '8px', height: '8px', borderRadius: '50%', background: estatusFiltro === 'activo' ? '#22c55e' : (estatusFiltro === 'inactivo' ? '#ef4444' : '#3b82f6'), display: 'inline-block' }} />}
-              options={[
-                { value: 'activo', label: `Activos (${cargando ? '--' : totalActivos})` },
-                { value: 'todos', label: `Todos (${cargando ? '--' : totalTodos})` },
-                { value: 'inactivo', label: `Inactivos (${cargando ? '--' : totalInactivos})` },
-              ]}
-              value={estatusFiltro}
-              onChange={val => setEstatusFiltro(val)}
-              minWidth="145px"
-            />
-
-            {/* 2. Cintas */}
+            {/* 1. Cintas */}
             <CustomDropdown
               label="Todas las cintas"
               icon={<FiAward size={13} />}
@@ -795,7 +831,7 @@ export default function Alumnos() {
               minWidth="175px"
             />
 
-            {/* 3. Edades */}
+            {/* 2. Edades */}
             <CustomDropdown
               label="Todas las edades"
               icon={<FiUsers size={13} />}
@@ -811,7 +847,7 @@ export default function Alumnos() {
               minWidth="175px"
             />
 
-            {/* 4. Horarios */}
+            {/* 3. Horarios */}
             <CustomDropdown
               label="Todos los horarios"
               icon={<FiClock size={13} />}
@@ -827,7 +863,7 @@ export default function Alumnos() {
               minWidth="185px"
             />
 
-            {/* 5. Ordenar */}
+            {/* 4. Ordenar */}
             <CustomDropdown
               label="Ordenar por ID"
               icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}

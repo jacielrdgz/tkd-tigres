@@ -3,18 +3,34 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { toast } from 'react-toastify'
+import { getCache, setCache } from '../utils/cacheManager'
 
 export default function SetupGuard({ children }) {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [status, setStatus] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const cachedStatus = getCache('school_setup_status')?.data
+  const [status, setStatus] = useState(cachedStatus || null)
+  const [loading, setLoading] = useState(cachedStatus?.configurado ? false : true)
   const [confirming, setConfirming] = useState(null)
 
-  const fetchStatus = () => {
+  const fetchStatus = (force = false) => {
+    if (!force) {
+      const cached = getCache('school_setup_status')?.data
+      if (cached?.configurado) {
+        setStatus(cached)
+        setLoading(false)
+        return
+      }
+    }
     api.get('/configuracion-escuela/status')
-      .then(res => setStatus(res.data))
-      .catch(() => setStatus({ configurado: true })) // Si falla, no bloquear
+      .then(res => {
+        setStatus(res.data)
+        setCache('school_setup_status', res.data)
+      })
+      .catch(() => {
+        setStatus({ configurado: true })
+        setCache('school_setup_status', { configurado: true })
+      })
       .finally(() => setLoading(false))
   }
 
