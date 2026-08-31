@@ -936,12 +936,15 @@ export default function Alumnos() {
           {/* Exportar con dropdown (Para móvil y desktop) */}
           <div style={{ position: 'relative' }} ref={exportRef}>
             <button
+              type="button"
               style={{
                 ...s.btnSecundario,
+                height: isMobile ? '36px' : 'auto',
                 borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
-                boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none',
-                padding: isMobile ? '8.5px 12px' : '9px 16px',
-                fontSize: isMobile ? '12px' : '13px',
+                boxShadow: exportOpen ? '0 0 10px rgba(59, 130, 246, 0.25)' : 'none',
+                padding: isMobile ? '0 12px' : '9px 16px',
+                fontSize: isMobile ? '11.5px' : '13px',
+                gap: isMobile ? '5px' : '7px',
               }}
               onClick={() => setExportOpen(v => !v)}
               onMouseEnter={e => {
@@ -955,7 +958,7 @@ export default function Alumnos() {
                 e.currentTarget.style.transform = 'none'
               }}
             >
-              <FiDownload size={14} />
+              <FiDownload size={13} />
               <span>Exportar</span>
               <FiChevronDown
                 size={13}

@@ -1,4 +1,5 @@
 import api from '../api/axios'
+import { getCache, setCache } from './cacheManager'
 
 const NOMBRES_MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -61,11 +62,17 @@ export async function getLogoBase64(logoSrc) {
  */
 export async function obtenerInfoEscuelaParaPDF(user = null) {
   let escuela = null
-  try {
-    const res = await api.get('/configuracion-escuela')
-    escuela = res.data
-  } catch (e) {
-    console.warn('No se pudo obtener datos de la escuela para el PDF')
+  const cached = getCache('configuracion_escuela')
+  if (cached && cached.data) {
+    escuela = cached.data
+  } else {
+    try {
+      const res = await api.get('/configuracion-escuela')
+      escuela = res.data
+      setCache('configuracion_escuela', res.data)
+    } catch (e) {
+      console.warn('No se pudo obtener datos de la escuela para el PDF')
+    }
   }
 
   const nombre = escuela?.nombre || user?.tenant?.nombre || 'MI ESCUELA'

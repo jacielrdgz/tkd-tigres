@@ -27,6 +27,7 @@ export default function CustomDropdown({
 
   const selectedOption = options.find((o) => String(o.value) === String(value))
   const displayLabel = selectedOption ? selectedOption.label : label
+  const isFilterActive = selectedOption && selectedOption.value !== '' && selectedOption.value !== 'id'
 
   return (
     <div
@@ -46,14 +47,15 @@ export default function CustomDropdown({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: isMobile ? '4px' : '7px',
+          gap: isMobile ? '5px' : '7px',
           width: '100%',
-          padding: isMobile ? '8px 8px' : '9px 14px',
+          height: isMobile ? '36px' : 'auto',
+          padding: isMobile ? '0 10px' : '9px 14px',
           background: open ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
           border: '1px solid',
           borderColor: open ? 'var(--accent-blue)' : 'var(--border)',
           borderRadius: '10px',
-          color: (selectedOption && selectedOption.value !== '') ? 'var(--text-primary)' : 'var(--text-secondary)',
+          color: isFilterActive ? 'var(--text-primary)' : 'var(--text-secondary)',
           fontSize: isMobile ? '11.5px' : '13px',
           fontWeight: '600',
           fontFamily: 'inherit',
