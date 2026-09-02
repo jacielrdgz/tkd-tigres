@@ -559,28 +559,33 @@ body {
     min-height: 44px;
   }
   
-  /* Sobrescribir modales inline para pantalla completa en móvil */
+  /* Modales en tarjeta flotante para móvil */
   .mobile-fullscreen-modal {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    border-radius: 0 !important;
-    position: fixed !important;
-    inset: 0 !important;
-    margin: 0 !important;
-    padding: 20px 18px calc(env(safe-area-inset-bottom, 0px) + 30px) 18px !important;
+    width: 94% !important;
+    max-width: 500px !important;
+    max-height: 86vh !important;
+    border-radius: 20px !important;
+    position: relative !important;
+    inset: auto !important;
+    margin: auto !important;
+    padding: 22px 18px !important;
     overflow-y: auto !important;
     background: var(--bg-secondary) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
     box-sizing: border-box !important;
   }
 
   .mobile-fullscreen-overlay {
-    background: var(--bg-secondary) !important;
-    padding: 0 !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(4px) !important;
+    padding: 16px !important;
     inset: 0 !important;
+    position: fixed !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     z-index: 1050 !important;
-    backdrop-filter: none !important;
   }
 
   /* Ocultar botones de exportar u otras acciones secundarias en el header del contenido */
@@ -598,10 +603,10 @@ body {
 @media (min-width: 641px) and (max-width: 1024px) {
   .mobile-fullscreen-modal {
     width: 92% !important;
-    max-width: 620px !important;
+    max-width: 540px !important;
     max-height: 88vh !important;
-    border-radius: 16px !important;
-    padding: 28px !important;
+    border-radius: 20px !important;
+    padding: 24px !important;
     overflow-y: auto !important;
     box-sizing: border-box !important;
   }

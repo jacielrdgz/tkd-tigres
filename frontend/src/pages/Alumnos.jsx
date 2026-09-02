@@ -1705,9 +1705,9 @@ export default function Alumnos() {
                   <img src={fotoPreview} alt="preview" style={s.fotoPreviewImg} />
                 ) : (
                   <div style={s.fotoPlaceholder}>
-                    <FiCamera size={24} color="var(--accent-blue)" style={{ marginBottom: '4px' }} />
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                      {form.nombre ? 'Cambiar foto' : 'Subir foto'}
+                    <span style={{ fontSize: '22px', color: 'var(--accent-blue)', fontWeight: '700', lineHeight: 1 }}>+</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '600' }}>
+                      Foto
                     </span>
                   </div>
                 )}
@@ -1730,7 +1730,7 @@ export default function Alumnos() {
               )}
             </div>
 
-            <div style={s.grid2} className="mobile-grid-1">
+            <div style={s.grid2}>
               <Campo label="Nombre(s)" value={form.nombre} error={errors.nombre?.[0]} required onChange={v => { setForm({ ...form, nombre: v }); if (errors.nombre) setErrors(prev => ({ ...prev, nombre: undefined })) }} />
               <Campo label="Apellido paterno" value={form.apellido_paterno} error={errors.apellido_paterno?.[0]} required onChange={v => { setForm({ ...form, apellido_paterno: v }); if (errors.apellido_paterno) setErrors(prev => ({ ...prev, apellido_paterno: undefined })) }} />
               <Campo label="Apellido materno" value={form.apellido_materno} error={errors.apellido_materno?.[0]} required onChange={v => { setForm({ ...form, apellido_materno: v }); if (errors.apellido_materno) setErrors(prev => ({ ...prev, apellido_materno: undefined })) }} />
@@ -2068,12 +2068,12 @@ const s = {
   cardFooter: { padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '15px', background: 'var(--bg-tertiary)' },
   btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '8px 30px', borderRadius: '5px', fontWeight: '600', cursor: 'pointer' },
   btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center' },
-  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px', width: '580px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: 'var(--shadow-lg)' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
+  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px 20px', width: '520px', maxWidth: '94vw', maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' },
   modalTitulo: { color: 'var(--text-primary)', fontSize: '18px', fontWeight: '700', margin: 0 },
   btnCerrarCircular: {
-    width: '32px',
-    height: '32px',
+    width: '30px',
+    height: '30px',
     borderRadius: '50%',
     background: 'var(--bg-tertiary)',
     border: '1px solid var(--border)',
@@ -2084,18 +2084,18 @@ const s = {
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   },
-  fotoUploadArea: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px', gap: '8px' },
-  fotoPreviewBox: { width: '96px', height: '96px', borderRadius: '50%', border: '2px dashed var(--border)', cursor: 'pointer', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
+  fotoUploadArea: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px', gap: '6px' },
+  fotoPreviewBox: { width: '80px', height: '80px', borderRadius: '50%', border: '1.5px dashed rgba(59, 130, 246, 0.4)', cursor: 'pointer', overflow: 'hidden', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
   fotoPreviewImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  fotoPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '12px', cursor: 'pointer', fontWeight: '600' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
+  fotoPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
+  btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '11px', cursor: 'pointer', fontWeight: '600' },
+  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 10px' },
   campoGroup: { marginTop: '1px' },
-  label: { display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600' },
-  input: { width: '100%', fontSize: '14px', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', transition: 'all 0.15s ease' },
-  inputError: { marginTop: '6px', fontSize: '12px', color: 'var(--accent-red)', lineHeight: 1.2 },
-  select: { width: '100%', fontSize: '14px', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', cursor: 'pointer', transition: 'all 0.15s ease' },
-  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' },
+  label: { display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '5px', fontWeight: '600' },
+  input: { width: '100%', fontSize: '13.5px', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', transition: 'all 0.15s ease' },
+  inputError: { marginTop: '5px', fontSize: '11.5px', color: 'var(--accent-red)', lineHeight: 1.2 },
+  select: { width: '100%', fontSize: '13.5px', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', cursor: 'pointer', transition: 'all 0.15s ease' },
+  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' },
   btnIcon: {
     padding: '8px',
     borderRadius: '10px',
