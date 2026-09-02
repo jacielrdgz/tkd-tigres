@@ -115,16 +115,12 @@ export default function Dashboard() {
     : 0
 
   return (
-    <div style={{ padding: isMobile ? '16px 14px 40px' : '24px 28px 48px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '20px' }}>
       {/* CABECERA */}
       <div style={s.headerRow}>
         <div>
-          <h1 style={{ ...s.titulo, fontSize: isMobile ? '22px' : '26px' }}>
-            Panel de Control
-          </h1>
-          <p style={s.sub}>
-            {fechaHeader.charAt(0).toUpperCase() + fechaHeader.slice(1)}
-          </p>
+          <h2 style={s.titulo}>Panel de Control</h2>
+          <p style={s.sub}>{fechaHeader.charAt(0).toUpperCase() + fechaHeader.slice(1)}</p>
         </div>
       </div>
 
@@ -410,26 +406,9 @@ function colorTipo(tipo) {
 }
 
 const s = {
-  headerRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
-    gap: '14px',
-  },
-  titulo: {
-    fontWeight: '800',
-    color: 'var(--text-primary)',
-    margin: 0,
-    letterSpacing: '-0.3px',
-  },
-  sub: {
-    fontSize: '13.5px',
-    color: 'var(--text-muted)',
-    marginTop: '4px',
-    fontWeight: '500',
-  },
+  headerRow: { marginBottom: '30px' },
+  titulo: { fontSize: '26px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
+  sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
 
   // Acciones rápidas en desktop
   quickBtnPrimary: {
