@@ -844,7 +844,7 @@ export default function Alumnos() {
               ]}
               value={edadFiltro}
               onChange={val => setEdadFiltro(val)}
-              minWidth="175px"
+              minWidth="185px"
             />
 
             {/* 3. Horarios */}
@@ -860,7 +860,7 @@ export default function Alumnos() {
               ]}
               value={horarioFiltro}
               onChange={val => setHorarioFiltro(val)}
-              minWidth="185px"
+              minWidth="205px"
             />
 
             {/* 4. Ordenar */}
@@ -877,7 +877,7 @@ export default function Alumnos() {
               ]}
               value={orden}
               onChange={val => setOrden(val)}
-              minWidth="175px"
+              minWidth="170px"
             />
 
             {/* Botón Limpiar */}
