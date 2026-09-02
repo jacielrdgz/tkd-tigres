@@ -155,20 +155,38 @@ body {
    Responsive Breakpoints
    ============================================================ */
 
-/* Tablet */
+/* Tablet & Mobile Layout: viewport fijo para que la barra inferior nunca se mueva */
 @media (max-width: 1024px) {
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-layout {
+    height: 100dvh;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
   .app-main {
     margin-left: 0;
-    padding: 20px;
-    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); /* space for bottom nav */
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 16px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); /* Espacio para barra flotante */
   }
 }
 
 /* Mobile */
 @media (max-width: 640px) {
   .app-main {
-    padding: 16px;
-    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    padding: 16px 12px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
 
