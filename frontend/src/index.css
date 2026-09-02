@@ -569,9 +569,10 @@ body {
     position: fixed !important;
     inset: 0 !important;
     margin: 0 !important;
-    padding: 24px 20px 80px 20px !important; /* Espacio extra abajo para no chocar con teclado */
+    padding: 20px 18px calc(env(safe-area-inset-bottom, 0px) + 30px) 18px !important;
     overflow-y: auto !important;
     background: var(--bg-secondary) !important;
+    box-sizing: border-box !important;
   }
 
   .mobile-fullscreen-overlay {
@@ -590,6 +591,19 @@ body {
   /* Forzar grids de 2 columnas a 1 columna */
   .mobile-grid-1 {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tablet Modals */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .mobile-fullscreen-modal {
+    width: 92% !important;
+    max-width: 620px !important;
+    max-height: 88vh !important;
+    border-radius: 16px !important;
+    padding: 28px !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
   }
 }
 

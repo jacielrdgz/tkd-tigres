@@ -21,6 +21,8 @@ import {
   FiFileText,
   FiCheck,
   FiFilter,
+  FiX,
+  FiCamera,
 } from 'react-icons/fi'
 import CustomDropdown from '../components/Common/CustomDropdown'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
@@ -140,8 +142,8 @@ export default function Alumnos() {
   const [historialData, setHistorialData] = useState([])
   const [cargandoHistorial, setCargandoHistorial] = useState(false)
   const [modalManual, setModalManual] = useState(false)
-  const [formManual, setFormManual] = useState({ 
-    grado_anterior_id: '', grado_nuevo_id: '', fecha_ascenso: new Date().toISOString().split('T')[0], actualizar_cinta: false 
+  const [formManual, setFormManual] = useState({
+    grado_anterior_id: '', grado_nuevo_id: '', fecha_ascenso: new Date().toISOString().split('T')[0], actualizar_cinta: false
   })
   const [form, setForm] = useState(VACIO)
   const [errors, setErrors] = useState({})
@@ -351,7 +353,7 @@ export default function Alumnos() {
     setModal(true);
   };
 
-  const abrirVer = (a) => { 
+  const abrirVer = (a) => {
     setAlumnoVer(a)
     setModalVer(true)
   }
@@ -860,13 +862,13 @@ export default function Alumnos() {
               ]}
               value={horarioFiltro}
               onChange={val => setHorarioFiltro(val)}
-              minWidth="205px"
+              minWidth="190px"
             />
 
             {/* 4. Ordenar */}
             <CustomDropdown
               label="Ordenar por ID"
-              icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
+              icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5" /></svg>}
               options={[
                 { value: 'id', label: 'Ordenar por ID' },
                 { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
@@ -900,7 +902,7 @@ export default function Alumnos() {
                 }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
                 </svg>
                 <span>Limpiar</span>
               </button>
@@ -1037,7 +1039,7 @@ export default function Alumnos() {
             {/* 5. Ordenar */}
             <CustomDropdown
               label="Ordenar"
-              icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>}
+              icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 15l5 5 5-5M7 9l5-5 5 5" /></svg>}
               options={[
                 { value: 'id', label: 'Ordenar' },
                 { value: 'cinta_desc', label: 'Cinta (Mayor a menor)' },
@@ -1506,7 +1508,7 @@ export default function Alumnos() {
               <h3 style={s.cardTitle}>
                 {alumnoVer.nombre} {alumnoVer.apellido_paterno} {alumnoVer.apellido_materno}
               </h3>
-              <button style={s.btnCerrarWhite} onClick={cerrar}>X</button>
+              <button style={s.btnCerrarCircular} onClick={cerrar} aria-label="Cerrar modal"><FiX size={16} /></button>
             </div>
             <div style={s.cardBody}>
               <div style={s.avatarBox}>
@@ -1574,14 +1576,14 @@ export default function Alumnos() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button 
-                  style={{ ...s.btnPrimary, padding: '8px 16px', fontSize: '12px' }} 
+                <button
+                  style={{ ...s.btnPrimary, padding: '8px 16px', fontSize: '12px' }}
                   onClick={() => {
-                    setFormManual({ 
-                      grado_anterior_id: historialAlumno.configuracion_cinta_id || '', 
-                      grado_nuevo_id: '', 
+                    setFormManual({
+                      grado_anterior_id: historialAlumno.configuracion_cinta_id || '',
+                      grado_nuevo_id: '',
                       fecha_ascenso: new Date().toISOString().split('T')[0],
-                      actualizar_cinta: false 
+                      actualizar_cinta: false
                     })
                     setModalManual(true)
                   }}
@@ -1647,30 +1649,30 @@ export default function Alumnos() {
           <div style={{ ...s.modalCard, width: '450px' }} className="mobile-fullscreen-modal">
             <div style={s.cardHeader}>
               <h3 style={s.cardTitle}>Registro de Grado Manual</h3>
-              <button style={s.btnCerrarWhite} onClick={() => setModalManual(false)}>✕</button>
+              <button style={s.btnCerrarCircular} onClick={() => setModalManual(false)} aria-label="Cerrar modal"><FiX size={16} /></button>
             </div>
             <div style={{ padding: '24px' }}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={s.label}>Grado Anterior</label>
-                <select style={s.select} value={formManual.grado_anterior_id} onChange={e => setFormManual({...formManual, grado_anterior_id: e.target.value})}>
+                <select style={s.select} value={formManual.grado_anterior_id} onChange={e => setFormManual({ ...formManual, grado_anterior_id: e.target.value })}>
                   <option value="">- Ninguno -</option>
                   {cintasConfig.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: '16px' }}>
                 <label style={s.label}>Grado Obtenido</label>
-                <select style={s.select} value={formManual.grado_nuevo_id} onChange={e => setFormManual({...formManual, grado_nuevo_id: e.target.value})}>
+                <select style={s.select} value={formManual.grado_nuevo_id} onChange={e => setFormManual({ ...formManual, grado_nuevo_id: e.target.value })}>
                   <option value="">- Seleccionar -</option>
                   {cintasConfig.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: '16px' }}>
                 <label style={s.label}>Fecha</label>
-                <input type="date" style={s.input} value={formManual.fecha_ascenso} onChange={e => setFormManual({...formManual, fecha_ascenso: e.target.value})} />
+                <input type="date" style={s.input} value={formManual.fecha_ascenso} onChange={e => setFormManual({ ...formManual, fecha_ascenso: e.target.value })} />
               </div>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ ...s.label, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                  <input type="checkbox" checked={formManual.actualizar_cinta} onChange={e => setFormManual({...formManual, actualizar_cinta: e.target.checked})} />
+                  <input type="checkbox" checked={formManual.actualizar_cinta} onChange={e => setFormManual({ ...formManual, actualizar_cinta: e.target.checked })} />
                   ¿Actualizar grado actual del alumno?
                 </label>
               </div>
@@ -1690,34 +1692,22 @@ export default function Alumnos() {
           <div style={s.modal} className="mobile-fullscreen-modal">
             <div style={s.modalHeader}>
               <h3 style={s.modalTitulo}>{editando ? 'Editar alumno' : 'Nuevo alumno'}</h3>
-              <button style={s.btnCerrar} onClick={cerrar}>X</button>
+              <button style={s.btnCerrarCircular} onClick={cerrar} aria-label="Cerrar modal"><FiX size={16} /></button>
             </div>
 
             <div style={s.fotoUploadArea}>
-              <div style={s.fotoPreviewBox} onClick={() => fileRef.current.click()}>
+              <div
+                style={s.fotoPreviewBox}
+                onClick={() => fileRef.current.click()}
+                title="Toca para seleccionar foto"
+              >
                 {fotoPreview ? (
                   <img src={fotoPreview} alt="preview" style={s.fotoPreviewImg} />
                 ) : (
                   <div style={s.fotoPlaceholder}>
-                    {/*/Icono SVG*/}
-                    <svg
-                      width="32"
-                      height="32"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#3b82f6"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    ></svg>
-                    <span style={{ fontSize: '25px', color: '#3b82f6', fontWeight: '700' }}>
-                      {form.nombre || form.apellido_paterno
-                        ? obtenerIniciales(form.nombre, form.apellido_paterno)
-                        : '+'
-                      }
-                    </span>
-                    <span style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
-                      {form.nombre ? 'Agregar foto' : 'Foto'}
+                    <FiCamera size={24} color="var(--accent-blue)" style={{ marginBottom: '4px' }} />
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                      {form.nombre ? 'Cambiar foto' : 'Subir foto'}
                     </span>
                   </div>
                 )}
@@ -1731,6 +1721,7 @@ export default function Alumnos() {
               />
               {fotoPreview && (
                 <button
+                  type="button"
                   style={s.btnQuitarFoto}
                   onClick={() => { setFotoFile(null); setFotoPreview(null); setEliminarFoto(true) }}
                 >
@@ -1756,16 +1747,14 @@ export default function Alumnos() {
                   onChange={e => setForm({ ...form, horario_id: e.target.value })}
                 >
                   <option value="">Seleccionar horario...</option>
-
-                  {/* Conexión por ID */}
                   {horarios.map((h) => (
                     <option key={h.id} value={h.id}>
                       {h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})
                     </option>
                   ))}
-
                 </select>
               </div>
+
               <div style={s.campoGroup}>
                 <label style={s.label}>Cinta</label>
                 <select style={s.select} value={form.configuracion_cinta_id} onChange={e => setForm({ ...form, configuracion_cinta_id: e.target.value })}>
@@ -1804,8 +1793,9 @@ export default function Alumnos() {
             </div>
 
             <div style={s.modalFooter}>
-              <button style={s.btnSecondary} onClick={cerrar} disabled={guardando}>Cancelar</button>
+              <button type="button" style={s.btnSecondary} onClick={cerrar} disabled={guardando}>Cancelar</button>
               <button
+                type="button"
                 style={{ ...s.btnPrimary, opacity: guardando ? 0.75 : 1, cursor: guardando ? 'not-allowed' : 'pointer' }}
                 onClick={guardar}
                 disabled={guardando}
@@ -2078,21 +2068,33 @@ const s = {
   cardFooter: { padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '15px', background: 'var(--bg-tertiary)' },
   btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '8px 30px', borderRadius: '5px', fontWeight: '600', cursor: 'pointer' },
   btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center' },
-  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px', width: '580px', maxHeight: '90vh', overflowY: 'auto' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
-  modalTitulo: { color: 'var(--text-primary)', fontSize: '18px', fontWeight: '700' },
-  btnCerrar: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
+  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px', width: '580px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: 'var(--shadow-lg)' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
+  modalTitulo: { color: 'var(--text-primary)', fontSize: '18px', fontWeight: '700', margin: 0 },
+  btnCerrarCircular: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-secondary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
   fotoUploadArea: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px', gap: '8px' },
-  fotoPreviewBox: { width: '100px', height: '100px', borderRadius: '50%', border: '2px dashed var(--border)', cursor: 'pointer', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  fotoPreviewBox: { width: '96px', height: '96px', borderRadius: '50%', border: '2px dashed var(--border)', cursor: 'pointer', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
   fotoPreviewImg: { width: '100%', height: '100%', objectFit: 'cover' },
   fotoPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '12px', cursor: 'pointer' },
+  btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '12px', cursor: 'pointer', fontWeight: '600' },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
   campoGroup: { marginTop: '1px' },
   label: { display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600' },
-  input: { width: '100%', fontSize: '14px', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
+  input: { width: '100%', fontSize: '14px', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', transition: 'all 0.15s ease' },
   inputError: { marginTop: '6px', fontSize: '12px', color: 'var(--accent-red)', lineHeight: 1.2 },
-  select: { width: '100%', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' },
+  select: { width: '100%', fontSize: '14px', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', cursor: 'pointer', transition: 'all 0.15s ease' },
   modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' },
   btnIcon: {
     padding: '8px',
