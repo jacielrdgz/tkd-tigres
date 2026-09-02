@@ -106,6 +106,7 @@ body {
   color: var(--text-primary);
   line-height: 1.5;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
 }
 
 /* ============================================================
@@ -159,7 +160,7 @@ body {
   .app-main {
     margin-left: 0;
     padding: 20px;
-    padding-bottom: 96px; /* space for bottom nav */
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); /* space for bottom nav */
   }
 }
 
@@ -167,7 +168,7 @@ body {
 @media (max-width: 640px) {
   .app-main {
     padding: 16px;
-    padding-bottom: 96px;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   }
 }
 
