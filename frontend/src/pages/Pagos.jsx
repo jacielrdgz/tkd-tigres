@@ -1449,10 +1449,10 @@ export default function Pagos() {
 }
 
 const s = {
-  page: { padding: '', scrollbarGutter: 'stable' },
+  page: { scrollbarGutter: 'stable', paddingBottom: '40px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' },
-  titulo: { fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
-  sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
+  titulo: { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
+  sub: { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px' },
   barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '16px' },
   search: { flex: 1, maxWidth: '395px', padding: '10px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '80px', color: 'var(--text-primary)', outline: 'none', transition: 'all 0.3s ease' },
   tabs: { display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', flexShrink: 0 },

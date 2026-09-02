@@ -186,13 +186,8 @@ export default function Examenes() {
     <div style={s.page}>
       <div style={s.header}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={s.headerIconBox}>
-              <FiAward size={24} color="var(--accent-blue)" />
-            </div>
-            <h2 style={s.titulo}>Exámenes de Grado</h2>
-          </div>
-          <p style={s.sub}>Gestión de convocatorias de evaluación y promociones de cinta</p>
+          <h2 style={s.titulo}>Exámenes</h2>
+          <p style={s.sub}>Gestión de evaluaciones y promociones de cinta</p>
         </div>
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           <div style={s.statBadge}>
@@ -452,11 +447,10 @@ export default function Examenes() {
 }
 
 const s = {
-  page: { padding: '24px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'Inter, sans-serif' },
+  page: { scrollbarGutter: 'stable', paddingBottom: '40px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' },
-  headerIconBox: { width: '42px', height: '42px', borderRadius: '12px', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  titulo: { fontSize: '26px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
-  sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
+  titulo: { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
+  sub: { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px' },
 
   statBadge: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '12px 24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.3)', color: '#fff', minWidth: '160px' },
   statLabel: { fontSize: '11px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },

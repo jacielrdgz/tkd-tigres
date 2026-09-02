@@ -424,10 +424,10 @@ export default function Eventos() {
 }
 
 const s = {
-  page:            { padding: '24px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'Inter, sans-serif' },
+  page:            { scrollbarGutter: 'stable', paddingBottom: '40px' },
   header:          { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' },
-  titulo:          { fontSize: '26px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
-  sub:             { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
+  titulo:          { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
+  sub:             { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px' },
   
   statBadge: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '12px 24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.3)', color: '#fff', minWidth: '160px' },
   statLabel: { fontSize: '11px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },
