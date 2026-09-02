@@ -567,14 +567,14 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
               end={item.path === '/'}
               style={({ isActive }) => ({
                 ...styles.bottomNavItem,
-                color: isActive ? 'var(--accent-blue)' : 'var(--text-muted)',
-                background: isActive ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                color: isActive ? '#3b82f6' : '#64748b',
+                background: isActive ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
               })}
             >
-              <span style={{ fontSize: '19px', display: 'flex', alignItems: 'center' }}>
+              <span style={{ fontSize: '20px', display: 'flex', alignItems: 'center' }}>
                 {item.icon}
               </span>
-              <span style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '0.2px' }}>
+              <span style={{ fontSize: '10.5px', fontWeight: '700', letterSpacing: '0.2px' }}>
                 {item.label}
               </span>
             </NavLink>
@@ -750,37 +750,30 @@ const styles = {
   },
   bottomNav: {
     position: 'fixed',
-    bottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
-    left: '12px',
-    right: '12px',
-    height: '62px',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '66px',
     background: 'var(--bg-secondary)',
-    border: '1px solid var(--border)',
-    borderRadius: '18px',
+    borderTop: '1px solid var(--border)',
     display: 'grid',
     gridTemplateColumns: 'repeat(5, 1fr)',
     alignItems: 'center',
-    zIndex: 9999,
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)',
-    transform: 'translate3d(0, 0, 0)',
-    WebkitTransform: 'translate3d(0, 0, 0)',
-    backfaceVisibility: 'hidden',
-    WebkitBackfaceVisibility: 'hidden',
-    willChange: 'transform',
-    touchAction: 'none',
+    zIndex: 100,
+    paddingBottom: 'env(safe-area-inset-bottom)',
+    boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)',
   },
   bottomNavItem: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '2px',
+    gap: '3px',
     textDecoration: 'none',
-    padding: '6px 2px',
-    borderRadius: '12px',
-    margin: '0 2px',
+    padding: '8px 2px',
+    borderRadius: '10px',
+    margin: '0 3px',
     transition: 'all 0.15s ease',
     minWidth: 0,
-    WebkitTapHighlightColor: 'transparent',
   },
 };
