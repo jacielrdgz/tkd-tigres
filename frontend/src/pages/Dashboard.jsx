@@ -1,15 +1,36 @@
 import { useEffect, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
+import {
+  FiUsers,
+  FiAlertCircle,
+  FiDollarSign,
+  FiCheckCircle,
+  FiArrowUpRight,
+  FiCalendar,
+  FiPlus,
+  FiChevronRight,
+  FiClock
+} from 'react-icons/fi'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { getCache, setCache } from '../utils/cacheManager'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   if (user?.is_superadmin) {
     return <Navigate to="/admin/dashboard" replace />
   }
+
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const [datos, setDatos] = useState(() => {
     const cached = getCache('dashboard_stats')
     return cached?.data || {
@@ -56,116 +77,313 @@ export default function Dashboard() {
     obtenerDashboard()
   }, [])
 
-  if (cargando) return <div style={s.loading}>Cargando estadísticas de la escuela...</div>
-  if (error)    return <div style={s.error}>{error}</div>
+  if (cargando) {
+    return (
+      <div style={s.loadingContainer}>
+        <div style={s.spinner} />
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '14px' }}>
+          Cargando panel de control...
+        </p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={s.errorContainer}>
+        <FiAlertCircle size={36} color="var(--accent-red)" />
+        <p style={{ color: 'var(--accent-red)', marginTop: '12px', fontWeight: '600' }}>{error}</p>
+        <button
+          type="button"
+          style={s.btnReintentar}
+          onClick={() => window.location.reload()}
+        >
+          Reintentar
+        </button>
+      </div>
+    )
+  }
 
   const fechaHeader = new Date().toLocaleDateString('es-MX', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   })
 
+  // Cálculo de cobranza
+  const totalEvaluados = (datos.pagos_al_corriente || 0) + (datos.pagos_pendientes || 0)
+  const pctCobranza = totalEvaluados > 0
+    ? Math.round(((datos.pagos_al_corriente || 0) / totalEvaluados) * 100)
+    : 0
+
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: isMobile ? '16px 14px 40px' : '24px 28px 48px', maxWidth: '1400px', margin: '0 auto' }}>
+      {/* CABECERA */}
       <div style={s.headerRow}>
         <div>
-          <h2 style={s.titulo}>Panel de Control</h2>
-          <p style={s.sub}>{fechaHeader.charAt(0).toUpperCase() + fechaHeader.slice(1)}</p>
+          <h1 style={{ ...s.titulo, fontSize: isMobile ? '22px' : '26px' }}>
+            Panel de Control
+          </h1>
+          <p style={s.sub}>
+            {fechaHeader.charAt(0).toUpperCase() + fechaHeader.slice(1)}
+          </p>
         </div>
       </div>
 
-      {/* CARDS PRINCIPALES */}
-      <div style={s.cards}>
-        <Card 
-          color="var(--accent-blue)" 
-          icon="👥" 
-          label="Alumnos Activos" 
-          valor={datos.alumnos_activos} 
+      {/* CARDS PRINCIPALES (GRID 2x2 EN MÓVIL, 4 COLS EN ESCRITORIO) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '12px' : '20px',
+        marginBottom: isMobile ? '20px' : '28px'
+      }}>
+        <MetricCard
+          color="var(--accent-blue)"
+          badgeBg="var(--accent-blue-bg)"
+          icon={<FiUsers size={isMobile ? 18 : 22} />}
+          label="Alumnos Activos"
+          valor={datos.alumnos_activos}
           subtext="En lista actual"
+          onClick={() => navigate('/alumnos')}
+          isMobile={isMobile}
         />
-        <Card 
-          color="var(--accent-red)" 
-          icon="⏳" 
-          label="Pagos Pendientes" 
-          valor={datos.pagos_pendientes} 
+        <MetricCard
+          color="var(--accent-red)"
+          badgeBg="var(--accent-red-bg)"
+          icon={<FiAlertCircle size={isMobile ? 18 : 22} />}
+          label="Pagos Pendientes"
+          valor={datos.pagos_pendientes}
           subtext="Periodo actual"
+          onClick={() => navigate('/pagos')}
+          isMobile={isMobile}
         />
-        <Card 
-          color="var(--accent-green)" 
-          icon="💰" 
-          label="Ingresos del Mes" 
-          valor={`$${datos.ingresos_mes.toLocaleString()}`} 
-          subtext="Recaudado hoy"
+        <MetricCard
+          color="var(--accent-green)"
+          badgeBg="var(--accent-green-bg)"
+          icon={<FiDollarSign size={isMobile ? 18 : 22} />}
+          label="Ingresos del Mes"
+          valor={`$${datos.ingresos_mes.toLocaleString('es-MX')}`}
+          subtext="Recaudado este mes"
+          onClick={() => navigate('/pagos')}
+          isMobile={isMobile}
         />
-        <Card 
-          color="var(--accent-purple)" 
-          icon="✅" 
-          label="Asistencias Hoy" 
-          valor={datos.asistencias_hoy} 
+        <MetricCard
+          color="var(--accent-purple)"
+          badgeBg="rgba(168, 85, 247, 0.12)"
+          icon={<FiCheckCircle size={isMobile ? 18 : 22} />}
+          label="Asistencias Hoy"
+          valor={datos.asistencias_hoy}
           subtext="Presentes hoy"
+          onClick={() => navigate('/asistencias')}
+          isMobile={isMobile}
         />
       </div>
 
-      <h3 style={s.subtitulo}>Calendario de Eventos</h3>
+      {/* WIDGET DE EFICIENCIA DE COBRANZA */}
+      {totalEvaluados > 0 && (
+        <div style={s.cobranzaCard}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: pctCobranza >= 80 ? 'var(--accent-green)' : (pctCobranza >= 50 ? 'var(--accent-yellow)' : 'var(--accent-red)')
+              }} />
+              <span style={{ fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                Progreso de Cobranza del Mes
+              </span>
+            </div>
+            <span style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
+              {pctCobranza}%
+            </span>
+          </div>
 
-      {datos.eventos_proximos.length === 0 ? (
-        <div style={s.vacio}>
-          <p>No hay exámenes o torneos próximos registrados.</p>
-        </div>
-      ) : (
-        <div style={s.tabla}>
-          <table style={s.table}>
-            <thead>
-              <tr>
-                {['Evento', 'Tipo', 'Fecha', 'Días restantes'].map(h => (
-                  <th key={h} style={s.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {datos.eventos_proximos.map(e => {
-                const dias = diasRestantes(e.fecha)
-                return (
-                  <tr key={e.id} style={s.tr}>
-                    <td style={s.td}>
-                      <span style={s.eventoNombre}>{e.nombre}</span>
-                    </td>
-                    <td style={s.td}>
-                      <span style={{ ...s.badge, ...colorTipo(e.tipo) }}>
-                        {e.tipo}
-                      </span>
-                    </td>
-                    <td style={s.td}>{formatearFecha(e.fecha)}</td>
-                    <td style={s.td}>
-                      <span style={{
-                        ...s.dias,
-                        color: dias === 0 ? '#f87171' : dias <= 7 ? '#f87171' : '#4ade80'
-                      }}>
-                        {dias === 0 ? '¡Hoy es el evento!' : `Faltan ${dias} días`}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div style={s.progressBarBg}>
+            <div style={{
+              ...s.progressBarFill,
+              width: `${pctCobranza}%`,
+              background: pctCobranza >= 80
+                ? 'linear-gradient(90deg, #10b981, #059669)'
+                : (pctCobranza >= 50 ? 'linear-gradient(90deg, #3b82f6, #6366f1)' : 'linear-gradient(90deg, #f59e0b, #ef4444)')
+            }} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '11.5px', color: 'var(--text-muted)' }}>
+            <span>✅ {datos.pagos_al_corriente} al corriente</span>
+            <span>⏳ {datos.pagos_pendientes} pendientes</span>
+          </div>
         </div>
       )}
+
+      {/* CALENDARIO DE EVENTOS */}
+      <div style={{ marginTop: '28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FiCalendar size={18} color="var(--accent-blue)" />
+            <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+              Próximos Eventos y Exámenes
+            </h2>
+          </div>
+          <button
+            type="button"
+            style={s.btnVerTodos}
+            onClick={() => navigate('/eventos')}
+          >
+            Ver todos
+            <FiArrowUpRight size={13} />
+          </button>
+        </div>
+
+        {datos.eventos_proximos.length === 0 ? (
+          <div style={s.vacioModerno}>
+            <div style={s.vacioIconBox}>
+              <FiCalendar size={28} color="var(--text-muted)" />
+            </div>
+            <p style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
+              Sin eventos programados
+            </p>
+            <p style={{ margin: '0 0 16px', fontSize: '12.5px', color: 'var(--text-muted)' }}>
+              No hay exámenes ni torneos próximos registrados en el calendario.
+            </p>
+            <button
+              type="button"
+              style={s.btnCrearEvento}
+              onClick={() => navigate('/eventos')}
+            >
+              <FiPlus size={14} />
+              <span>Programar Evento</span>
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: '12px'
+          }}>
+            {datos.eventos_proximos.map(e => {
+              const dias = diasRestantes(e.fecha)
+              const badgeStyle = colorTipo(e.tipo)
+              return (
+                <div
+                  key={e.id}
+                  style={s.eventoCard}
+                  onClick={() => navigate(e.tipo?.toLowerCase() === 'examen' ? `/examenes/${e.id}` : `/eventos/${e.id}`)}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                    e.currentTarget.style.transform = 'none'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ ...s.badgeModerno, background: badgeStyle.background, color: badgeStyle.color }}>
+                      {e.tipo || 'Evento'}
+                    </span>
+                    <span style={{
+                      ...s.diasBadge,
+                      background: dias === 0 ? 'rgba(239, 68, 68, 0.15)' : (dias <= 7 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(34, 197, 94, 0.12)'),
+                      color: dias === 0 ? '#ef4444' : (dias <= 7 ? '#f59e0b' : '#22c55e'),
+                    }}>
+                      <FiClock size={11} />
+                      {dias === 0 ? '¡Hoy es el evento!' : (dias === 1 ? 'Mañana' : `Faltan ${dias} días`)}
+                    </span>
+                  </div>
+
+                  <div style={s.eventoTitulo}>{e.nombre}</div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                    <span style={{ fontSize: '12.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <FiCalendar size={13} />
+                      {formatearFecha(e.fecha)}
+                    </span>
+                    <span style={{ fontSize: '12px', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: '600' }}>
+                      Ver detalles
+                      <FiChevronRight size={14} />
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-// Componentes Reutilizables internos
-function Card({ color, icon, label, valor, subtext }) {
+// Tarjeta de métrica con micro-interacción y redirección
+function MetricCard({ color, badgeBg, icon, label, valor, subtext, onClick, isMobile }) {
+  const [hover, setHover] = useState(false)
+
   return (
-    <div style={{ ...s.card, borderTop: `4px solid ${color}` }}>
-      <div style={s.cardIcon}>{icon}</div>
-      <div style={{ ...s.cardValor, color }}>{valor}</div>
-      <div style={s.cardLabel}>{label}</div>
-      <div style={s.cardSubtext}>{subtext}</div>
+    <div
+      role="button"
+      tabIndex={0}
+      style={{
+        ...s.cardBase,
+        borderColor: hover ? color : 'var(--border)',
+        transform: hover ? 'translateY(-3px)' : 'none',
+        boxShadow: hover ? `0 8px 24px ${color}26` : 'var(--shadow-sm)',
+        padding: isMobile ? '16px 14px' : '22px 20px',
+      }}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {/* Encabezado de la tarjeta: Badge con icono SVG y flecha de enlace */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '10px' : '14px' }}>
+        <div style={{
+          ...s.iconBadge,
+          background: badgeBg,
+          color: color,
+          width: isMobile ? '36px' : '44px',
+          height: isMobile ? '36px' : '44px',
+        }}>
+          {icon}
+        </div>
+
+        <div style={{
+          ...s.arrowIconBox,
+          color: hover ? color : 'var(--text-muted)',
+          transform: hover ? 'translate(2px, -2px)' : 'none',
+        }}>
+          <FiArrowUpRight size={isMobile ? 15 : 18} />
+        </div>
+      </div>
+
+      {/* Valor principal */}
+      <div style={{
+        ...s.cardValor,
+        color: color,
+        fontSize: isMobile ? '26px' : '34px',
+      }}>
+        {valor}
+      </div>
+
+      {/* Etiqueta y subtítulo */}
+      <div style={{
+        ...s.cardLabel,
+        fontSize: isMobile ? '12.5px' : '14px',
+      }}>
+        {label}
+      </div>
+
+      <div style={{
+        ...s.cardSubtext,
+        fontSize: isMobile ? '10px' : '11px',
+      }}>
+        {subtext}
+      </div>
     </div>
   )
 }
 
 function diasRestantes(fechaStr) {
+  if (!fechaStr) return 0
   const hoy = new Date()
   const evt = new Date(fechaStr + 'T00:00:00')
   hoy.setHours(0, 0, 0, 0)
@@ -175,36 +393,298 @@ function diasRestantes(fechaStr) {
 }
 
 function formatearFecha(f) {
-  return new Date(f + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+  if (!f) return ''
+  return new Date(f + 'T00:00:00').toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  })
 }
 
 function colorTipo(tipo) {
-  const t = tipo?.toLowerCase()
-  if (t === 'examen') return { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }
-  if (t === 'torneo') return { background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }
-  return { background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }
+  const t = tipo?.toLowerCase() || ''
+  if (t.includes('examen')) return { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }
+  if (t.includes('torneo')) return { background: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)' }
+  if (t.includes('seminario')) return { background: 'rgba(168, 85, 247, 0.12)', color: 'var(--accent-purple)' }
+  return { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }
 }
 
 const s = {
-  loading: { color: 'var(--text-muted)', padding: '50px', textAlign: 'center', fontSize: '18px' },
-  error: { color: 'var(--accent-red)', padding: '50px', textAlign: 'center' },
-  headerRow: { marginBottom: '30px' },
-  titulo: { fontSize: '26px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
-  sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
-  cards: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' },
-  card: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', boxShadow: 'var(--shadow-sm)' },
-  cardIcon: { fontSize: '20px', marginBottom: '10px' },
-  cardValor: { fontSize: '42px', fontWeight: '900', lineHeight: '1' },
-  cardLabel: { fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600', marginTop: '8px' },
-  cardSubtext: { fontSize: '11px', color: 'var(--text-dim)', marginTop: '4px', textTransform: 'uppercase' },
-  subtitulo: { fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '15px' },
-  vacio: { background: 'var(--bg-secondary)', padding: '40px', borderRadius: '12px', textAlign: 'center', color: 'var(--text-dim)', border: '1px dashed var(--border-hover)' },
-  tabla: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '14px 16px', textAlign: 'left', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', letterSpacing: '1px' },
-  tr: { borderBottom: '1px solid var(--border)' },
-  td: { padding: '16px', fontSize: '14px', color: 'var(--text-secondary)' },
-  eventoNombre: { fontWeight: '700', color: 'var(--text-primary)' },
-  badge: { padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' },
-  dias: { fontSize: '13px', fontWeight: '600' }
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '14px',
+  },
+  titulo: {
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: 0,
+    letterSpacing: '-0.3px',
+  },
+  sub: {
+    fontSize: '13.5px',
+    color: 'var(--text-muted)',
+    marginTop: '4px',
+    fontWeight: '500',
+  },
+
+  // Acciones rápidas en desktop
+  quickBtnPrimary: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '7px',
+    padding: '9px 16px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
+    transition: 'all 0.15s ease',
+  },
+  quickBtnSecondary: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '7px',
+    padding: '9px 14px',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+
+  // Acciones rápidas en móvil
+  quickActionsMobile: {
+    display: 'flex',
+    gap: '8px',
+    overflowX: 'auto',
+    paddingBottom: '12px',
+    marginBottom: '16px',
+    scrollbarWidth: 'none',
+  },
+  quickPillPrimary: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+    padding: '7px 14px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '20px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    flexShrink: 0,
+    boxShadow: '0 2px 8px rgba(59, 130, 246, 0.35)',
+  },
+  quickPillSecondary: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+    padding: '7px 14px',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '20px',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+
+  // Tarjeta de métrica base
+  cardBase: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    cursor: 'pointer',
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    boxSizing: 'border-box',
+    outline: 'none',
+  },
+  iconBadge: {
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  arrowIconBox: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease',
+  },
+  cardValor: {
+    fontWeight: '900',
+    lineHeight: '1.15',
+    letterSpacing: '-0.5px',
+  },
+  cardLabel: {
+    color: 'var(--text-primary)',
+    fontWeight: '700',
+    marginTop: '6px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  cardSubtext: {
+    color: 'var(--text-muted)',
+    marginTop: '3px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.4px',
+    fontWeight: '600',
+  },
+
+  // Widget de cobranza
+  cobranzaCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '14px',
+    padding: '16px 20px',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  progressBarBg: {
+    height: '7px',
+    background: 'var(--bg-tertiary)',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: '10px',
+    transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+
+  // Eventos y exámenes
+  btnVerTodos: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--accent-blue)',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    padding: '4px 8px',
+    borderRadius: '8px',
+    transition: 'background 0.15s ease',
+  },
+  vacioModerno: {
+    background: 'var(--bg-secondary)',
+    border: '1px dashed var(--border)',
+    borderRadius: '16px',
+    padding: '36px 20px',
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vacioIconBox: {
+    width: '54px',
+    height: '54px',
+    borderRadius: '50%',
+    background: 'var(--bg-tertiary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '12px',
+  },
+  btnCrearEvento: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 16px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+  },
+  eventoCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '14px',
+    padding: '16px 18px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    boxSizing: 'border-box',
+  },
+  badgeModerno: {
+    padding: '4px 9px',
+    borderRadius: '6px',
+    fontSize: '10.5px',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: '0.4px',
+  },
+  diasBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '3px 8px',
+    borderRadius: '6px',
+    fontSize: '11px',
+    fontWeight: '700',
+  },
+  eventoTitulo: {
+    fontSize: '14.5px',
+    fontWeight: '700',
+    color: 'var(--text-primary)',
+    lineHeight: '1.3',
+  },
+
+  // Estados de carga y error
+  loadingContainer: {
+    minHeight: 'calc(100vh - 120px)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spinner: {
+    width: '36px',
+    height: '36px',
+    border: '3px solid var(--border)',
+    borderTopColor: 'var(--accent-blue)',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+  },
+  errorContainer: {
+    minHeight: 'calc(100vh - 120px)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px',
+    textAlign: 'center',
+  },
+  btnReintentar: {
+    marginTop: '16px',
+    padding: '8px 18px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    color: 'var(--text-primary)',
+    fontWeight: '600',
+    cursor: 'pointer',
+  }
 }
