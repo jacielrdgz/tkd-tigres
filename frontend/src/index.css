@@ -159,7 +159,7 @@ body {
   .app-main {
     margin-left: 0;
     padding: 20px;
-    padding-bottom: 80px; /* space for bottom nav */
+    padding-bottom: 96px; /* space for bottom nav */
   }
 }
 
@@ -167,7 +167,7 @@ body {
 @media (max-width: 640px) {
   .app-main {
     padding: 16px;
-    padding-bottom: 80px;
+    padding-bottom: 96px;
   }
 }
 
