@@ -137,6 +137,9 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
         ...(isMobile ? {
           transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
           boxShadow: mobileOpen ? '4px 0 30px rgba(0,0,0,0.5)' : 'none',
+          height: '100dvh',
+          maxHeight: '100dvh',
+          overflowY: 'auto',
         } : {}),
       }}>
         {/* Logo & tenant info */}
@@ -173,7 +176,14 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
         </div>
 
         {/* Navigation */}
-        <nav style={styles.nav}>
+        <nav style={{
+          ...styles.nav,
+          ...(isMobile ? {
+            padding: '12px 12px',
+            flex: '1 1 auto',
+            overflowY: 'auto',
+          } : {}),
+        }}>
           {filteredMenu.map(item => (
             <NavLink
               key={item.path}
@@ -189,7 +199,14 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
         </nav>
 
         {/* User info + logout */}
-        <div style={styles.footer}>
+        <div style={{
+          ...styles.footer,
+          ...(isMobile ? {
+            padding: '12px 16px',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)',
+            marginBottom: '8px',
+          } : {}),
+        }}>
           {/*Ajustes link*/}
           <NavLink
             to="/ajustes"
