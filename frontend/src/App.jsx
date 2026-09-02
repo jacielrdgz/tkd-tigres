@@ -51,7 +51,7 @@ function AppLayout() {
     <div className="app-layout">
       {isMobile && <Topbar onToggleSidebar={() => setMobileOpen(true)} />}
       <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
-      <main className="app-main" style={isMobile ? { paddingTop: '60px' } : {}}>
+      <main className="app-main">
         <Outlet />
       </main>
     </div>

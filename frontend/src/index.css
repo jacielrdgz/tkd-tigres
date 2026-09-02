@@ -159,6 +159,7 @@ body {
   .app-main {
     margin-left: 0;
     padding: 20px;
+    padding-top: 80px; /* 60px Topbar + 20px margen superior */
     padding-bottom: 80px; /* space for bottom nav */
   }
 }
@@ -167,6 +168,7 @@ body {
 @media (max-width: 640px) {
   .app-main {
     padding: 16px;
+    padding-top: 76px; /* 60px Topbar + 16px margen superior */
     padding-bottom: 80px;
   }
 }
