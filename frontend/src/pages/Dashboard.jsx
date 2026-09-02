@@ -115,9 +115,9 @@ export default function Dashboard() {
     : 0
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={s.container}>
       {/* CABECERA */}
-      <div style={s.headerRow}>
+      <div style={s.header}>
         <div>
           <h2 style={s.titulo}>Panel de Control</h2>
           <p style={s.sub}>{fechaHeader.charAt(0).toUpperCase() + fechaHeader.slice(1)}</p>
@@ -204,8 +204,14 @@ export default function Dashboard() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '11.5px', color: 'var(--text-muted)' }}>
-            <span>✅ {datos.pagos_al_corriente} al corriente</span>
-            <span>⏳ {datos.pagos_pendientes} pendientes</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <FiCheckCircle size={13} color="var(--accent-green)" />
+              {datos.pagos_al_corriente} al corriente
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <FiClock size={13} color="var(--accent-yellow)" />
+              {datos.pagos_pendientes} pendientes
+            </span>
           </div>
         </div>
       )}
@@ -223,9 +229,23 @@ export default function Dashboard() {
             type="button"
             style={s.btnVerTodos}
             onClick={() => navigate('/eventos')}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--accent-blue)'
+              e.currentTarget.style.color = 'var(--accent-blue)'
+              e.currentTarget.style.background = 'var(--bg-tertiary)'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+              e.currentTarget.style.boxShadow = '0 3px 10px rgba(59, 130, 246, 0.15)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.background = 'var(--bg-secondary)'
+              e.currentTarget.style.transform = 'none'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
           >
-            Ver todos
-            <FiArrowUpRight size={13} />
+            <span>Ver todos</span>
+            <FiArrowUpRight size={14} />
           </button>
         </div>
 
@@ -244,8 +264,18 @@ export default function Dashboard() {
               type="button"
               style={s.btnCrearEvento}
               onClick={() => navigate('/eventos')}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-1px)'
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.35)'
+                e.currentTarget.style.filter = 'brightness(1.08)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'none'
+                e.currentTarget.style.boxShadow = 'var(--shadow-glow-blue)'
+                e.currentTarget.style.filter = 'none'
+              }}
             >
-              <FiPlus size={14} />
+              <FiPlus size={15} />
               <span>Programar Evento</span>
             </button>
           </div>
@@ -406,9 +436,10 @@ function colorTipo(tipo) {
 }
 
 const s = {
-  headerRow: { marginBottom: '30px' },
-  titulo: { fontSize: '26px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
-  sub: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
+  container: { scrollbarGutter: 'stable', paddingBottom: '40px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
+  titulo: { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' },
+  sub: { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px' },
 
   // Acciones rápidas en desktop
   quickBtnPrimary: {
@@ -552,16 +583,17 @@ const s = {
   btnVerTodos: {
     display: 'flex',
     alignItems: 'center',
-    gap: '4px',
-    background: 'transparent',
-    border: 'none',
-    color: 'var(--accent-blue)',
+    gap: '6px',
+    padding: '7px 14px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-secondary)',
     fontSize: '12.5px',
-    fontWeight: '700',
+    fontWeight: '600',
     cursor: 'pointer',
-    padding: '4px 8px',
-    borderRadius: '8px',
-    transition: 'background 0.15s ease',
+    transition: 'all 0.15s ease',
+    fontFamily: 'inherit',
   },
   vacioModerno: {
     background: 'var(--bg-secondary)',
@@ -587,16 +619,18 @@ const s = {
   btnCrearEvento: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '8px 16px',
+    gap: '8px',
+    padding: '10px 18px',
     background: 'var(--accent-blue)',
     color: '#fff',
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '12.5px',
+    borderRadius: '12px',
     fontWeight: '700',
+    fontSize: '13px',
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+    boxShadow: 'var(--shadow-glow-blue)',
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    fontFamily: 'inherit',
   },
   eventoCard: {
     background: 'var(--bg-secondary)',
