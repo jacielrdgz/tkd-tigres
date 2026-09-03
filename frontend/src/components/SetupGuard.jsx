@@ -3,7 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { toast } from 'react-toastify'
-import { getCache, setCache } from '../utils/cacheManager'
+import { 
+  FiSettings, 
+  FiHome, 
+  FiAward, 
+  FiClock, 
+  FiInfo, 
+  FiCheck, 
+  FiArrowRight, 
+  FiCheckCircle 
+} from 'react-icons/fi'
 
 export default function SetupGuard({ children }) {
   const { user } = useAuth()
@@ -11,6 +20,13 @@ export default function SetupGuard({ children }) {
   const [status, setStatus] = useState(user?.is_superadmin ? { configurado: true } : null)
   const [loading, setLoading] = useState(user?.is_superadmin ? false : true)
   const [confirming, setConfirming] = useState(null)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const fetchStatus = () => {
     if (user?.is_superadmin) {
@@ -30,7 +46,6 @@ export default function SetupGuard({ children }) {
   }
 
   useEffect(() => {
-    // SuperAdmin no necesita configurar escuela
     if (user?.is_superadmin) {
       setLoading(false)
       setStatus({ configurado: true })
@@ -72,7 +87,7 @@ export default function SetupGuard({ children }) {
       id: 'info_basica',
       label: 'Datos de la Escuela',
       desc: 'Configura el nombre, titular y datos básicos de tu academia.',
-      icon: '🏫',
+      icon: <FiHome size={16} color="var(--accent-blue)" />,
       done: pasos.info_basica,
       path: '/ajustes/configuracion/general'
     },
@@ -80,7 +95,7 @@ export default function SetupGuard({ children }) {
       id: 'cintas',
       label: 'Grados y Cintas',
       desc: 'Verifica o personaliza los grados de cintas para tus alumnos.',
-      icon: '🥋',
+      icon: <FiAward size={16} color="#eab308" />,
       done: pasos.cintas,
       path: '/ajustes/configuracion/cintas'
     },
@@ -88,7 +103,7 @@ export default function SetupGuard({ children }) {
       id: 'horarios',
       label: 'Horarios de Clase',
       desc: 'Crea al menos un horario para organizar las clases.',
-      icon: '⏰',
+      icon: <FiClock size={16} color="var(--accent-purple)" />,
       done: pasos.horarios,
       path: '/ajustes/configuracion/horarios'
     }
@@ -98,13 +113,15 @@ export default function SetupGuard({ children }) {
 
   return (
     <div style={s.container}>
-      <div style={s.card}>
+      <div style={{ ...s.card, padding: isMobile ? '24px 16px' : '32px 28px' }}>
         <div style={s.cardGlow} />
         
         <div style={s.header}>
-          <div style={s.iconCircle}>⚙️</div>
-          <h1 style={s.title}>Configura tu Escuela</h1>
-          <p style={s.subtitle}>
+          <div style={s.iconCircle}>
+            <FiSettings size={24} color="var(--accent-blue)" />
+          </div>
+          <h1 style={{ ...s.title, fontSize: isMobile ? '20px' : '23px' }}>Configura tu Escuela</h1>
+          <p style={{ ...s.subtitle, fontSize: isMobile ? '12.5px' : '13.5px' }}>
             Antes de comenzar a usar el sistema, necesitas completar la configuración inicial de tu academia.
           </p>
         </div>
@@ -116,10 +133,19 @@ export default function SetupGuard({ children }) {
 
         <div style={s.stepsContainer}>
           {steps.map((step, i) => (
-            <div key={step.id} style={{ ...s.stepCard, ...(step.done ? s.stepDone : {}) }}>
+            <div 
+              key={step.id} 
+              style={{ 
+                ...s.stepCard, 
+                ...(step.done ? s.stepDone : {}),
+                flexDirection: isMobile ? 'column' : 'row',
+                alignItems: isMobile ? 'stretch' : 'center',
+                gap: isMobile ? '12px' : '16px'
+              }}
+            >
               <div style={s.stepLeft}>
                 <div style={{ ...s.stepCheck, ...(step.done ? s.stepCheckDone : {}) }}>
-                  {step.done ? '✓' : (i + 1)}
+                  {step.done ? <FiCheck size={14} strokeWidth={3} /> : (i + 1)}
                 </div>
                 <div style={s.stepInfo}>
                   <div style={s.stepHeader}>
@@ -131,26 +157,36 @@ export default function SetupGuard({ children }) {
               </div>
               
               {step.done ? (
-                <button style={s.btnDone} disabled>
-                  ✓ Completado
-                </button>
+                <div style={{ display: 'flex', justifyContent: isMobile ? 'flex-end' : 'center' }}>
+                  <button style={{ ...s.btnDone, width: isMobile ? '100%' : 'auto' }} disabled>
+                    <FiCheck size={14} style={{ marginRight: '4px' }} />
+                    <span>Completado</span>
+                  </button>
+                </div>
               ) : (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '8px', 
+                  alignItems: 'center',
+                  width: isMobile ? '100%' : 'auto',
+                  justifyContent: isMobile ? 'stretch' : 'flex-end'
+                }}>
                   {(step.id === 'info_basica' || step.id === 'cintas') && (
                     <button
-                      style={s.btnConfirm}
+                      style={{ ...s.btnConfirm, flex: isMobile ? 1 : 'initial' }}
                       onClick={() => handleConfirmStep(step.id)}
                       disabled={confirming !== null}
                     >
-                      {confirming === step.id ? '⌛...' : 'Confirmar'}
+                      {confirming === step.id ? 'Confirmando...' : 'Confirmar'}
                     </button>
                   )}
                   <button
-                    style={s.btnAction}
+                    style={{ ...s.btnAction, flex: isMobile ? 1 : 'initial' }}
                     onClick={() => navigate(step.path)}
                     disabled={confirming !== null}
                   >
-                    Configurar →
+                    <span>Configurar</span>
+                    <FiArrowRight size={13} style={{ marginLeft: '4px' }} />
                   </button>
                 </div>
               )}
@@ -159,7 +195,8 @@ export default function SetupGuard({ children }) {
         </div>
 
         <div style={s.footer}>
-          <p style={s.footerText}>💡 Una vez completados los 3 pasos, podrás acceder a todas las funciones del sistema.</p>
+          <FiInfo size={16} color="var(--accent-blue)" style={{ flexShrink: 0 }} />
+          <p style={s.footerText}>Una vez completados los 3 pasos, podrás acceder a todas las funciones del sistema.</p>
         </div>
       </div>
     </div>
@@ -172,14 +209,13 @@ const s = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '20px 16px',
+    padding: '16px 12px',
   },
   card: {
     position: 'relative',
     background: 'var(--bg-secondary)',
     borderRadius: '24px',
     border: '1px solid var(--border)',
-    padding: '30px 28px',
     maxWidth: '580px',
     width: '100%',
     boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
@@ -201,26 +237,23 @@ const s = {
     zIndex: 1,
   },
   iconCircle: {
-    width: '54px',
-    height: '54px',
+    width: '52px',
+    height: '52px',
     borderRadius: '50%',
     background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(168,85,247,0.15))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '24px',
     margin: '0 auto 12px',
-    border: '1px solid rgba(59,130,246,0.2)',
+    border: '1px solid rgba(59,130,246,0.25)',
   },
   title: {
-    fontSize: '22px',
-    fontWeight: '900',
+    fontWeight: '800',
     color: 'var(--text-primary)',
     margin: '0 0 8px',
-    letterSpacing: '-0.5px',
+    letterSpacing: '-0.4px',
   },
   subtitle: {
-    fontSize: '13.5px',
     color: 'var(--text-secondary)',
     lineHeight: '1.5',
     maxWidth: '450px',
@@ -242,7 +275,7 @@ const s = {
     transition: 'width 0.5s ease',
   },
   progressText: {
-    fontSize: '11px',
+    fontSize: '11.5px',
     color: 'var(--text-muted)',
     textAlign: 'center',
     marginBottom: '16px',
@@ -259,10 +292,8 @@ const s = {
   },
   stepCard: {
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '16px',
-    padding: '12px 18px',
+    padding: '14px 16px',
     background: 'var(--bg-primary)',
     borderRadius: '14px',
     border: '1px solid var(--border)',
@@ -277,6 +308,7 @@ const s = {
     alignItems: 'center',
     gap: '12px',
     flex: 1,
+    minWidth: 0,
   },
   stepCheck: {
     width: '28px',
@@ -299,6 +331,7 @@ const s = {
   },
   stepInfo: {
     flex: 1,
+    minWidth: 0,
   },
   stepHeader: {
     display: 'flex',
@@ -307,10 +340,12 @@ const s = {
     marginBottom: '2px',
   },
   stepIcon: {
-    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stepLabel: {
-    fontSize: '14px',
+    fontSize: '13.5px',
     fontWeight: '700',
     color: 'var(--text-primary)',
     margin: 0,
@@ -327,12 +362,15 @@ const s = {
     color: '#fff',
     border: 'none',
     borderRadius: '10px',
-    fontWeight: '800',
+    fontWeight: '700',
     fontSize: '12px',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     boxShadow: '0 4px 12px rgba(37,99,235,0.2)',
     transition: 'transform 0.2s, box-shadow 0.2s',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   btnDone: {
     padding: '8px 14px',
@@ -342,8 +380,11 @@ const s = {
     borderRadius: '10px',
     fontWeight: '700',
     fontSize: '12px',
-    cursor: 'pointer',
+    cursor: 'default',
     whiteSpace: 'nowrap',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   btnConfirm: {
     padding: '8px 14px',
@@ -351,26 +392,31 @@ const s = {
     color: '#22c55e',
     border: '1px solid rgba(34,197,94,0.4)',
     borderRadius: '10px',
-    fontWeight: '800',
+    fontWeight: '700',
     fontSize: '12px',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     transition: 'all 0.2s',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     marginTop: '20px',
-    padding: '12px 16px',
+    padding: '10px 14px',
     background: 'rgba(59,130,246,0.06)',
     borderRadius: '12px',
     border: '1px solid rgba(59,130,246,0.12)',
     position: 'relative',
     zIndex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
   },
   footerText: {
     fontSize: '12px',
     color: 'var(--text-secondary)',
     margin: 0,
-    textAlign: 'center',
     lineHeight: '1.4',
   },
   loadingContainer: {

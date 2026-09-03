@@ -222,7 +222,7 @@ export default function Dashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FiCalendar size={18} color="var(--accent-blue)" />
             <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
-              Próximos Eventos y Exámenes
+              Próximos Eventos
             </h2>
           </div>
           <button

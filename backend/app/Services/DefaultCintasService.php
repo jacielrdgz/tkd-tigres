@@ -35,13 +35,17 @@ class DefaultCintasService
      */
     public static function asegurarCintasGlobales(): void
     {
-        $cintas = self::getCintasDefecto();
+        try {
+            $cintas = self::getCintasDefecto();
 
-        foreach ($cintas as $cinta) {
-            ConfiguracionCinta::firstOrCreate(
-                ['tenant_id' => null, 'nombre_nivel' => $cinta['nombre_nivel']],
-                $cinta
-            );
+            foreach ($cintas as $cinta) {
+                ConfiguracionCinta::firstOrCreate(
+                    ['tenant_id' => null, 'nombre_nivel' => $cinta['nombre_nivel']],
+                    $cinta
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('No se pudieron asegurar cintas globales: ' . $e->getMessage());
         }
     }
 
