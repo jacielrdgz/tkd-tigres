@@ -88,7 +88,8 @@ export default function Asistencias() {
     if (!force) {
       const cached = getCache(key)
       if (cached && cached.data) {
-        setListaAlumnos(cached.data)
+        const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
+        setListaAlumnos(cachedList)
         setCargandoAlumnos(false)
       } else {
         setCargandoAlumnos(true)
@@ -99,8 +100,9 @@ export default function Asistencias() {
 
     try {
       const res = await api.get('/asistencias/por-alumno', { params: { mes } })
-      setListaAlumnos(res.data)
-      setCache(key, res.data)
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+      setListaAlumnos(list)
+      setCache(key, list)
     } catch {
       const cached = getCache(key)
       if (!cached || !cached.data) {
@@ -117,7 +119,7 @@ export default function Asistencias() {
     if (!force) {
       const cached = getCache(key)
       if (cached && cached.data) {
-        setDatosPorFecha(cached.data)
+        setDatosPorFecha(typeof cached.data === 'object' && cached.data !== null ? cached.data : {})
         setCargandoFecha(false)
       } else {
         setCargandoFecha(true)
@@ -128,8 +130,9 @@ export default function Asistencias() {
 
     try {
       const res = await api.get('/asistencias/por-fecha', { params: { mes } })
-      setDatosPorFecha(res.data)
-      setCache(key, res.data)
+      const obj = typeof res.data === 'object' && res.data !== null ? res.data : {}
+      setDatosPorFecha(obj)
+      setCache(key, obj)
     } catch {
       const cached = getCache(key)
       if (!cached || !cached.data) {

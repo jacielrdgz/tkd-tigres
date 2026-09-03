@@ -138,11 +138,12 @@ export default function Pagos() {
     if (!force) {
       const cached = getCache('pagos_main_data')
       if (cached && cached.data) {
-        setAlumnos(cached.data.alumnos || [])
-        setPagosActivos(cached.data.pagos || [])
-        setCintas(cached.data.cintas || [])
-        setHorarios(cached.data.horarios || [])
-        setEscuelaInfo(cached.data.escuela || null)
+        const c = cached.data
+        setAlumnos(Array.isArray(c.alumnos) ? c.alumnos : Object.values(c.alumnos || {}))
+        setPagosActivos(Array.isArray(c.pagos) ? c.pagos : Object.values(c.pagos || {}))
+        setCintas(Array.isArray(c.cintas) ? c.cintas : Object.values(c.cintas || {}))
+        setHorarios(Array.isArray(c.horarios) ? c.horarios : Object.values(c.horarios || {}))
+        setEscuelaInfo(c.escuela || null)
         setCargando(false)
       } else {
         setCargando(true)
@@ -159,18 +160,33 @@ export default function Pagos() {
         api.get('/horarios'),
         api.get('/configuracion-escuela')
       ])
-      setAlumnos(resAlumnos.data)
-      setPagosActivos(resPagos.data)
-      setCintas(resCintas.data)
-      setHorarios(resHorarios.data)
-      setEscuelaInfo(resEscuela.data)
+
+      const rawAlu = resAlumnos.data?.alumnos || resAlumnos.data || []
+      const listAlu = Array.isArray(rawAlu) ? rawAlu : Object.values(rawAlu)
+      
+      const rawPag = resPagos.data?.pagos || resPagos.data || []
+      const listPag = Array.isArray(rawPag) ? rawPag : Object.values(rawPag)
+
+      const rawCin = resCintas.data?.configuraciones || resCintas.data || []
+      const listCin = Array.isArray(rawCin) ? rawCin : Object.values(rawCin)
+
+      const rawHor = resHorarios.data?.horarios || resHorarios.data || []
+      const listHor = Array.isArray(rawHor) ? rawHor : Object.values(rawHor)
+
+      const infoEsc = resEscuela.data || null
+
+      setAlumnos(listAlu)
+      setPagosActivos(listPag)
+      setCintas(listCin)
+      setHorarios(listHor)
+      setEscuelaInfo(infoEsc)
 
       setCache('pagos_main_data', {
-        alumnos: resAlumnos.data,
-        pagos: resPagos.data,
-        cintas: resCintas.data,
-        horarios: resHorarios.data,
-        escuela: resEscuela.data
+        alumnos: listAlu,
+        pagos: listPag,
+        cintas: listCin,
+        horarios: listHor,
+        escuela: infoEsc
       })
     } catch {
       const cached = getCache('pagos_main_data')

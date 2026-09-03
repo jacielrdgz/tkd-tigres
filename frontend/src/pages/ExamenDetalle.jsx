@@ -179,13 +179,13 @@ export default function ExamenDetalle() {
       setInscritos(insData)
       setCache(`examen_detalle_${id}`, { examen: evData, inscritos: insData })
 
-      const listAlu = Array.isArray(resAlu.data) 
-        ? resAlu.data 
-        : (Array.isArray(resAlu.data?.data) ? resAlu.data.data : [])
+      const rawAlu = resAlu.data?.alumnos || resAlu.data || []
+      const listAlu = Array.isArray(rawAlu) ? rawAlu : Object.values(rawAlu)
       setAlumnosDojo(listAlu)
       setCache('alumnos_simple_activos', listAlu, 10 * 60 * 1000)
 
-      const listCin = Array.isArray(resCin.data) ? resCin.data : (resCin.data?.data || [])
+      const rawCin = resCin.data?.configuraciones || resCin.data || []
+      const listCin = Array.isArray(rawCin) ? [...rawCin] : Object.values(rawCin)
       listCin.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
       setCintasConfig(listCin)
       setCache('cintas_config', listCin, 30 * 60 * 1000)

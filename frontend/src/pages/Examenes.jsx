@@ -78,7 +78,8 @@ export default function Examenes() {
     if (!force) {
       const cached = getCache('examenes_lista')
       if (cached && cached.data) {
-        setExamenes(cached.data)
+        const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
+        setExamenes(cachedList)
         setCargando(false)
       } else {
         setCargando(true)
@@ -89,7 +90,8 @@ export default function Examenes() {
 
     try {
       const res = await api.get('/eventos?tipo=examen')
-      const soloExamenes = (res.data || [])
+      const rawList = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+      const soloExamenes = [...rawList]
       soloExamenes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
       setExamenes(soloExamenes)
       setCache('examenes_lista', soloExamenes)

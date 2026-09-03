@@ -33,13 +33,16 @@ export default function Dashboard() {
 
   const [datos, setDatos] = useState(() => {
     const cached = getCache('dashboard_stats')
-    return cached?.data || {
-      alumnos_activos: 0,
-      pagos_al_corriente: 0,
-      pagos_pendientes: 0,
-      ingresos_mes: 0,
-      asistencias_hoy: 0,
-      eventos_proximos: []
+    const c = cached?.data
+    return {
+      alumnos_activos: Number(c?.alumnos_activos) || 0,
+      pagos_al_corriente: Number(c?.pagos_al_corriente) || 0,
+      pagos_pendientes: Number(c?.pagos_pendientes) || 0,
+      ingresos_mes: Number(c?.ingresos_mes) || 0,
+      asistencias_hoy: Number(c?.asistencias_hoy) || 0,
+      eventos_proximos: Array.isArray(c?.eventos_proximos)
+        ? c.eventos_proximos
+        : (c?.eventos_proximos ? Object.values(c.eventos_proximos) : [])
     }
   })
 
@@ -53,13 +56,18 @@ export default function Dashboard() {
     const obtenerDashboard = async () => {
       try {
         const res = await api.get('/dashboard')
+        const rawEvs = res.data?.eventos_proximos
+        const evsArray = Array.isArray(rawEvs)
+          ? rawEvs
+          : (rawEvs ? Object.values(rawEvs) : [])
+
         const data = {
-          alumnos_activos: Number(res.data.alumnos_activos) || 0,
-          pagos_al_corriente: Number(res.data.pagos_al_corriente) || 0,
-          pagos_pendientes: Number(res.data.pagos_pendientes) || 0,
-          ingresos_mes: Number(res.data.ingresos_mes) || 0,
-          asistencias_hoy: Number(res.data.asistencias_hoy) || 0,
-          eventos_proximos: res.data.eventos_proximos || []
+          alumnos_activos: Number(res.data?.alumnos_activos) || 0,
+          pagos_al_corriente: Number(res.data?.pagos_al_corriente) || 0,
+          pagos_pendientes: Number(res.data?.pagos_pendientes) || 0,
+          ingresos_mes: Number(res.data?.ingresos_mes) || 0,
+          asistencias_hoy: Number(res.data?.asistencias_hoy) || 0,
+          eventos_proximos: evsArray
         }
         setDatos(data)
         setCache('dashboard_stats', data)
@@ -249,7 +257,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {datos.eventos_proximos.length === 0 ? (
+        {(!Array.isArray(datos?.eventos_proximos) || datos.eventos_proximos.length === 0) ? (
           <div style={s.vacioModerno}>
             <div style={s.vacioIconBox}>
               <FiCalendar size={28} color="var(--text-muted)" />
@@ -285,7 +293,7 @@ export default function Dashboard() {
             gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))',
             gap: '12px'
           }}>
-            {datos.eventos_proximos.map(e => {
+            {(Array.isArray(datos.eventos_proximos) ? datos.eventos_proximos : []).map(e => {
               const dias = diasRestantes(e.fecha)
               const badgeStyle = colorTipo(e.tipo)
               return (

@@ -83,7 +83,9 @@ class DashboardController extends Controller
                 'eventos_proximos'   => Evento::whereDate('fecha', '>=', $hoySoloFecha)
                                                 ->orderBy('fecha')
                                                 ->take(5)
-                                                ->get(),
+                                                ->get()
+                                                ->values()
+                                                ->toArray(),
             ];
         });
 

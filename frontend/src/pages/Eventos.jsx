@@ -74,7 +74,8 @@ export default function Eventos() {
     if (!force) {
       const cached = getCache('eventos_lista')
       if (cached && cached.data) {
-        setEventos(cached.data)
+        const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
+        setEventos(cachedList)
         setCargando(false)
       } else {
         setCargando(true)
@@ -85,9 +86,9 @@ export default function Eventos() {
 
     try {
       const res = await api.get('/eventos?excluir=examen')
-      // Ordenar: exámenes ya excluidos desde el servidor
-      const evs = (res.data || [])
-        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+      const rawList = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+      const evs = [...rawList]
+      evs.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
       setEventos(evs)
       setCache('eventos_lista', evs)
     } catch (e) {

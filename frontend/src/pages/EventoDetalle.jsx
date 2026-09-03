@@ -171,17 +171,20 @@ export default function EventoDetalle() {
         cachedCintas && !force ? Promise.resolve({ data: cachedCintas.data }) : api.get('/configuraciones-cintas')
       ])
 
-      const ev = resEv.data.evento || resEv.data
-      const listIns = resIns.data || []
+      const ev = resEv.data?.evento || resEv.data || {}
+      const rawIns = resIns.data || []
+      const listIns = Array.isArray(rawIns) ? rawIns : Object.values(rawIns)
       setEvento(ev)
       setInscritos(listIns)
       setCache(`evento_detalle_${id}`, { evento: ev, inscritos: listIns })
 
-      const listAlu = resAl.data.alumnos || resAl.data || []
+      const rawAlu = resAl.data?.alumnos || resAl.data || []
+      const listAlu = Array.isArray(rawAlu) ? rawAlu : Object.values(rawAlu)
       setAlumnosDojo(listAlu)
       setCache('alumnos_simple_activos', listAlu, 10 * 60 * 1000)
 
-      const cintas = resCin.data?.configuraciones || resCin.data || []
+      const rawCin = resCin.data?.configuraciones || resCin.data || []
+      const cintas = Array.isArray(rawCin) ? [...rawCin] : Object.values(rawCin)
       cintas.sort((a, b) => (a.orden || 0) - (b.orden || 0))
       setCintasConfig(cintas)
       setCache('cintas_config', cintas, 30 * 60 * 1000)

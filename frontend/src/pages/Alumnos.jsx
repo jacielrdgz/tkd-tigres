@@ -182,7 +182,8 @@ export default function Alumnos() {
     if (!force) {
       const cached = getCache(cacheKey)
       if (cached && cached.data) {
-        setTodosLosAlumnos(cached.data)
+        const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
+        setTodosLosAlumnos(cachedList)
         setCargando(false)
       } else {
         setCargando(true)
@@ -194,8 +195,9 @@ export default function Alumnos() {
     // Siempre traemos TODOS sin filtrar por estatus
     api.get('/alumnos', { params: { search: busqueda } })
       .then(res => {
-        setTodosLosAlumnos(res.data)
-        setCache(cacheKey, res.data)
+        const list = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+        setTodosLosAlumnos(list)
+        setCache(cacheKey, list)
       })
       .catch(() => {
         const cached = getCache(cacheKey)
@@ -257,12 +259,14 @@ export default function Alumnos() {
   const cargarHorarios = () => {
     const cached = getCache('horarios_lista')
     if (cached && cached.data) {
-      setHorarios(cached.data)
+      const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
+      setHorarios(cachedList)
     }
     api.get('/horarios')
       .then(res => {
-        setHorarios(res.data)
-        setCache('horarios_lista', res.data)
+        const list = Array.isArray(res.data) ? res.data : (res.data?.data || Object.values(res.data || {}))
+        setHorarios(list)
+        setCache('horarios_lista', list)
       })
       .catch(err => console.error("Error cargando horarios", err))
   }
