@@ -23,7 +23,8 @@ class InstructorController extends Controller
         if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
             $file = $request->file('foto');
             $customName = 'instructor_' . time() . '_' . Str::random(6) . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
-            $validated['foto_url'] = SupabaseStorageService::upload($file, 'instructores', $customName);
+            $tenantNombre = auth()->user()?->tenant?->nombre ?? 'tigres-do';
+            $validated['foto_url'] = SupabaseStorageService::upload($file, 'instructores', $customName, $tenantNombre);
         }
 
         $instructor = Instructor::create($validated);
@@ -52,7 +53,8 @@ class InstructorController extends Controller
             }
             $file = $request->file('foto');
             $customName = 'instructor_' . $instructor->id . '_' . time() . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
-            $data['foto_url'] = SupabaseStorageService::upload($file, 'instructores', $customName);
+            $tenantNombre = $instructor->tenant?->nombre ?? auth()->user()?->tenant?->nombre ?? 'tigres-do';
+            $data['foto_url'] = SupabaseStorageService::upload($file, 'instructores', $customName, $tenantNombre);
         }
 
         $instructor->fill($data);

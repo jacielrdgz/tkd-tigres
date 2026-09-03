@@ -106,7 +106,8 @@ class AlumnoController extends Controller
             try {
                 $file = $request->file('foto');
                 $customName = 'alumno_' . time() . '_' . Str::random(6) . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
-                $validated['foto'] = SupabaseStorageService::upload($file, 'alumnos', $customName);
+                $tenantNombre = auth()->user()?->tenant?->nombre ?? 'tigres-do';
+                $validated['foto'] = SupabaseStorageService::upload($file, 'alumnos', $customName, $tenantNombre);
             } catch (\Throwable $eFile) {
                 unset($validated['foto']);
             }
@@ -150,7 +151,8 @@ class AlumnoController extends Controller
                 }
                 $file = $request->file('foto');
                 $customName = 'alumno_' . $alumno->id . '_' . time() . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
-                $validated['foto'] = SupabaseStorageService::upload($file, 'alumnos', $customName);
+                $tenantNombre = $alumno->tenant?->nombre ?? auth()->user()?->tenant?->nombre ?? 'tigres-do';
+                $validated['foto'] = SupabaseStorageService::upload($file, 'alumnos', $customName, $tenantNombre);
             } catch (\Throwable $eFile) {
                 unset($validated['foto']);
             }

@@ -139,10 +139,12 @@ class UserController extends Controller
             SupabaseStorageService::delete($user->avatar);
         }
 
+        $tenantNombre = $user->tenant?->nombre ?? 'tigres-do';
         $avatarUrl = SupabaseStorageService::upload(
             $request->file('avatar'), 
             'avatars', 
-            'avatar_user_' . $user->id . '_' . time() . '.' . ($request->file('avatar')->getClientOriginalExtension() ?: 'jpg')
+            'avatar_user_' . $user->id . '_' . time() . '.' . ($request->file('avatar')->getClientOriginalExtension() ?: 'jpg'),
+            $tenantNombre
         );
 
         $user->avatar = $avatarUrl;
