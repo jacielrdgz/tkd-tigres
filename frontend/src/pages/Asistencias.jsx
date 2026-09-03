@@ -14,7 +14,7 @@ import ModalDia from '../components/Asistencias/ModalDia'
 import ModalRegistrar from '../components/Asistencias/ModalRegistrar'
 import Swal from 'sweetalert2'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes, guardarODescargarPDF } from '../utils/pdfHelper'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 function mesActual() {
@@ -237,7 +237,7 @@ export default function Asistencias() {
       // FOOTER
       agregarPieDePagina(doc, user)
 
-      doc.save(`Asistencias_${mes}.pdf`)
+      await guardarODescargarPDF(doc, `Asistencias_${mes}.pdf`)
     }
   }
 

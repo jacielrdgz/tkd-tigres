@@ -26,7 +26,7 @@ import {
   FiCamera,
 } from 'react-icons/fi'
 import CustomDropdown from '../components/Common/CustomDropdown'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, guardarODescargarPDF } from '../utils/pdfHelper'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 const limpiarDato = (val) => {
@@ -684,7 +684,7 @@ export default function Alumnos() {
       // Agregar pie de página membretado con fecha exacta y usuario
       agregarPieDePagina(doc, user)
 
-      doc.save(`Reporte_Alumnos_${new Date().toISOString().split('T')[0]}.pdf`)
+      await guardarODescargarPDF(doc, `Reporte_Alumnos_${new Date().toISOString().split('T')[0]}.pdf`)
       toastSuccess("Documento PDF generado 📄")
     } catch (err) {
       console.error(err)

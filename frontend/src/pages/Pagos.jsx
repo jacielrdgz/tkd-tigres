@@ -5,8 +5,7 @@ import { toast } from 'react-toastify'
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes, formatearFechaNaturalPDF } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes, formatearFechaNaturalPDF, guardarODescargarPDF } from '../utils/pdfHelper'
 import CustomDropdown from '../components/Common/CustomDropdown'
 import BotonExportar from '../components/Common/BotonExportar'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
@@ -384,7 +383,7 @@ export default function Pagos() {
 
       agregarPieDePagina(doc, user)
 
-      doc.save(`Reporte_Pagos_${new Date().toISOString().split('T')[0]}.pdf`)
+      await guardarODescargarPDF(doc, `Reporte_Pagos_${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success("PDF generado ✓")
     } catch { toast.error("Error al generar PDF") }
   }
@@ -476,7 +475,7 @@ export default function Pagos() {
       // PIE DE PÁGINA
       agregarPieDePagina(doc, user)
 
-      doc.save(`Recibo_${escuelaInfo?.nombre || 'Pago'}_${alumno.nombre}_${pago.fecha_pago}.pdf`)
+      await guardarODescargarPDF(doc, `Recibo_${escuelaInfo?.nombre || 'Pago'}_${alumno.nombre}_${pago.fecha_pago}.pdf`)
       toast.success("Recibo generado ✓")
     } catch (e) {
       console.error(e)

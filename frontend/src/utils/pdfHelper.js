@@ -314,3 +314,53 @@ export function agregarPieDePagina(doc, user = null) {
     }
   }
 }
+
+/**
+ * Guarda o descarga el documento PDF de forma segura en dispositivos móviles y web
+ * sin recargar la página ni perder el estado/filtros actuales.
+ */
+export async function guardarODescargarPDF(doc, filename) {
+  try {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    const blob = doc.output('blob')
+
+    // Si es móvil y tiene soporte nativo para compartir/guardar archivos (iOS / Android)
+    if (isMobile && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'application/pdf' })
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: filename,
+          })
+          return true
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') {
+            return true // El usuario simplemente canceló el diálogo de compartir
+          }
+        }
+      }
+    }
+
+    // Descarga limpia vía Blob URL sin recargar la página ni cambiar de pestaña
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.target = '_self'
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+
+    setTimeout(() => {
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }, 1500)
+
+    return true
+  } catch (e) {
+    // Fallback estándar
+    doc.save(filename)
+    return true
+  }
+}
