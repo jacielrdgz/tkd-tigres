@@ -344,7 +344,14 @@ export default function InstructorManager() {
             <div style={s.modalBody}>
               <div style={s.modalPhotoSection}>
                 <div style={s.modalPhotoFrame}>
-                  {preview ? <img src={preview} style={s.modalPhoto} /> : (
+                  {preview ? (
+                    <img 
+                      src={preview} 
+                      alt="" 
+                      style={s.modalPhoto} 
+                      onError={() => setPreview(null)}
+                    />
+                  ) : (
                     <div style={s.modalPhotoPlaceholder}>
                       <FiUser size={48} color="var(--text-muted)" />
                     </div>

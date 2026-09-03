@@ -123,7 +123,12 @@ export default function DojoInfo() {
         <div style={s.photoSection}>
           <div style={s.photoFrame}>
             {fotoPreview ? (
-              <img src={fotoPreview} alt="Logo" style={s.logoImg} />
+              <img 
+                src={fotoPreview} 
+                alt="Logo" 
+                style={s.logoImg} 
+                onError={() => setFotoPreview(null)}
+              />
             ) : (
               <div style={s.logoPlaceholder}>
                 <FiAward size={48} color="var(--accent-blue)" />

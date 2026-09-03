@@ -66,6 +66,8 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [modalFoto, setModalFoto] = useState(null);
   const [modalConfirmLogout, setModalConfirmLogout] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const avatarInputRef = useRef(null);
 
   const mobileOpen = propMobileOpen !== undefined ? propMobileOpen : localMobileOpen;
@@ -157,11 +159,12 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
             }
           }}
         >
-          {logoUrlFinal ? (
+          {logoUrlFinal && !logoError ? (
             <img
               src={logoUrlFinal}
               alt="Logo"
               style={styles.logoImage}
+              onError={() => setLogoError(true)}
             />
           ) : (
             <div style={{ ...styles.logoImage, background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-blue)' }}>
@@ -237,11 +240,12 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
               onMouseEnter={() => setAvatarHover(true)}
               onMouseLeave={() => setAvatarHover(false)}
             >
-              {user?.avatar_url ? (
+              {user?.avatar_url && !avatarError ? (
                 <img
                   src={user.avatar_url}
-                  alt="Avatar"
+                  alt=""
                   style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 uploadingAvatar ? <FiLoader className="spin" size={16} /> : (user?.name?.charAt(0)?.toUpperCase() || '?')

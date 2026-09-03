@@ -1733,7 +1733,12 @@ export default function Alumnos() {
                 title="Toca para seleccionar foto"
               >
                 {fotoPreview ? (
-                  <img src={fotoPreview} alt="preview" style={s.fotoPreviewImg} />
+                  <img 
+                    src={fotoPreview} 
+                    alt="" 
+                    style={s.fotoPreviewImg} 
+                    onError={() => setFotoPreview(null)}
+                  />
                 ) : (
                   <div style={s.fotoPlaceholder}>
                     <FiCamera size={26} color="var(--accent-blue)" style={{ marginBottom: '4px' }} />
