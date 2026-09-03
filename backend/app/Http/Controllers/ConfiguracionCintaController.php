@@ -230,16 +230,30 @@ class ConfiguracionCintaController extends Controller
                 return response()->json(['message' => 'Acción no permitida.'], 403);
             }
 
-            // Mapa de cintas globales
+            // Mapa de cintas globales por orden y por nombre
             DefaultCintasService::asegurarCintasGlobales();
-            $globales = ConfiguracionCinta::globales()->get()->keyBy('nombre_nivel');
+            $globales = ConfiguracionCinta::globales()->orderBy('orden')->get();
+            $globalesByOrden = $globales->keyBy('orden');
+            $globalesByName = $globales->keyBy('nombre_nivel');
+            $primeraGlobal = $globales->first();
 
-            // Reasignar alumnos que apuntaban a cintas del tenant hacia las globales
+            // Reasignar alumnos e instructores que apuntaban a cintas del tenant hacia las globales
             $cintasTenant = ConfiguracionCinta::where('tenant_id', $tenantId)->get();
             foreach ($cintasTenant as $cintaTenant) {
-                if (isset($globales[$cintaTenant->nombre_nivel])) {
-                    $globalId = $globales[$cintaTenant->nombre_nivel]->id;
+                // 1. Mapear por orden jerárquico (conserva el grado aunque se le haya cambiado el nombre)
+                // 2. Si no, mapear por nombre exacto
+                $globalCinta = $globalesByOrden[$cintaTenant->orden]
+                    ?? $globalesByName[$cintaTenant->nombre_nivel]
+                    ?? $primeraGlobal;
+
+                if ($globalCinta) {
+                    $globalId = $globalCinta->id;
+
                     Alumno::where('tenant_id', $tenantId)
+                        ->where('configuracion_cinta_id', $cintaTenant->id)
+                        ->update(['configuracion_cinta_id' => $globalId]);
+
+                    \App\Models\Instructor::where('tenant_id', $tenantId)
                         ->where('configuracion_cinta_id', $cintaTenant->id)
                         ->update(['configuracion_cinta_id' => $globalId]);
                 }
@@ -247,6 +261,17 @@ class ConfiguracionCintaController extends Controller
 
             // Eliminar personalizaciones del tenant
             ConfiguracionCinta::where('tenant_id', $tenantId)->delete();
+
+            // Sanación: si algún alumno quedó con cinta huérfana o nula en este tenant, asignarle la global correspondiente
+            if ($primeraGlobal) {
+                $validGlobalIds = $globales->pluck('id')->toArray();
+                Alumno::where('tenant_id', $tenantId)
+                    ->where(function ($q) use ($validGlobalIds) {
+                        $q->whereNull('configuracion_cinta_id')
+                          ->orWhereNotIn('configuracion_cinta_id', $validGlobalIds);
+                    })
+                    ->update(['configuracion_cinta_id' => $primeraGlobal->id]);
+            }
 
             $cintas = ConfiguracionCinta::forTenant($tenantId)->get();
             return response()->json([
