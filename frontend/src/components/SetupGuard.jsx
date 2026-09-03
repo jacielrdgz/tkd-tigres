@@ -87,24 +87,24 @@ export default function SetupGuard({ children }) {
       id: 'info_basica',
       label: 'Datos de la Escuela',
       desc: 'Configura el nombre, titular y datos básicos de tu academia.',
-      icon: <FiHome size={16} color="var(--accent-blue)" />,
-      done: pasos.info_basica,
+      icon: (done) => <FiHome size={16} color={done ? '#22c55e' : 'var(--accent-blue)'} />,
+      done: Boolean(pasos.info_basica),
       path: '/ajustes/configuracion/general'
     },
     {
       id: 'cintas',
       label: 'Grados y Cintas',
       desc: 'Verifica o personaliza los grados de cintas para tus alumnos.',
-      icon: <FiAward size={16} color="#eab308" />,
-      done: pasos.cintas,
+      icon: (done) => <FiAward size={16} color={done ? '#22c55e' : '#eab308'} />,
+      done: Boolean(pasos.cintas),
       path: '/ajustes/configuracion/cintas'
     },
     {
       id: 'horarios',
       label: 'Horarios de Clase',
       desc: 'Crea al menos un horario para organizar las clases.',
-      icon: <FiClock size={16} color="var(--accent-purple)" />,
-      done: pasos.horarios,
+      icon: (done) => <FiClock size={16} color={done ? '#22c55e' : 'var(--accent-purple)'} />,
+      done: Boolean(pasos.horarios),
       path: '/ajustes/configuracion/horarios'
     }
   ]
@@ -149,8 +149,8 @@ export default function SetupGuard({ children }) {
                 </div>
                 <div style={s.stepInfo}>
                   <div style={s.stepHeader}>
-                    <span style={s.stepIcon}>{step.icon}</span>
-                    <h3 style={{ ...s.stepLabel, ...(step.done ? { color: 'var(--accent-green)' } : {}) }}>{step.label}</h3>
+                    <span style={s.stepIcon}>{step.icon(step.done)}</span>
+                    <h3 style={{ ...s.stepLabel, color: step.done ? '#22c55e' : 'var(--text-primary)' }}>{step.label}</h3>
                   </div>
                   <p style={s.stepDesc}>{step.desc}</p>
                 </div>

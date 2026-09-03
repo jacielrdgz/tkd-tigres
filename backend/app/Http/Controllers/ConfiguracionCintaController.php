@@ -22,15 +22,6 @@ class ConfiguracionCintaController extends Controller
     public function index(Request $request)
     {
         try {
-            $tenant = auth()->user()?->tenant;
-            if ($tenant) {
-                $config = $tenant->configuracion ?? [];
-                if (empty($config['setup_confirmado']['cintas'])) {
-                    $config['setup_confirmado']['cintas'] = true;
-                    $tenant->update(['configuracion' => $config]);
-                }
-            }
-
             DefaultCintasService::asegurarCintasGlobales();
             $tenantId = $this->getTenantId();
 
