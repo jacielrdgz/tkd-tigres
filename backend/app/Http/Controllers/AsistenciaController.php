@@ -334,10 +334,9 @@ class AsistenciaController extends Controller
         foreach ($request->asistencias as $item) {
             $alumnoId = $item['alumno_id'];
             $presente = (bool) $item['presente'];
-            $alumno = $alumnos->get($alumnoId);
 
             if ($presente) {
-                // Si asistió, siempre se registra la asistencia
+                // Solo registramos a quienes asistieron realmente
                 $recordsToUpsert[] = [
                     'alumno_id'  => $alumnoId,
                     'fecha'      => $request->fecha,
@@ -347,31 +346,8 @@ class AsistenciaController extends Controller
                     'updated_at' => $ahora,
                 ];
             } else {
-                // Si faltó, verificar si ese día le corresponde clase según su horario
-                $horario = $alumno ? $alumno->horarioConfig : null;
-                $diasConClaseSet = $this->obtenerDiasConClase($horario);
-
-                $esFinDeSemana = in_array($diaSemana, [0, 6]);
-
-                $debeTenerClase = true;
-                if ($esFinDeSemana) {
-                    $debeTenerClase = false;
-                } elseif ($diasConClaseSet !== null && !in_array($diaSemana, $diasConClaseSet)) {
-                    $debeTenerClase = false;
-                }
-
-                if ($debeTenerClase) {
-                    $recordsToUpsert[] = [
-                        'alumno_id'  => $alumnoId,
-                        'fecha'      => $request->fecha,
-                        'presente'   => false,
-                        'tenant_id'  => $tenantId,
-                        'created_at' => $ahora,
-                        'updated_at' => $ahora,
-                    ];
-                } else {
-                    $recordsToDelete[] = $alumnoId;
-                }
+                // Alumno desmarcado: se borra si existía para esa fecha (cero registros de falta)
+                $recordsToDelete[] = $alumnoId;
             }
         }
 
