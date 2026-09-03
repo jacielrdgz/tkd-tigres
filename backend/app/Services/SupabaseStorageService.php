@@ -57,18 +57,31 @@ class SupabaseStorageService
         if (empty($escuelaNombre)) {
             $user = auth()->user();
             if ($user) {
-                if ($user->tenant && !empty($user->tenant->nombre)) {
+                if ($user->tenant && !empty($user->tenant->slug)) {
+                    $escuelaNombre = $user->tenant->slug;
+                } elseif ($user->tenant && !empty($user->tenant->nombre)) {
                     $escuelaNombre = $user->tenant->nombre;
                 } elseif ($user->tenant_id) {
-                    $escuelaNombre = \App\Models\Escuela::where('tenant_id', $user->tenant_id)->value('nombre');
+                    $escuelaNombre = \App\Models\Tenant::where('id', $user->tenant_id)->value('slug')
+                        ?: \App\Models\Tenant::where('id', $user->tenant_id)->value('nombre')
+                        ?: \App\Models\Escuela::where('tenant_id', $user->tenant_id)->value('nombre');
                 }
             }
         }
 
-        $escuelaFolder = !empty($escuelaNombre) ? Str::slug($escuelaNombre) : 'general';
+        // Fallback robusto si no se detecta usuario o tenant específico
+        if (empty($escuelaNombre)) {
+            $escuelaNombre = \App\Models\Tenant::first()?->slug 
+                ?: \App\Models\Tenant::first()?->nombre 
+                ?: \App\Models\Escuela::first()?->nombre 
+                ?: 'tigres-do';
+        }
+
+        $escuelaFolder = Str::slug($escuelaNombre);
         $categoryFolder = trim(strtolower($category), '/');
 
-        // Jerarquía: (nombre-escuela)/(categoria)/(archivo)
+        // Jerarquía obligatoria: (nombre-escuela)/(categoria)/(archivo)
+        // Ejemplo: tigres-do/alumnos/alumno_1_1725324000.jpg
         $fileName = $customName ?: ($categoryFolder . '_' . time() . '_' . Str::random(8) . '.' . $extension);
         $filePath = "{$escuelaFolder}/{$categoryFolder}/{$fileName}";
 
