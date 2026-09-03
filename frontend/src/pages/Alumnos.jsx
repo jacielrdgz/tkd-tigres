@@ -1510,7 +1510,7 @@ export default function Alumnos() {
               <h3 style={s.cardTitle}>
                 {alumnoVer.nombre} {alumnoVer.apellido_paterno} {alumnoVer.apellido_materno}
               </h3>
-              <button style={s.btnCerrarCircular} onClick={cerrar} aria-label="Cerrar modal"><FiX size={16} /></button>
+              <button className="btn-cerrar-circular" style={s.btnCerrarCircular} onClick={cerrar} aria-label="Cerrar modal"><FiX size={16} /></button>
             </div>
             <div style={s.cardBody}>
               <div style={s.avatarBox}>
@@ -1651,7 +1651,7 @@ export default function Alumnos() {
           <div style={{ ...s.modalCard, width: '450px' }} className="mobile-fullscreen-modal">
             <div style={s.cardHeader}>
               <h3 style={s.cardTitle}>Registro de Grado Manual</h3>
-              <button style={s.btnCerrarCircular} onClick={() => setModalManual(false)} aria-label="Cerrar modal"><FiX size={16} /></button>
+              <button className="btn-cerrar-circular" style={s.btnCerrarCircular} onClick={() => setModalManual(false)} aria-label="Cerrar modal"><FiX size={16} /></button>
             </div>
             <div style={{ padding: '24px' }}>
               <div style={{ marginBottom: '16px' }}>
@@ -1705,6 +1705,7 @@ export default function Alumnos() {
               <h3 style={s.modalTitulo}>{editando ? 'Editar alumno' : 'Nuevo alumno'}</h3>
               <button
                 type="button"
+                className="btn-cerrar-circular"
                 style={s.btnCerrarCircular}
                 onClick={cerrar}
                 aria-label="Cerrar modal"

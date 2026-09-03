@@ -587,10 +587,29 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   /* Normalizar inputs dentro del modal en móvil */
   .mobile-fullscreen-modal input,
   .mobile-fullscreen-modal select,
-  .mobile-fullscreen-modal button {
+  .mobile-fullscreen-modal button:not(.btn-cerrar-circular) {
     font-size: 13.5px !important;
     min-height: 38px !important;
     height: 38px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Botón de salir/cerrar circular perfecto */
+  .btn-cerrar-circular,
+  .mobile-fullscreen-modal .btn-cerrar-circular,
+  button.btn-cerrar-circular {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    max-width: 34px !important;
+    max-height: 34px !important;
+    border-radius: 50% !important;
+    aspect-ratio: 1 / 1 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     box-sizing: border-box !important;
   }
 
