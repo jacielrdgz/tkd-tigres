@@ -1993,7 +1993,7 @@ function CampoFecha({ label, value, onChange, error, required, placeholder = 'dd
         <input
           style={{
             ...s.input,
-            paddingRight: '34px',
+            paddingRight: '36px',
             border: error ? '1px solid #ef4444' : s.input.border,
             boxShadow: error ? '0 0 0 3px rgba(239,68,68,.12)' : 'none',
             display: 'flex',
@@ -2005,14 +2005,13 @@ function CampoFecha({ label, value, onChange, error, required, placeholder = 'dd
           placeholder={placeholder}
           value={textVal}
           onChange={handleTextChange}
-          onClick={openPicker}
         />
         <button
           type="button"
           onClick={openPicker}
           style={{
             position: 'absolute',
-            right: '8px',
+            right: '6px',
             background: 'none',
             border: 'none',
             color: 'var(--text-muted)',
@@ -2021,12 +2020,23 @@ function CampoFecha({ label, value, onChange, error, required, placeholder = 'dd
             alignItems: 'center',
             justifyContent: 'center',
             padding: '4px',
-            height: '26px',
-            width: '26px',
+            height: '28px',
+            width: '28px',
+            borderRadius: '6px',
+            transition: 'color 0.15s ease, background 0.15s ease',
           }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = 'var(--accent-blue)'
+            e.currentTarget.style.background = 'var(--accent-blue-bg)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = 'var(--text-muted)'
+            e.currentTarget.style.background = 'none'
+          }}
+          title="Abrir calendario"
           aria-label="Seleccionar fecha"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="16" y1="2" x2="16" y2="6"></line>
             <line x1="8" y1="2" x2="8" y2="6"></line>
