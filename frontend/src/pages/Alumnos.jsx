@@ -105,7 +105,10 @@ export default function Alumnos() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [alumnos, setAlumnos] = useState([])
-  const [cintasConfig, setCintasConfig] = useState([])
+  const [cintasConfig, setCintasConfig] = useState(() => {
+    const c = getCache('cintas_config')?.data
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  })
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
@@ -156,12 +159,18 @@ export default function Alumnos() {
   const [alumnoEliminar, setAlumnoEliminar] = useState(null)
   const [eliminandoId, setEliminandoId] = useState(null)
   const [editando, setEditando] = useState(null)
-  const [cargando, setCargando] = useState(true)
+  const [cargando, setCargando] = useState(() => !getCache(`alumnos_search_${searchParams.get('busqueda') || 'all'}`)?.data && !getCache('alumnos_search_all')?.data)
   const [guardando, setGuardando] = useState(false)
-  const [todosLosAlumnos, setTodosLosAlumnos] = useState([])
+  const [todosLosAlumnos, setTodosLosAlumnos] = useState(() => {
+    const c = getCache(`alumnos_search_${searchParams.get('busqueda') || 'all'}`)?.data || getCache('alumnos_search_all')?.data
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  })
   const [rowHover, setRowHover] = useState(null)
   const [tabHover, setTabHover] = useState(null)
-  const [horarios, setHorarios] = useState([]);
+  const [horarios, setHorarios] = useState(() => {
+    const c = getCache('horarios_lista')?.data
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  });
 
   // Filtros — se inicializan desde la URL
   const [estatusFiltro, setEstatusFiltro] = useState(searchParams.get('estatus') || 'activo')

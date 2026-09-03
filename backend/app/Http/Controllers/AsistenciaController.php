@@ -32,12 +32,13 @@ class AsistenciaController extends Controller
         $inicioMes = $carbonMes->copy()->startOfMonth()->toDateString();
         $finMes    = $carbonMes->copy()->endOfMonth()->toDateString();
 
-        // Fechas con clase en el mes (fechas que tienen al menos un registro)
-        $totalClases = Asistencia::whereBetween('fecha', [$inicioMes, $finMes])
-            ->distinct('fecha')
-            ->count('fecha');
+        // Fechas con clase en el mes de los alumnos activos
+        $asistenciasMes = Asistencia::whereIn('alumno_id', $alumnos)
+            ->whereBetween('fecha', [$inicioMes, $finMes])
+            ->select('id', 'alumno_id', 'presente')
+            ->get();
 
-        if ($totalClases === 0) {
+        if ($asistenciasMes->isEmpty()) {
             return response()->json([
                 'total_alumnos'   => $totalAlumnos,
                 'pct_promedio'    => 0,
@@ -45,25 +46,15 @@ class AsistenciaController extends Controller
             ]);
         }
 
-        // Traer asistencias agregadas por alumno directamente en SQL (rápido y con índice)
-        $asistenciasMes = Asistencia::selectRaw("
-                alumno_id,
-                COUNT(*) as total,
-                SUM(CASE WHEN presente = 1 THEN 1 ELSE 0 END) as asistio
-            ")
-            ->whereBetween('fecha', [$inicioMes, $finMes])
-            ->whereIn('alumno_id', $alumnos)
-            ->groupBy('alumno_id')
-            ->get()
-            ->keyBy('alumno_id');
+        $agrupadas = $asistenciasMes->groupBy('alumno_id');
 
         $sumPct = 0;
         $bajaAsistencia = 0;
 
         foreach ($alumnos as $alumnoId) {
-            $reg = $asistenciasMes->get($alumnoId);
-            $total = $reg ? (int) $reg->total : 0;
-            $asistio = $reg ? (int) $reg->asistio : 0;
+            $regs = $agrupadas->get($alumnoId, collect());
+            $total = $regs->count();
+            $asistio = $regs->filter(fn($r) => (bool)$r->presente)->count();
             $pct = $total > 0 ? round(($asistio / $total) * 100) : 0;
 
             $sumPct += $pct;

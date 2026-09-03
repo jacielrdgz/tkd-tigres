@@ -38,13 +38,19 @@ export default function Asistencias() {
   const [mes, setMes] = useState(mesActual)
 
   // Datos
-  const [resumen, setResumen] = useState(null)
-  const [listaAlumnos, setListaAlumnos] = useState([])
-  const [datosPorFecha, setDatosPorFecha] = useState({})
-  const [cargandoAlumnos, setCargandoAlumnos] = useState(false)
+  const [resumen, setResumen] = useState(() => getCache(`asistencias_resumen_${mesActual}`)?.data || null)
+  const [listaAlumnos, setListaAlumnos] = useState(() => {
+    const c = getCache(`asistencias_alumno_${mesActual}`)?.data
+    return Array.isArray(c) ? c : []
+  })
+  const [datosPorFecha, setDatosPorFecha] = useState(() => {
+    const c = getCache(`asistencias_fecha_${mesActual}`)?.data
+    return typeof c === 'object' && c !== null ? c : {}
+  })
+  const [cargandoAlumnos, setCargandoAlumnos] = useState(() => !getCache(`asistencias_alumno_${mesActual}`)?.data)
   const [listaFiltrada, setListaFiltrada] = useState([])
-  const [cargandoFecha, setCargandoFecha] = useState(false)
-  const [cargandoResumen, setCargandoResumen] = useState(false)
+  const [cargandoFecha, setCargandoFecha] = useState(() => !getCache(`asistencias_fecha_${mesActual}`)?.data)
+  const [cargandoResumen, setCargandoResumen] = useState(() => !getCache(`asistencias_resumen_${mesActual}`)?.data)
 
   // Modales
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState(null)

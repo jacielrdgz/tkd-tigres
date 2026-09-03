@@ -26,8 +26,11 @@ const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Se
 
 export default function Examenes() {
   const navigate = useNavigate()
-  const [examenes, setExamenes] = useState([])
-  const [cargando, setCargando] = useState(true)
+  const [examenes, setExamenes] = useState(() => {
+    const c = getCache('examenes_lista')?.data
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  })
+  const [cargando, setCargando] = useState(() => !getCache('examenes_lista')?.data)
 
   // Filtros
   const [busqueda, setBusqueda] = useState('')
@@ -39,7 +42,10 @@ export default function Examenes() {
   const [formExamen, setFormExamen] = useState(VACIO)
   const [editando, setEditando] = useState(null)
   const [guardando, setGuardando] = useState(false)
-  const [cintasConfig, setCintasConfig] = useState([])
+  const [cintasConfig, setCintasConfig] = useState(() => {
+    const c = getCache('cintas_config')?.data
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  })
 
   // Responsividad
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)

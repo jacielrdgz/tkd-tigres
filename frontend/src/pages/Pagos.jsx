@@ -64,7 +64,10 @@ const hoy = new Date().toLocaleDateString('sv-SE')
 
 export default function Pagos() {
   const { user } = useAuth()
-  const [alumnos, setAlumnos] = useState([])
+  const [alumnos, setAlumnos] = useState(() => {
+    const c = getCache('pagos_main_data')?.data?.alumnos
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  })
   const [tabHover, setTabHover] = useState(null)
 
   const handleHover = (e, color) => {
@@ -76,9 +79,12 @@ export default function Pagos() {
     e.currentTarget.style.transform = 'translateY(0)';
     e.currentTarget.style.boxShadow = `0 4px 15px ${color}`;
   };
-  const [pagosActivos, setPagosActivos] = useState([]) // pagos del período actual de cada alumno
-  const [cargando, setCargando] = useState(true)
-  const [escuelaInfo, setEscuelaInfo] = useState(null)
+  const [pagosActivos, setPagosActivos] = useState(() => {
+    const c = getCache('pagos_main_data')?.data?.pagos
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  })
+  const [cargando, setCargando] = useState(() => !getCache('pagos_main_data')?.data)
+  const [escuelaInfo, setEscuelaInfo] = useState(() => getCache('pagos_main_data')?.data?.escuela || null)
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState('todos') // todos | pagado | pendiente
   const [submodulo, setSubmodulo] = useState('mensualidades') // mensualidades | inscripciones
@@ -108,8 +114,14 @@ export default function Pagos() {
   const [cargandoHistorial, setCargandoHistorial] = useState(false)
 
   // Opciones para filtros
-  const [cintas, setCintas] = useState([])
-  const [horarios, setHorarios] = useState([])
+  const [cintas, setCintas] = useState(() => {
+    const c = getCache('pagos_main_data')?.data?.cintas || getCache('cintas_config')?.data
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  })
+  const [horarios, setHorarios] = useState(() => {
+    const c = getCache('pagos_main_data')?.data?.horarios || getCache('horarios_lista')?.data
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  })
 
   // Filtros adicionales
   const [filtroCinta, setFiltroCinta] = useState('')

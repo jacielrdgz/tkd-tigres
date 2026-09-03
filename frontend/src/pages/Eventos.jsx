@@ -34,9 +34,12 @@ const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Se
 
 export default function Eventos() {
   const navigate = useNavigate()
-  const [eventos, setEventos] = useState([])
+  const [eventos, setEventos] = useState(() => {
+    const c = getCache('eventos_lista')?.data
+    return Array.isArray(c) ? c : (c ? Object.values(c) : [])
+  })
   const [submodulo, setSubmodulo] = useState('todos') // 'todos' | 'torneos' | 'seminarios' | 'fogueos'
-  const [cargando, setCargando] = useState(true)
+  const [cargando, setCargando] = useState(() => !getCache('eventos_lista')?.data)
 
   // Filtros (por defecto en 'todos')
   const [busqueda, setBusqueda] = useState('')

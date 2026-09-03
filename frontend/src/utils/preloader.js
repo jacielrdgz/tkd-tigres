@@ -18,13 +18,18 @@ export function precargarTodosLosModulos(user) {
   // 1. Dashboard
   api.get('/dashboard')
     .then(res => {
+      const rawEvs = res.data?.eventos_proximos
+      const evsArray = Array.isArray(rawEvs)
+        ? rawEvs
+        : (rawEvs ? Object.values(rawEvs) : [])
+
       const data = {
-        alumnos_activos: Number(res.data.alumnos_activos) || 0,
-        pagos_al_corriente: Number(res.data.pagos_al_corriente) || 0,
-        pagos_pendientes: Number(res.data.pagos_pendientes) || 0,
-        ingresos_mes: Number(res.data.ingresos_mes) || 0,
-        asistencias_hoy: Number(res.data.asistencias_hoy) || 0,
-        eventos_proximos: res.data.eventos_proximos || []
+        alumnos_activos: Number(res.data?.alumnos_activos) || 0,
+        pagos_al_corriente: Number(res.data?.pagos_al_corriente) || 0,
+        pagos_pendientes: Number(res.data?.pagos_pendientes) || 0,
+        ingresos_mes: Number(res.data?.ingresos_mes) || 0,
+        asistencias_hoy: Number(res.data?.asistencias_hoy) || 0,
+        eventos_proximos: evsArray
       }
       setCache('dashboard_stats', data)
     })
@@ -33,7 +38,8 @@ export function precargarTodosLosModulos(user) {
   // 2. Alumnos (Lista completa)
   api.get('/alumnos')
     .then(res => {
-      setCache('alumnos_search_all', res.data)
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+      setCache('alumnos_search_all', list)
     })
     .catch(() => {})
 
@@ -46,15 +52,20 @@ export function precargarTodosLosModulos(user) {
     api.get('/configuracion-escuela')
   ])
     .then(([resAlumnos, resPagos, resCintas, resHorarios, resEscuela]) => {
+      const listAlu = Array.isArray(resAlumnos.data) ? resAlumnos.data : (resAlumnos.data?.data || [])
+      const listPag = Array.isArray(resPagos.data) ? resPagos.data : (resPagos.data?.data || [])
+      const listCin = Array.isArray(resCintas.data) ? resCintas.data : (resCintas.data?.data || [])
+      const listHor = Array.isArray(resHorarios.data) ? resHorarios.data : (resHorarios.data?.data || [])
+
       setCache('pagos_main_data', {
-        alumnos: resAlumnos.data,
-        pagos: resPagos.data,
-        cintas: resCintas.data,
-        horarios: resHorarios.data,
+        alumnos: listAlu,
+        pagos: listPag,
+        cintas: listCin,
+        horarios: listHor,
         escuela: resEscuela.data
       })
-      setCache('cintas_config', Array.isArray(resCintas.data) ? resCintas.data : (resCintas.data?.data || []))
-      setCache('horarios_lista', resHorarios.data)
+      setCache('cintas_config', listCin)
+      setCache('horarios_lista', listHor)
       setCache('configuracion_escuela', resEscuela.data)
     })
     .catch(() => {})
@@ -65,19 +76,35 @@ export function precargarTodosLosModulos(user) {
     .catch(() => {})
 
   api.get('/asistencias/por-alumno', { params: { mes: mesActual } })
-    .then(res => setCache(`asistencias_alumno_${mesActual}`, res.data))
+    .then(res => {
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+      setCache(`asistencias_alumno_${mesActual}`, list)
+    })
     .catch(() => {})
 
-  api.get('/asistencias/dias-clase', { params: { mes: mesActual } })
-    .then(res => setCache(`asistencias_dias_${mesActual}`, res.data))
+  api.get('/asistencias/por-fecha', { params: { mes: mesActual } })
+    .then(res => {
+      const obj = typeof res.data === 'object' && res.data !== null ? res.data : {}
+      setCache(`asistencias_fecha_${mesActual}`, obj)
+    })
     .catch(() => {})
 
   // 5. Eventos y Exámenes
-  api.get('/eventos')
-    .then(res => setCache('eventos_lista', res.data))
+  api.get('/eventos?excluir=examen')
+    .then(res => {
+      const rawList = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+      const evs = [...rawList]
+      evs.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+      setCache('eventos_lista', evs)
+    })
     .catch(() => {})
 
-  api.get('/examenes')
-    .then(res => setCache('examenes_lista', res.data))
+  api.get('/eventos?tipo=examen')
+    .then(res => {
+      const rawList = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+      const soloExamenes = [...rawList]
+      soloExamenes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+      setCache('examenes_lista', soloExamenes)
+    })
     .catch(() => {})
 }
