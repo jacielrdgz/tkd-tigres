@@ -7,9 +7,9 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { useAuth } from '../../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF } from '../../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF, guardarODescargarPDF, guardarODescargarExcel } from '../../utils/pdfHelper'
 import BotonExportar from '../Common/BotonExportar'
-import { invalidateCache } from '../../utils/cacheManager'
+import { getCache, setCache, invalidateCache } from '../../utils/cacheManager'
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -65,8 +65,23 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
     return () => window.removeEventListener('keydown', handler)
   }, [onCerrar])
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
+  const cargar = useCallback(async (force = false) => {
+    const key = `asistencias_dia_${fecha}`
+    if (!force) {
+      const cached = getCache(key)
+      if (cached && cached.data) {
+        setAlumnos(cached.data)
+        const mapa = {}
+        cached.data.forEach(a => { mapa[a.alumno_id] = a.presente })
+        setPresencias(mapa)
+        setCargando(false)
+      } else {
+        setCargando(true)
+      }
+    } else {
+      setCargando(true)
+    }
+
     try {
       const res = await api.get('/asistencias', { params: { fecha } })
       const lista = res.data
@@ -74,8 +89,12 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
       const mapa = {}
       lista.forEach(a => { mapa[a.alumno_id] = a.presente })
       setPresencias(mapa)
+      setCache(key, lista)
     } catch {
-      toast.error('Error al cargar alumnos')
+      const cached = getCache(key)
+      if (!cached || !cached.data) {
+        toast.error('Error al cargar alumnos')
+      }
     } finally {
       setCargando(false)
     }
@@ -181,10 +200,10 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
 
     agregarPieDePagina(doc, user)
 
-    doc.save(`Asistencias_${fecha}.pdf`)
+    await guardarODescargarPDF(doc, `Asistencias_${fecha}.pdf`)
   }
 
-  const exportarExcel = () => {
+  const exportarExcel = async () => {
     if (filtrados.length === 0) return toast.warning('No hay datos para exportar')
     const data = filtrados.map((a, index) => ({
       "#": index + 1,
@@ -199,7 +218,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
     const worksheet = XLSX.utils.json_to_sheet(data)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Asistencias")
-    XLSX.writeFile(workbook, `Asistencias_${fecha}.xlsx`)
+    await guardarODescargarExcel(workbook, `Asistencias_${fecha}.xlsx`)
   }
 
   const guardar = async () => {
