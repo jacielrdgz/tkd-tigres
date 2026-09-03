@@ -23,8 +23,8 @@ class UpdateAlumnoRequest extends FormRequest
             'nombre'           => ['sometimes', 'string', 'max:100'],
             'apellido_paterno' => ['sometimes', 'string', 'max:100'],
             'apellido_materno' => ['sometimes', 'string', 'max:100'],
-            'nombre_tutor'     => ['sometimes', 'string', 'max:100'],
-            'telefono_tutor'   => ['sometimes', 'string', 'max:20', 'regex:/^[0-9+\s()-]+$/'],
+            'nombre_tutor'     => ['nullable', 'string', 'max:100'],
+            'telefono_tutor'   => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s()-]+$/'],
             'email'            => [
                 'nullable',
                 'email',
@@ -34,7 +34,7 @@ class UpdateAlumnoRequest extends FormRequest
             'foto'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif,svg', 'max:10240'],
             'configuracion_cinta_id' => ['sometimes', 'nullable', 'integer', 'exists:configuraciones_cintas,id'],
             'estatus'          => ['sometimes', Rule::in(['activo', 'inactivo'])],
-            'horario_id'       => ['sometimes', 'nullable', 'integer', 'exists:horarios,id'],
+            'horario_id'       => ['sometimes', 'required', 'integer', 'exists:horarios,id'],
             'eliminar_foto'    => ['sometimes', Rule::in(['0', '1', 0, 1, true, false])],
             'dia_pago'         => ['sometimes', 'nullable', 'integer', 'min:1', 'max:31'],
         ];

@@ -405,9 +405,8 @@ export default function Alumnos() {
     if (!form.nombre?.trim()) e.nombre = ['El nombre es obligatorio.']
     if (!form.apellido_paterno?.trim()) e.apellido_paterno = ['El apellido paterno es obligatorio.']
     if (!form.apellido_materno?.trim()) e.apellido_materno = ['El apellido materno es obligatorio.']
-    if (!form.nombre_tutor?.trim()) e.nombre_tutor = ['El nombre del tutor es obligatorio.']
-    if (!form.telefono_tutor?.trim()) e.telefono_tutor = ['El teléfono del tutor es obligatorio.']
     if (!form.fecha_nacimiento) e.fecha_nacimiento = ['La fecha de nacimiento es obligatoria.']
+    if (!form.horario_id) e.horario_id = ['Debes seleccionar un horario para el alumno.']
     if (!form.configuracion_cinta_id) e.configuracion_cinta_id = ['Debes seleccionar una cinta para el alumno.']
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = ['Correo inválido.']
     return e
@@ -1771,13 +1770,12 @@ export default function Alumnos() {
               <Campo label="Apellido paterno" value={form.apellido_paterno} error={errors.apellido_paterno?.[0]} required onChange={v => { setForm({ ...form, apellido_paterno: v }); if (errors.apellido_paterno) setErrors(prev => ({ ...prev, apellido_paterno: undefined })) }} />
               <Campo label="Apellido materno" value={form.apellido_materno} error={errors.apellido_materno?.[0]} required onChange={v => { setForm({ ...form, apellido_materno: v }); if (errors.apellido_materno) setErrors(prev => ({ ...prev, apellido_materno: undefined })) }} />
               <CampoFecha label="Fecha de nacimiento" value={form.fecha_nacimiento} placeholder="dd/mm/aaaa" error={errors.fecha_nacimiento?.[0]} required onChange={v => { setForm({ ...form, fecha_nacimiento: v }); if (errors.fecha_nacimiento) setErrors(prev => ({ ...prev, fecha_nacimiento: undefined })) }} />
-              <Campo label="Nombre del tutor" value={form.nombre_tutor} error={errors.nombre_tutor?.[0]} required onChange={v => { setForm({ ...form, nombre_tutor: v }); if (errors.nombre_tutor) setErrors(prev => ({ ...prev, nombre_tutor: undefined })) }} />
+              <Campo label="Nombre del tutor" value={form.nombre_tutor} error={errors.nombre_tutor?.[0]} onChange={v => { setForm({ ...form, nombre_tutor: v }); if (errors.nombre_tutor) setErrors(prev => ({ ...prev, nombre_tutor: undefined })) }} />
               <Campo
                 label="Teléfono del tutor"
                 value={form.telefono_tutor}
                 placeholder="10 dígitos"
                 error={errors.telefono_tutor?.[0]}
-                required
                 type="tel"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -1791,6 +1789,7 @@ export default function Alumnos() {
 
               <FormDropdown
                 label="Horario Asignado"
+                required
                 placeholder="Seleccionar horario..."
                 searchable
                 options={[
@@ -1801,7 +1800,11 @@ export default function Alumnos() {
                   }))
                 ]}
                 value={form.horario_id}
-                onChange={val => setForm({ ...form, horario_id: val })}
+                error={errors.horario_id?.[0]}
+                onChange={val => {
+                  setForm({ ...form, horario_id: val })
+                  if (errors.horario_id) setErrors(prev => ({ ...prev, horario_id: undefined }))
+                }}
               />
 
               <FormDropdown

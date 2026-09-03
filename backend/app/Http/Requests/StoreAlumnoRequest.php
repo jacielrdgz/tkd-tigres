@@ -20,8 +20,8 @@ class StoreAlumnoRequest extends FormRequest
             'nombre'           => ['required', 'string', 'max:100'],
             'apellido_paterno' => ['required', 'string', 'max:100'],
             'apellido_materno' => ['required', 'string', 'max:100'],
-            'nombre_tutor'     => ['required', 'string', 'max:100'],
-            'telefono_tutor'   => ['required', 'string', 'max:20', 'regex:/^[0-9+\s()-]+$/'],
+            'nombre_tutor'     => ['nullable', 'string', 'max:100'],
+            'telefono_tutor'   => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s()-]+$/'],
             'email'            => [
                 'nullable',
                 'email',
@@ -31,7 +31,7 @@ class StoreAlumnoRequest extends FormRequest
             'foto'             => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif,svg', 'max:10240'],
             'configuracion_cinta_id' => ['nullable', 'integer', 'exists:configuraciones_cintas,id'],
             'estatus'          => ['sometimes', Rule::in(['activo', 'inactivo'])],
-            'horario_id'       => ['nullable', 'integer', 'exists:horarios,id'],
+            'horario_id'       => ['required', 'integer', 'exists:horarios,id'],
             'dia_pago'         => ['nullable', 'integer', 'min:1', 'max:31'],
         ];
     }
