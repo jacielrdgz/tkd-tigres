@@ -10,14 +10,17 @@ use Illuminate\Support\Str;
 class SupabaseStorageService
 {
     /**
-     * Sube un archivo al bucket de Supabase Storage.
+     * Sube un archivo al bucket de Supabase Storage estructurado por escuela.
+     * Estructura: {nombre_escuela}/{categoria}/{archivo}
+     * Categorías estándar: 'alumnos', 'avatars', 'instructores', 'logos'
      * 
      * @param UploadedFile|string $file Archivo subido o contenido binario/base64
-     * @param string $folder Carpeta dentro del bucket (ej: 'logos', 'alumnos', 'avatars')
+     * @param string $category Carpeta de categoría (ej: 'alumnos', 'avatars', 'instructores', 'logos')
      * @param string|null $customName Nombre opcional del archivo
+     * @param string|null $escuelaNombre Nombre explícito de la escuela (opcional)
      * @return string URL pública de la imagen o base64 en caso de fallback
      */
-    public static function upload($file, string $folder = 'general', ?string $customName = null): string
+    public static function upload($file, string $category = 'general', ?string $customName = null, ?string $escuelaNombre = null): string
     {
         $supabaseUrl = config('services.supabase.url') ?: env('SUPABASE_URL');
         $supabaseKey = config('services.supabase.key') ?: (env('SUPABASE_SERVICE_ROLE_KEY') ?: env('SUPABASE_KEY') ?: env('SUPABASE_ANON_KEY'));
@@ -50,8 +53,24 @@ class SupabaseStorageService
             throw new \Exception('No se pudo leer el contenido del archivo.');
         }
 
-        $fileName = $customName ?: (Str::slug($folder) . '_' . time() . '_' . Str::random(8) . '.' . $extension);
-        $filePath = trim($folder, '/') . '/' . $fileName;
+        // Determinar el nombre de la escuela para la jerarquía del bucket
+        if (empty($escuelaNombre)) {
+            $user = auth()->user();
+            if ($user) {
+                if ($user->tenant && !empty($user->tenant->nombre)) {
+                    $escuelaNombre = $user->tenant->nombre;
+                } elseif ($user->tenant_id) {
+                    $escuelaNombre = \App\Models\Escuela::where('tenant_id', $user->tenant_id)->value('nombre');
+                }
+            }
+        }
+
+        $escuelaFolder = !empty($escuelaNombre) ? Str::slug($escuelaNombre) : 'general';
+        $categoryFolder = trim(strtolower($category), '/');
+
+        // Jerarquía: (nombre-escuela)/(categoria)/(archivo)
+        $fileName = $customName ?: ($categoryFolder . '_' . time() . '_' . Str::random(8) . '.' . $extension);
+        $filePath = "{$escuelaFolder}/{$categoryFolder}/{$fileName}";
 
         // Si tenemos las credenciales de Supabase configuradas, intentamos subir al Bucket
         if (!empty($supabaseUrl) && !empty($supabaseKey)) {

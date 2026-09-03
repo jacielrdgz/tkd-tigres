@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use App\Services\SupabaseStorageService;
 
 class ConfiguracionEscuelaController extends Controller
 {
@@ -30,13 +30,13 @@ class ConfiguracionEscuelaController extends Controller
         $tenant->direccion = $request->direccion;
         $tenant->telefono = $request->telefono;
 
-        if ($request->hasFile('foto')) {
+        if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
             // Borrar logo anterior si existe
             if ($tenant->logo) {
-                Storage::disk('public')->delete($tenant->logo);
+                SupabaseStorageService::delete($tenant->logo);
             }
-            // Guardar nuevo logo
-            $path = $request->file('foto')->store('logos', 'public');
+            // Guardar nuevo logo en carpeta logos de la escuela
+            $path = SupabaseStorageService::upload($request->file('foto'), 'logos');
             $tenant->logo = $path;
         }
 
