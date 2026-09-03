@@ -1764,14 +1764,26 @@ export default function Alumnos() {
               <Campo label="Nombre(s)" value={form.nombre} error={errors.nombre?.[0]} required onChange={v => { setForm({ ...form, nombre: v }); if (errors.nombre) setErrors(prev => ({ ...prev, nombre: undefined })) }} />
               <Campo label="Apellido paterno" value={form.apellido_paterno} error={errors.apellido_paterno?.[0]} required onChange={v => { setForm({ ...form, apellido_paterno: v }); if (errors.apellido_paterno) setErrors(prev => ({ ...prev, apellido_paterno: undefined })) }} />
               <Campo label="Apellido materno" value={form.apellido_materno} error={errors.apellido_materno?.[0]} required onChange={v => { setForm({ ...form, apellido_materno: v }); if (errors.apellido_materno) setErrors(prev => ({ ...prev, apellido_materno: undefined })) }} />
-              <Campo label="Fecha de nacimiento" value={form.fecha_nacimiento} error={errors.fecha_nacimiento?.[0]} required onChange={v => { setForm({ ...form, fecha_nacimiento: v }); if (errors.fecha_nacimiento) setErrors(prev => ({ ...prev, fecha_nacimiento: undefined })) }} type="date" />
+              <Campo label="Fecha de nacimiento" value={form.fecha_nacimiento} placeholder="dd/mm/aaaa" error={errors.fecha_nacimiento?.[0]} required onChange={v => { setForm({ ...form, fecha_nacimiento: v }); if (errors.fecha_nacimiento) setErrors(prev => ({ ...prev, fecha_nacimiento: undefined })) }} type="date" />
               <Campo label="Nombre del tutor" value={form.nombre_tutor} error={errors.nombre_tutor?.[0]} required onChange={v => { setForm({ ...form, nombre_tutor: v }); if (errors.nombre_tutor) setErrors(prev => ({ ...prev, nombre_tutor: undefined })) }} />
-              <Campo label="Teléfono del tutor" value={form.telefono_tutor} error={errors.telefono_tutor?.[0]} required onChange={v => { setForm({ ...form, telefono_tutor: v }); if (errors.telefono_tutor) setErrors(prev => ({ ...prev, telefono_tutor: undefined })) }} />
+              <Campo
+                label="Teléfono del tutor"
+                value={form.telefono_tutor}
+                placeholder="10 dígitos"
+                error={errors.telefono_tutor?.[0]}
+                required
+                onChange={v => {
+                  const limpio = v.replace(/[^0-9]/g, '')
+                  setForm({ ...form, telefono_tutor: limpio })
+                  if (errors.telefono_tutor) setErrors(prev => ({ ...prev, telefono_tutor: undefined }))
+                }}
+              />
               <Campo label="Correo electrónico" value={form.email} error={errors.email?.[0]} onChange={v => { setForm({ ...form, email: v }); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })) }} type="email" full />
 
               <FormDropdown
                 label="Horario Asignado"
                 placeholder="Seleccionar horario..."
+                searchable
                 options={[
                   { value: '', label: 'Seleccionar horario...' },
                   ...horarios.map(h => ({
@@ -1786,6 +1798,7 @@ export default function Alumnos() {
               <FormDropdown
                 label="Cinta"
                 required
+                searchable
                 placeholder="Seleccionar cinta..."
                 options={[
                   { value: '', label: 'Seleccionar cinta...' },
@@ -1813,7 +1826,7 @@ export default function Alumnos() {
               />
 
               <div style={s.campoGroup}>
-                <label style={s.label}>Día de pago mensual (1-31)</label>
+                <label style={s.label}>Día de pago (1-31)</label>
                 <input
                   style={s.input}
                   type="number"
@@ -1893,7 +1906,7 @@ function InfoItem({ label, value }) {
   )
 }
 
-function Campo({ label, value, onChange, type = 'text', full, error, required }) {
+function Campo({ label, value, onChange, type = 'text', full, error, required, placeholder }) {
   return (
     <div style={full ? { gridColumn: '1 / -1' } : {}}>
       <label style={s.label}>
@@ -1906,6 +1919,7 @@ function Campo({ label, value, onChange, type = 'text', full, error, required })
           boxShadow: error ? '0 0 0 3px rgba(239,68,68,.12)' : 'none',
         }}
         type={type}
+        placeholder={placeholder || ''}
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
       />
@@ -1914,17 +1928,19 @@ function Campo({ label, value, onChange, type = 'text', full, error, required })
   )
 }
 
-function FormDropdown({ label, required, options = [], value, onChange, placeholder = 'Seleccionar...', error }) {
+function FormDropdown({ label, required, options = [], value, onChange, placeholder = 'Seleccionar...', error, searchable = false }) {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0, openUp: false })
   const buttonRef = useRef(null)
   const menuRef = useRef(null)
+  const searchInputRef = useRef(null)
 
   const updatePosition = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       const spaceBelow = window.innerHeight - rect.bottom
-      const openUp = spaceBelow < 210 && rect.top > 210
+      const openUp = spaceBelow < 220 && rect.top > 220
       setDropdownPos({
         top: openUp ? (rect.top - 6) : (rect.bottom + 6),
         left: rect.left,
@@ -1959,6 +1975,17 @@ function FormDropdown({ label, required, options = [], value, onChange, placehol
     }
   }, [open])
 
+  useEffect(() => {
+    if (open) {
+      setSearch('')
+      if (searchable || options.length > 5) {
+        setTimeout(() => {
+          if (searchInputRef.current) searchInputRef.current.focus()
+        }, 60)
+      }
+    }
+  }, [open, searchable, options.length])
+
   const toggleOpen = () => {
     if (!open) {
       updatePosition()
@@ -1968,6 +1995,10 @@ function FormDropdown({ label, required, options = [], value, onChange, placehol
 
   const selectedOption = options.find((o) => String(o.value) === String(value))
   const displayLabel = selectedOption ? selectedOption.label : placeholder
+
+  const filteredOptions = search.trim()
+    ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()) || (o.value === '' && search === ''))
+    : options
 
   return (
     <div style={s.campoGroup}>
@@ -2030,70 +2061,115 @@ function FormDropdown({ label, required, options = [], value, onChange, placehol
               bottom: dropdownPos.openUp ? `${window.innerHeight - dropdownPos.top}px` : 'auto',
               left: `${dropdownPos.left}px`,
               width: `${dropdownPos.width}px`,
-              maxHeight: '220px',
+              maxHeight: '230px',
               overflowY: 'auto',
               background: 'var(--bg-secondary)',
               border: '1px solid var(--border)',
               borderRadius: '10px',
-              padding: '4px',
+              padding: '5px',
               zIndex: 99999,
               boxShadow: '0 15px 35px rgba(0, 0, 0, 0.7)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '0px',
+              gap: '2px',
               boxSizing: 'border-box',
             }}
           >
-            {options.map((opt) => {
-              const isSelected = String(opt.value) === String(value)
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
+            {(searchable || options.length > 5) && (
+              <div style={{ padding: '2px 2px 5px 2px', borderBottom: '1px solid var(--border)', marginBottom: '3px' }}>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder={`Escribir para filtrar...`}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                   style={{
-                    flexShrink: 1,
-                    minHeight: '30px',
                     width: '100%',
-                    background: isSelected ? 'var(--accent-blue-bg)' : 'transparent',
-                    color: isSelected ? 'var(--accent-blue)' : 'var(--text-primary)',
-                    border: 'none',
+                    fontSize: '12.5px',
+                    height: '32px',
+                    padding: '0 8px',
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border)',
                     borderRadius: '6px',
-                    padding: '8px 12px',
-                    fontSize: '13px',
-                    lineHeight: '1.4',
-                    fontWeight: isSelected ? '700' : '500',
-                    fontFamily: 'Inter, sans-serif',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: 'flex',
-                    alignItems: 'center',
+                    color: '#ffffff',
+                    outline: 'none',
                     boxSizing: 'border-box',
+                    fontFamily: 'Inter, sans-serif',
                   }}
-                  onClick={() => {
-                    onChange(opt.value)
-                    setOpen(false)
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = 'rgba(59, 130, 246, 0.12)'
-                      e.currentTarget.style.color = '#ffffff'
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (filteredOptions.length > 0) {
+                        const targetOpt = filteredOptions.find((o) => o.value !== '') || filteredOptions[0]
+                        if (targetOpt) {
+                          onChange(targetOpt.value)
+                          setOpen(false)
+                        }
+                      }
                     }
                   }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = 'transparent'
-                      e.currentTarget.style.color = 'var(--text-primary)'
-                    }
-                  }}
-                >
-                  {opt.label}
-                </button>
-              )
-            })}
+                />
+              </div>
+            )}
+
+            {filteredOptions.length === 0 ? (
+              <div style={{ padding: '10px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                Sin resultados
+              </div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = String(opt.value) === String(value)
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    style={{
+                      flexShrink: 0,
+                      minHeight: '34px',
+                      width: '100%',
+                      background: isSelected ? 'var(--accent-blue-bg)' : 'transparent',
+                      color: isSelected ? 'var(--accent-blue)' : 'var(--text-primary)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      fontSize: '13px',
+                      lineHeight: '1.4',
+                      fontWeight: isSelected ? '700' : '500',
+                      fontFamily: 'Inter, sans-serif',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'flex',
+                      alignItems: 'center',
+                      boxSizing: 'border-box',
+                    }}
+                    onClick={() => {
+                      onChange(opt.value)
+                      setOpen(false)
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.12)'
+                        e.currentTarget.style.color = '#ffffff'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.background = 'transparent'
+                        e.currentTarget.style.color = 'var(--text-primary)'
+                      }
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })
+            )}
           </div>,
           document.body
         )}
