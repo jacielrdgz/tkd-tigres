@@ -3,8 +3,9 @@ import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate } fr
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider, useTheme } from './context/ThemeContext'
+import { precargarTodosLosModulos } from './utils/preloader'
 import ProtectedRoute from './components/ProtectedRoute'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
@@ -37,6 +38,7 @@ import PerfilAlumno from './pages/PerfilAlumno'
  * Layout principal con Sidebar (solo cuando está autenticado).
  */
 function AppLayout() {
+  const { user } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -46,6 +48,13 @@ function AppLayout() {
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  // Precargar en segundo plano todos los módulos clave al entrar a la sesión
+  useEffect(() => {
+    if (user && !user.is_superadmin) {
+      precargarTodosLosModulos(user)
+    }
+  }, [user])
 
   return (
     <div className="app-layout">
