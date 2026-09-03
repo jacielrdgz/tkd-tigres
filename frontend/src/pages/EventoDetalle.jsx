@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF, guardarODescargarPDF, guardarODescargarExcel } from '../utils/pdfHelper'
 import BotonExportar from '../components/Common/BotonExportar'
 
 const tieneFoto = (foto) => {
@@ -352,7 +352,7 @@ export default function EventoDetalle() {
     e.currentTarget.style.boxShadow = `0 4px 15px ${color}`
   }
 
-  const exportarExcel = () => {
+  const exportarExcel = async () => {
     if (inscritosFiltrados.length === 0) return toast.info('No hay datos para exportar')
     try {
       const data = inscritosFiltrados.map((a, i) => {
@@ -376,7 +376,7 @@ export default function EventoDetalle() {
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "Inscritos")
-      XLSX.writeFile(wb, `Reporte_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`)
+      await guardarODescargarExcel(wb, `Reporte_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`)
       toast.success("Excel generado ✓")
     } catch { toast.error("Error al generar Excel") }
   }
@@ -430,7 +430,7 @@ export default function EventoDetalle() {
 
       agregarPieDePagina(doc, user)
 
-      doc.save(`Reporte_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`)
+      await guardarODescargarPDF(doc, `Reporte_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success("PDF generado ✓")
     } catch { toast.error("Error al generar PDF") }
   }
@@ -532,7 +532,7 @@ export default function EventoDetalle() {
 
       agregarPieDePagina(doc, user)
 
-      doc.save(`Recibo_${escuelaInfo?.nombre || 'Evento'}_${nom}_${new Date().toISOString().split('T')[0]}.pdf`)
+      await guardarODescargarPDF(doc, `Recibo_${escuelaInfo?.nombre || 'Evento'}_${nom}_${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success("Recibo generado ✓")
     } catch (e) {
       console.error(e)

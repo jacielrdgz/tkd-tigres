@@ -223,6 +223,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Eventos - Inscripciones (base)
         Route::get('eventos/{evento}/inscritos',       [\App\Http\Controllers\EventoAlumnoController::class, 'getInscritos']);
         Route::post('eventos/{evento}/inscribir',      [\App\Http\Controllers\EventoAlumnoController::class, 'inscribir']);
+        Route::post('eventos/{evento}/inscribir-masivo', [\App\Http\Controllers\EventoAlumnoController::class, 'inscribirMasivo']);
         Route::put('eventos/{evento}/alumnos/{alumno}', [\App\Http\Controllers\EventoAlumnoController::class, 'actualizarInscripcion']);
         Route::delete('eventos/{evento}/alumnos/{alumno}', [\App\Http\Controllers\EventoAlumnoController::class, 'eliminarInscripcion']);
 

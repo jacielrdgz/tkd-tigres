@@ -6,7 +6,7 @@ import { FiAward, FiCalendar, FiMapPin, FiDollarSign, FiPlus, FiSearch, FiEdit2,
 import CustomDropdown from '../components/Common/CustomDropdown'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
-const VACIO = { nombre: '', tipo: 'examen', fecha: '', lugar: '', descripcion: '', costo: '' }
+const VACIO = { nombre: '', tipo: 'examen', fecha: '', lugar: '', descripcion: '', costo: '', precios_cintas: {} }
 const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 export default function Examenes() {
@@ -22,10 +22,23 @@ export default function Examenes() {
   const [modalExamen, setModalExamen] = useState(false)
   const [formExamen, setFormExamen] = useState(VACIO)
   const [editando, setEditando] = useState(null)
+  const [cintasConfig, setCintasConfig] = useState([])
 
   useEffect(() => {
     cargarExamenes()
+    cargarCintas()
   }, [])
+
+  const cargarCintas = async () => {
+    try {
+      const res = await api.get('/configuraciones-cintas')
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+      list.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+      setCintasConfig(list)
+    } catch (err) {
+      console.error('Error cargando cintas:', err)
+    }
+  }
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -67,7 +80,7 @@ export default function Examenes() {
 
   // --- CRUD EXÁMENES ---
   const abrirCrear = () => {
-    setFormExamen({ ...VACIO })
+    setFormExamen({ ...VACIO, precios_cintas: {} })
     setEditando(null)
     setModalExamen(true)
   }
@@ -80,7 +93,8 @@ export default function Examenes() {
       fecha: e.fecha,
       lugar: e.lugar || '',
       descripcion: e.descripcion || '',
-      costo: e.costo || ''
+      costo: e.costo || '',
+      precios_cintas: e.precios_cintas || {}
     })
     setEditando(e.id)
     setModalExamen(true)
@@ -412,6 +426,71 @@ export default function Examenes() {
                 />
               </div>
             </div>
+
+            {cintasConfig.length > 0 && (
+              <div style={s.campoGroup}>
+                <label style={s.label}>
+                  Precios Específicos por Cinta <span style={{ fontSize: '11.5px', fontWeight: 'normal', color: 'var(--text-muted)' }}>(Opcional: si se deja vacío, aplica el costo base)</span>
+                </label>
+                <div style={{
+                  maxHeight: '180px',
+                  overflowY: 'auto',
+                  border: '1px solid var(--border)',
+                  borderRadius: '12px',
+                  padding: '8px 12px',
+                  background: 'var(--bg-primary)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  {cintasConfig.map(c => {
+                    const val = formExamen.precios_cintas?.[String(c.id)] ?? ''
+                    return (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '14px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          background: c.color_hex || 'var(--bg-tertiary)',
+                          color: c.color_texto || 'var(--text-primary)',
+                          border: '1px solid rgba(0,0,0,0.1)',
+                          minWidth: '95px',
+                          textAlign: 'center'
+                        }}>
+                          {c.nombre_nivel}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '130px' }}>
+                          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>$</span>
+                          <input
+                            type="number"
+                            placeholder={formExamen.costo || '0'}
+                            value={val}
+                            onChange={e => {
+                              const nuevo = e.target.value
+                              setFormExamen(prev => ({
+                                ...prev,
+                                precios_cintas: {
+                                  ...(prev.precios_cintas || {}),
+                                  [String(c.id)]: nuevo
+                                }
+                              }))
+                            }}
+                            style={{
+                              ...s.input,
+                              padding: '6px 10px',
+                              fontSize: '13px',
+                              borderRadius: '8px',
+                              height: '32px'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             <div style={s.campoGroup}>
               <label style={s.label}>Lugar / Sede del Examen</label>

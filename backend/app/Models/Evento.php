@@ -16,6 +16,11 @@ class Evento extends Model
         'lugar',
         'descripcion',
         'costo',
+        'precios_cintas',
+    ];
+
+    protected $casts = [
+        'precios_cintas' => 'array',
     ];
 
     public function alumnos()

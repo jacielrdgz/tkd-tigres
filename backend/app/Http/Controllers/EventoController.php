@@ -33,6 +33,7 @@ class EventoController extends Controller
             'lugar'       => 'nullable|string|max:200',
             'descripcion' => 'nullable|string',
             'costo'       => 'nullable|numeric|min:0',
+            'precios_cintas' => 'nullable|array',
         ]);
 
         $evento = Evento::create($validated);
@@ -59,6 +60,7 @@ class EventoController extends Controller
             'lugar'       => 'nullable|string|max:200',
             'descripcion' => 'nullable|string',
             'costo'       => 'nullable|numeric|min:0',
+            'precios_cintas' => 'nullable|array',
         ]);
 
         $evento->update($validated);

@@ -21,34 +21,44 @@ class EventoAlumnoController extends Controller
     {
         $inscritos = $evento->alumnos()
             ->with('cintaConfig')
-            ->get()
-            ->map(function ($alumno) use ($evento) {
-                $data = $alumno->toArray();
-                $data['pivot_id']   = $alumno->pivot->id;
-                $data['pagado']     = $alumno->pivot->pagado;
-                $data['fecha_pago'] = $alumno->pivot->fecha_pago;
-                $data['asistio']    = $alumno->pivot->asistio;
-                $data['pago_inscripcion'] = $alumno->pivot->pago_inscripcion;
-                $data['pivot_created_at'] = $alumno->pivot->created_at;
+            ->get();
+            
+        $examenes = collect();
+        $torneos = collect();
 
-                if ($evento->tipo === 'examen') {
-                    $examen = ExamenAlumno::with(['gradoActual', 'gradoSiguiente'])
-                        ->where('evento_id', $evento->id)
-                        ->where('alumno_id', $alumno->id)
-                        ->first();
-                    $data['examen_detalle'] = $examen;
-                } elseif ($evento->tipo === 'torneo') {
-                    $torneo = TorneoAlumno::with(['modalidades'])
-                        ->where('evento_id', $evento->id)
-                        ->where('alumno_id', $alumno->id)
-                        ->first();
-                    $data['torneo_detalle'] = $torneo;
-                }
+        if ($evento->tipo === 'examen') {
+            $examenes = ExamenAlumno::with(['gradoActual', 'gradoSiguiente'])
+                ->where('evento_id', $evento->id)
+                ->whereIn('alumno_id', $inscritos->pluck('id'))
+                ->get()
+                ->keyBy('alumno_id');
+        } elseif ($evento->tipo === 'torneo') {
+            $torneos = TorneoAlumno::with(['modalidades'])
+                ->where('evento_id', $evento->id)
+                ->whereIn('alumno_id', $inscritos->pluck('id'))
+                ->get()
+                ->keyBy('alumno_id');
+        }
 
-                return $data;
-            });
+        $resultado = $inscritos->map(function ($alumno) use ($evento, $examenes, $torneos) {
+            $data = $alumno->toArray();
+            $data['pivot_id']   = $alumno->pivot->id;
+            $data['pagado']     = $alumno->pivot->pagado;
+            $data['fecha_pago'] = $alumno->pivot->fecha_pago;
+            $data['asistio']    = $alumno->pivot->asistio;
+            $data['pago_inscripcion'] = $alumno->pivot->pago_inscripcion;
+            $data['pivot_created_at'] = $alumno->pivot->created_at;
 
-        return response()->json($inscritos);
+            if ($evento->tipo === 'examen') {
+                $data['examen_detalle'] = $examenes->get($alumno->id);
+            } elseif ($evento->tipo === 'torneo') {
+                $data['torneo_detalle'] = $torneos->get($alumno->id);
+            }
+
+            return $data;
+        });
+
+        return response()->json($resultado);
     }
 
     // ──────────────────────────────────────────────
@@ -127,6 +137,79 @@ class EventoAlumnoController extends Controller
         });
 
         return response()->json(['message' => 'Alumno inscrito correctamente'], 201);
+    }
+
+    // ──────────────────────────────────────────────
+    // POST inscribir masivo
+    // ──────────────────────────────────────────────
+    public function inscribirMasivo(Request $request, Evento $evento)
+    {
+        $validated = $request->validate([
+            'alumnos'                      => 'required|array',
+            'alumnos.*.alumno_id'          => 'required|exists:alumnos,id',
+            'alumnos.*.costo_examen'       => 'nullable|numeric|min:0',
+            'alumnos.*.grado_actual_id'    => 'nullable|exists:configuraciones_cintas,id',
+            'alumnos.*.grado_siguiente_id' => 'nullable|exists:configuraciones_cintas,id',
+            'alumnos.*.pagado'             => 'boolean',
+        ]);
+
+        $alumnoIds = collect($validated['alumnos'])->pluck('alumno_id');
+
+        $yaInscritos = $evento->alumnos()->whereIn('alumno_id', $alumnoIds)->pluck('alumnos.id')->toArray();
+
+        $nuevos = collect($validated['alumnos'])->filter(function ($item) use ($yaInscritos) {
+            return !in_array($item['alumno_id'], $yaInscritos);
+        });
+
+        if ($nuevos->isEmpty()) {
+            return response()->json([
+                'message' => 'Todos los alumnos ya estaban inscritos',
+                'inscritos' => []
+            ], 200);
+        }
+
+        DB::transaction(function () use ($evento, $nuevos) {
+            $pivotRecords = [];
+            foreach ($nuevos as $item) {
+                $pivotRecords[$item['alumno_id']] = [
+                    'pagado' => $item['pagado'] ?? false,
+                    'fecha_pago' => (!empty($item['pagado'])) ? now() : null,
+                    'pago_inscripcion' => $item['costo_examen'] ?? 0,
+                ];
+            }
+            $evento->alumnos()->attach($pivotRecords);
+
+            if ($evento->tipo === 'examen') {
+                $nuevosPivot = DB::table('evento_alumno')
+                    ->where('evento_id', $evento->id)
+                    ->whereIn('alumno_id', $nuevos->pluck('alumno_id'))
+                    ->get()
+                    ->keyBy('alumno_id');
+
+                $examenRecords = [];
+                foreach ($nuevos as $item) {
+                    $pivotId = $nuevosPivot->get($item['alumno_id'])->id;
+                    $examenRecords[] = [
+                        'evento_id' => $evento->id,
+                        'alumno_id' => $item['alumno_id'],
+                        'evento_alumno_id' => $pivotId,
+                        'grado_actual_id' => $item['grado_actual_id'] ?? null,
+                        'grado_siguiente_id' => $item['grado_siguiente_id'] ?? null,
+                        'costo_examen' => $item['costo_examen'] ?? null,
+                        'resultado' => 'pendiente',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+                ExamenAlumno::insert($examenRecords);
+            }
+        });
+
+        return response()->json([
+            'message' => 'Alumnos inscritos masivamente',
+            'count' => $nuevos->count(),
+            'inscritos' => $nuevos->pluck('alumno_id')
+        ], 201);
     }
 
     // ──────────────────────────────────────────────
