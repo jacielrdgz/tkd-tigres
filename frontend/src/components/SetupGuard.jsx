@@ -17,8 +17,18 @@ import {
 export default function SetupGuard({ children }) {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [status, setStatus] = useState(user?.is_superadmin ? { configurado: true } : null)
-  const [loading, setLoading] = useState(user?.is_superadmin ? false : true)
+  
+  // Revisar si ya sabemos que la escuela está configurada en esta sesión
+  const isAlreadyConfigured = user?.is_superadmin || (() => {
+    try {
+      return sessionStorage.getItem(`school_configured_${user?.tenant_id}`) === 'true'
+    } catch {
+      return false
+    }
+  })()
+
+  const [status, setStatus] = useState(isAlreadyConfigured ? { configurado: true } : null)
+  const [loading, setLoading] = useState(isAlreadyConfigured ? false : true)
   const [confirming, setConfirming] = useState(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640)
 
@@ -38,6 +48,11 @@ export default function SetupGuard({ children }) {
     api.get('/configuracion-escuela/status')
       .then(res => {
         setStatus(res.data)
+        if (res.data?.configurado && user?.tenant_id) {
+          sessionStorage.setItem(`school_configured_${user.tenant_id}`, 'true')
+        } else if (user?.tenant_id) {
+          sessionStorage.removeItem(`school_configured_${user.tenant_id}`)
+        }
       })
       .catch(() => {
         setStatus({ configurado: true })
@@ -53,7 +68,7 @@ export default function SetupGuard({ children }) {
     }
 
     fetchStatus()
-  }, [user])
+  }, [user?.id, user?.tenant_id])
 
   const handleConfirmStep = async (stepId) => {
     setConfirming(stepId)

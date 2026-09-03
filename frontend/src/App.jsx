@@ -131,20 +131,22 @@ const router = createBrowserRouter([
       {
         element: (
           <ProtectedRoute requireTenant={true}>
-            <Outlet />
+            <SetupGuard>
+              <Outlet />
+            </SetupGuard>
           </ProtectedRoute>
         ),
         children: [
           { index: true, element: <Dashboard /> },
-          { path: "alumnos", element: <SetupGuard><Alumnos /></SetupGuard> },
-          { path: "alumnos/:id", element: <SetupGuard><PerfilAlumno /></SetupGuard> },
-          { path: "pagos", element: <SetupGuard><Pagos /></SetupGuard> },
-          { path: "asistencias", element: <SetupGuard><Asistencias /></SetupGuard> },
-          { path: "asistencias-antiguo", element: <SetupGuard><AsistenciasAntiguo /></SetupGuard> },
-          { path: "eventos", element: <SetupGuard><Eventos /></SetupGuard> },
-          { path: "eventos/:id", element: <SetupGuard><EventoDetalle /></SetupGuard> },
-          { path: "examenes", element: <SetupGuard><Examenes /></SetupGuard> },
-          { path: "examenes/:id", element: <SetupGuard><ExamenDetalle /></SetupGuard> },
+          { path: "alumnos", element: <Alumnos /> },
+          { path: "alumnos/:id", element: <PerfilAlumno /> },
+          { path: "pagos", element: <Pagos /> },
+          { path: "asistencias", element: <Asistencias /> },
+          { path: "asistencias-antiguo", element: <AsistenciasAntiguo /> },
+          { path: "eventos", element: <Eventos /> },
+          { path: "eventos/:id", element: <EventoDetalle /> },
+          { path: "examenes", element: <Examenes /> },
+          { path: "examenes/:id", element: <ExamenDetalle /> },
         ]
       }
     ]
