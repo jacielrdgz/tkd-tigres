@@ -2087,13 +2087,15 @@ function FormDropdown({ label, required, options = [], value, onChange, placehol
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder={`Escribir para filtrar...`}
+                  className="form-dropdown-search-input"
+                  placeholder="Escribir para filtrar..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   style={{
                     width: '100%',
                     fontSize: '12.5px',
                     height: '32px',
+                    minHeight: '32px',
                     padding: '0 8px',
                     background: 'var(--bg-primary)',
                     border: '1px solid var(--border)',

@@ -584,8 +584,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     box-sizing: border-box !important;
   }
 
+  /* Normalizar inputs dentro del modal en móvil */
+  .mobile-fullscreen-modal input,
+  .mobile-fullscreen-modal select,
+  .mobile-fullscreen-modal button {
+    font-size: 13.5px !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    box-sizing: border-box !important;
+  }
+
   .mobile-fullscreen-modal input::placeholder {
-    font-size: 11px !important;
+    font-size: 12px !important;
   }
   
   .mobile-fullscreen-modal input[type="date"] {
@@ -593,7 +603,24 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     width: 100% !important;
     min-width: 0 !important;
     box-sizing: border-box !important;
-    padding: 0 6px !important;
+    padding: 0 10px !important;
+    font-size: 13.5px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    display: block !important;
+  }
+
+  /* Input de búsqueda dentro del portal de dropdown */
+  .form-dropdown-search-input {
+    font-size: 12.5px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 8px !important;
+    box-sizing: border-box !important;
+  }
+  .form-dropdown-search-input::placeholder {
     font-size: 12px !important;
   }
 
