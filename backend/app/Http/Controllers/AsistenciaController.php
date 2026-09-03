@@ -43,13 +43,17 @@ class AsistenciaController extends Controller
             ]);
         }
 
+        // Traer asistencias del mes de todos los alumnos en 1 sola consulta SQL
+        $asistenciasMes = Asistencia::where('fecha', 'like', $mes . '%')
+            ->whereIn('alumno_id', $alumnos->pluck('id'))
+            ->get()
+            ->groupBy('alumno_id');
+
         $sumPct = 0;
         $bajaAsistencia = 0;
 
         foreach ($alumnos as $alumno) {
-            $registros = Asistencia::where('alumno_id', $alumno->id)
-                ->where('fecha', 'like', $mes . '%')
-                ->get();
+            $registros = $asistenciasMes->get($alumno->id, collect());
 
             $total    = $registros->count();
             $asistio  = $registros->where('presente', true)->count();

@@ -20,13 +20,15 @@ class DashboardController extends Controller
         // 1. Alumnos Activos
         $totalAlumnosActivos = Alumno::where('estatus', 'activo')->count();
 
-        // 2. Cálculo de Pagos Pendientes y Al corriente del mes
-        // Obtenemos todos los pagos de los periodos que podrían estar activos (este mes y el anterior)
-        $mesActual = $hoy->format('Y-m');
-        $mesPasado = $hoy->copy()->subMonth()->format('Y-m');
-
-        // Obtenemos los alumnos activos con su último pago
+        // 2. Cálculo de Pagos Pendientes y Al corriente del mes optimizado en 1 sola consulta
         $alumnos = Alumno::where('estatus', 'activo')->get();
+        $alumnoIds = $alumnos->pluck('id');
+
+        // Traer pagos relevantes de todos los alumnos en 1 sola consulta agrupada
+        $pagosAgrupados = Pago::whereIn('alumno_id', $alumnoIds)
+            ->where('fecha_inicio', '>=', $hoy->copy()->subMonths(2)->startOfMonth()->toDateString())
+            ->get()
+            ->groupBy('alumno_id');
         
         $pagadosCount = 0;
         $pendientesCount = 0;
@@ -38,16 +40,15 @@ class DashboardController extends Controller
             $inicioEsteMes = Carbon::create($hoy->year, $hoy->month, $dia, 0, 0, 0, $tz);
             
             if ($hoy->lt($inicioEsteMes)) {
-                // Si aún no llegamos al día de pago de este mes, el periodo a revisar es el que inició el mes pasado
                 $fechaInicioPeriodo = $inicioEsteMes->copy()->subMonth()->toDateString();
             } else {
-                // Si ya pasamos el día de pago, el periodo a revisar es el de este mes
                 $fechaInicioPeriodo = $inicioEsteMes->toDateString();
             }
 
-            $tienePago = Pago::where('alumno_id', $alumno->id)
-                ->where('fecha_inicio', $fechaInicioPeriodo)
-                ->exists();
+            $pagosAlumno = $pagosAgrupados->get($alumno->id, collect());
+            $tienePago = $pagosAlumno->contains(function ($p) use ($fechaInicioPeriodo) {
+                return $p->fecha_inicio === $fechaInicioPeriodo || str_starts_with($p->fecha_inicio, substr($fechaInicioPeriodo, 0, 7));
+            });
 
             if ($tienePago) {
                 $pagadosCount++;
