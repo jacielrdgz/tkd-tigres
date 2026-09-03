@@ -67,12 +67,21 @@ class AlumnoController extends Controller
         }
 
         $alumnos = $query->orderBy('nombre')->get();
+        $alumnoIds = $alumnos->pluck('id');
+
+        // Cargar todas las asistencias recientes de los alumnos en 1 SOLA consulta rápida
+        $asistenciasAgrupadas = \App\Models\Asistencia::withoutGlobalScopes()
+            ->whereIn('alumno_id', $alumnoIds)
+            ->select('id', 'alumno_id', 'fecha', 'presente')
+            ->orderBy('fecha', 'desc')
+            ->get()
+            ->groupBy('alumno_id');
 
         foreach ($alumnos as $alumno) {
             $alumno->estatus_pago = $alumno->ultimoPago?->estado ?? 'pendiente';
             
-            // Rachas (Cálculo original, posiblemente costoso pero es lo que estaba antes)
-            $asistencias = $alumno->asistencias()->orderBy('fecha', 'desc')->take(15)->get();
+            // Tomar las últimas 15 asistencias del mapa en memoria (0 consultas SQL adicionales)
+            $asistencias = $asistenciasAgrupadas->get($alumno->id, collect())->take(15);
             
             $contadorFaltas = 0;
             foreach ($asistencias as $asist) {
@@ -90,7 +99,7 @@ class AlumnoController extends Controller
 
             $alumno->ultimas_asistencias = $asistencias->map(function($a) {
                 return ['fecha' => $a->fecha, 'presente' => $a->presente];
-            });
+            })->values();
         }
 
         return response()->json($alumnos);
