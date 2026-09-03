@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { toast } from 'react-toastify'
+import Swal from 'sweetalert2'
 import { FiShield, FiLogIn } from 'react-icons/fi'
 
 export default function Login() {
@@ -10,6 +11,22 @@ export default function Login() {
   const [cargando, setCargando] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const notice = sessionStorage.getItem('auth_expired_notice')
+    if (notice) {
+      sessionStorage.removeItem('auth_expired_notice')
+      Swal.fire({
+        title: 'Acceso Finalizado',
+        text: notice,
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: 'var(--accent-blue)',
+        background: 'var(--bg-secondary)',
+        color: 'var(--text-primary)',
+      })
+    }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -22,7 +39,19 @@ export default function Login() {
       navigate('/')
     } catch (err) {
       const msg = err.response?.data?.message || 'Error al iniciar sesión'
-      toast.error(msg)
+      if (err.response?.data?.subscription_expired || err.response?.data?.school_suspended) {
+        Swal.fire({
+          title: 'Suscripción Vencida',
+          text: msg,
+          icon: 'error',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: 'var(--accent-blue)',
+          background: 'var(--bg-secondary)',
+          color: 'var(--text-primary)',
+        })
+      } else {
+        toast.error(msg)
+      }
     } finally {
       setCargando(false)
     }

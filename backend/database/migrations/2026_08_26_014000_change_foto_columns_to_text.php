@@ -1,28 +1,36 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Cambiar columnas de varchar(255) a TEXT para poder almacenar Base64
-        // Usar SQL directo para máxima compatibilidad con PostgreSQL
-        DB::statement('ALTER TABLE alumnos ALTER COLUMN foto TYPE TEXT');
-        DB::statement('ALTER TABLE escuelas ALTER COLUMN logo_url TYPE TEXT');
-        DB::statement('ALTER TABLE tenants ALTER COLUMN logo TYPE TEXT');
-        
-        // También instructores si existe la columna
-        try {
-            DB::statement('ALTER TABLE instructors ALTER COLUMN foto_url TYPE TEXT');
-        } catch (\Throwable $e) {
-            // La columna podría no existir
+        if (Schema::hasTable('alumnos') && Schema::hasColumn('alumnos', 'foto')) {
+            Schema::table('alumnos', function (Blueprint $table) {
+                $table->text('foto')->nullable()->change();
+            });
+        }
+        if (Schema::hasTable('escuelas') && Schema::hasColumn('escuelas', 'logo_url')) {
+            Schema::table('escuelas', function (Blueprint $table) {
+                $table->text('logo_url')->nullable()->change();
+            });
+        }
+        if (Schema::hasTable('tenants') && Schema::hasColumn('tenants', 'logo')) {
+            Schema::table('tenants', function (Blueprint $table) {
+                $table->text('logo')->nullable()->change();
+            });
+        }
+        if (Schema::hasTable('instructores') && Schema::hasColumn('instructores', 'foto_url')) {
+            Schema::table('instructores', function (Blueprint $table) {
+                $table->text('foto_url')->nullable()->change();
+            });
         }
     }
 
     public function down(): void
     {
-        // No revertimos porque podría perder datos
     }
 };

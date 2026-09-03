@@ -85,8 +85,10 @@ export default function AdminSuscripciones() {
   const abrirRenovar = (item) => {
     setSelectedAcademia(item);
     setRenovarForm({
+      tipo_renovacion: 'meses',
       monto: item.suscripcion_monto || 500,
       meses: 1,
+      fecha_vencimiento: item.suscripcion_hasta ? item.suscripcion_hasta.split('T')[0] : new Date().toISOString().split('T')[0],
     });
     setShowRenovarModal(true);
   };
@@ -96,12 +98,12 @@ export default function AdminSuscripciones() {
     setProcesando(true);
     try {
       await api.post(`/admin/suscripciones/${selectedAcademia.id}/renovar`, renovarForm);
-      toast.success('Suscripción renovada correctamente');
+      toast.success('Suscripción actualizada correctamente');
       setShowRenovarModal(false);
       invalidateCache('admin_');
       fetchSuscripciones(true);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al renovar');
+      toast.error(err.response?.data?.message || 'Error al actualizar suscripción');
     } finally {
       setProcesando(false);
     }
@@ -269,8 +271,13 @@ export default function AdminSuscripciones() {
                         <div style={styles.schoolInfo}>
                           <span style={styles.schoolName}>{item.nombre}</span>
                           <span style={styles.schoolMeta}>
-                            Dueño: {item.owner_name} · {item.owner_email}
+                            Titular: <strong style={{ color: 'var(--text-primary)' }}>{item.owner_name || 'Sin titular'}</strong>
                           </span>
+                          {item.owner_email && (
+                            <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                              {item.owner_email}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td style={{ ...styles.td, textAlign: 'center' }}>
@@ -284,9 +291,9 @@ export default function AdminSuscripciones() {
                       </td>
                       <td style={styles.td}>
                         <span style={styles.dateMeta}>
-                          {item.suscripcion_vence
-                            ? formatearFechaNatural(item.suscripcion_vence)
-                            : 'Ilimitado / Sin vencimiento'}
+                          {item.suscripcion_hasta
+                            ? formatearFechaNatural(item.suscripcion_hasta)
+                            : '1 mes por defecto'}
                         </span>
                       </td>
                       <td style={{ ...styles.td, textAlign: 'center' }}>
@@ -360,18 +367,69 @@ export default function AdminSuscripciones() {
             <form onSubmit={handleRenovarSubmit}>
               <div style={styles.modalBody}>
                 <div style={styles.inputGroup}>
-                  <label style={styles.label}>Meses a Extender</label>
-                  <select
-                    style={styles.selectModal}
-                    value={renovarForm.meses}
-                    onChange={(e) => setRenovarForm({ ...renovarForm, meses: parseInt(e.target.value) })}
-                  >
-                    <option value={1}>1 Mes (+30 días)</option>
-                    <option value={3}>3 Meses (+90 días)</option>
-                    <option value={6}>6 Meses (+180 días)</option>
-                    <option value={12}>1 Año (+365 días)</option>
-                  </select>
+                  <label style={styles.label}>Modo de Renovación</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setRenovarForm({ ...renovarForm, tipo_renovacion: 'meses' })}
+                      style={{
+                        padding: '8px',
+                        borderRadius: '8px',
+                        border: renovarForm.tipo_renovacion === 'meses' ? '1.5px solid var(--accent-blue)' : '1px solid var(--border)',
+                        background: renovarForm.tipo_renovacion === 'meses' ? 'var(--accent-blue-bg)' : 'var(--bg-primary)',
+                        color: renovarForm.tipo_renovacion === 'meses' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Por Meses (+30d)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRenovarForm({ ...renovarForm, tipo_renovacion: 'fecha' })}
+                      style={{
+                        padding: '8px',
+                        borderRadius: '8px',
+                        border: renovarForm.tipo_renovacion === 'fecha' ? '1.5px solid var(--accent-blue)' : '1px solid var(--border)',
+                        background: renovarForm.tipo_renovacion === 'fecha' ? 'var(--accent-blue-bg)' : 'var(--bg-primary)',
+                        color: renovarForm.tipo_renovacion === 'fecha' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Fecha Exacta Manual
+                    </button>
+                  </div>
                 </div>
+
+                {renovarForm.tipo_renovacion === 'meses' ? (
+                  <div style={styles.inputGroup}>
+                    <label style={styles.label}>Meses a Extender</label>
+                    <select
+                      style={styles.selectModal}
+                      value={renovarForm.meses}
+                      onChange={(e) => setRenovarForm({ ...renovarForm, meses: parseInt(e.target.value) })}
+                    >
+                      <option value={1}>1 Mes (+30 días)</option>
+                      <option value={3}>3 Meses (+90 días)</option>
+                      <option value={6}>6 Meses (+180 días)</option>
+                      <option value={12}>1 Año (+365 días)</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div style={styles.inputGroup}>
+                    <label style={styles.label}>Fecha de Vencimiento Manual</label>
+                    <input
+                      type="date"
+                      style={styles.input}
+                      value={renovarForm.fecha_vencimiento}
+                      onChange={(e) => setRenovarForm({ ...renovarForm, fecha_vencimiento: e.target.value })}
+                      required
+                    />
+                  </div>
+                )}
 
                 <div style={styles.inputGroup}>
                   <label style={styles.label}>Monto Recibido ($ MXN)</label>
@@ -379,7 +437,7 @@ export default function AdminSuscripciones() {
                     type="number"
                     style={styles.input}
                     value={renovarForm.monto}
-                    onChange={(e) => setRenovarForm({ ...renovarForm, monto: parseFloat(e.target.value) })}
+                    onChange={(e) => setRenovarForm({ ...renovarForm, monto: parseFloat(e.target.value) || 0 })}
                     required
                   />
                 </div>

@@ -88,6 +88,32 @@ export default function Cintas({ isEmbedded = false }) {
     })
   }
 
+  const handleResetToDefault = () => {
+    Swal.fire({
+      title: '¿Restablecer al Catálogo Oficial?',
+      text: 'Se eliminarán las personalizaciones de tu escuela y volverás a heredar los 15 grados oficiales estándar de Taekwondo.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, restablecer',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: 'var(--accent-blue)',
+      background: 'var(--bg-secondary)',
+      color: 'var(--text-primary)',
+    }).then(async (r) => {
+      if (r.isConfirmed) {
+        try {
+          const { data } = await api.post('/configuraciones-cintas/reset-default')
+          toast.success(data.message || 'Restablecido correctamente')
+          setCintas(data.cintas || [])
+          setEditId(null)
+          setForm({ nombre: '', bg: '#3b82f6', tx: '#ffffff' })
+        } catch {
+          toast.error('Error al restablecer')
+        }
+      }
+    })
+  }
+
   const handleDragStart = (idx) => {
     setDragIdx(idx)
   }
@@ -290,8 +316,60 @@ export default function Cintas({ isEmbedded = false }) {
 
         {/* Lista de Registros */}
         <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Banner de Estado del Catálogo */}
+          {!loading && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              padding: '10px 14px',
+              marginBottom: '14px',
+              borderRadius: '10px',
+              background: cintas.some(c => c.tenant_id !== null) ? 'rgba(59, 130, 246, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+              border: cintas.some(c => c.tenant_id !== null) ? '1px solid rgba(59, 130, 246, 0.2)' : '1px solid rgba(16, 185, 129, 0.2)',
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px' }}>{cintas.some(c => c.tenant_id !== null) ? '⚙️' : '🥋'}</span>
+                <span style={{ fontSize: '12.5px', color: 'var(--text-primary)', fontWeight: '500' }}>
+                  {cintas.some(c => c.tenant_id !== null)
+                    ? 'Catálogo personalizado activo para tu escuela'
+                    : 'Usando Catálogo Oficial Estándar de Taekwondo (15 Grados)'}
+                </span>
+              </div>
+              {cintas.some(c => c.tenant_id !== null) && (
+                <button
+                  type="button"
+                  onClick={handleResetToDefault}
+                  style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '11.5px',
+                    fontWeight: '600',
+                    color: 'var(--accent-blue)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--accent-blue)';
+                    e.currentTarget.style.background = 'var(--accent-blue-bg)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                    e.currentTarget.style.background = 'var(--bg-secondary)';
+                  }}
+                >
+                  Restablecer a Oficial
+                </button>
+              )}
+            </div>
+          )}
+
           <div style={s.listHeader}>
-            <span>Grados Registrados</span>
+            <span>Grados Registrados ({cintas.length})</span>
             <span>Acciones y Orden</span>
           </div>
           <div style={s.toolList}>

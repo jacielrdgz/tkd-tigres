@@ -383,7 +383,7 @@ class AlumnoController extends Controller
         ];
 
         // 9. Cintas config de la escuela
-        $cintas_config = \App\Models\ConfiguracionCinta::orderBy('orden')->get();
+        $cintas_config = \App\Models\ConfiguracionCinta::forTenant($alumno->tenant_id)->get();
 
         $escuela = \App\Models\Escuela::where('tenant_id', $alumno->tenant_id)->first();
         $academia = $escuela ? $escuela->nombre : '-';

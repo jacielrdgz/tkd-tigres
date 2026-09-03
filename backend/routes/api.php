@@ -239,6 +239,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('torneos/{torneoAlumnoId}/modalidades/{modalidad}/resultado', [\App\Http\Controllers\TorneoController::class, 'actualizarResultadoModalidad']);
         Route::post('torneos/{torneoAlumnoId}/modalidades', [\App\Http\Controllers\TorneoController::class, 'inscribirModalidad']);
         Route::post('configuraciones-cintas/reorder', [ConfiguracionCintaController::class, 'reorder']);
+        Route::post('configuraciones-cintas/reset-default', [ConfiguracionCintaController::class, 'resetToDefault']);
         Route::apiResource('configuraciones-cintas', ConfiguracionCintaController::class);
         Route::apiResource('horarios', HorarioController::class);
         Route::apiResource('instructores', \App\Http\Controllers\InstructorController::class)->parameters([

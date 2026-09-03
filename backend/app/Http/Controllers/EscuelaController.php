@@ -198,7 +198,7 @@ class EscuelaController extends Controller
         
         $infoCompleta = $escuela && $escuela->nombre && $escuela->titular && $infoConfirmada;
         
-        $tieneCintas = \App\Models\ConfiguracionCinta::withoutGlobalScopes()->where('tenant_id', $tenant->id)->exists();
+        $tieneCintas = \App\Models\ConfiguracionCinta::forTenant($tenant->id)->exists();
         $cintasCompleta = $tieneCintas && $cintasConfirmadas;
         
         $tieneHorarios = \App\Models\Horario::withoutGlobalScopes()->where('tenant_id', $tenant->id)->exists();
@@ -257,10 +257,7 @@ class EscuelaController extends Controller
             }
             $escuela->save();
         } elseif ($paso === 'cintas') {
-            $tieneCintas = \App\Models\ConfiguracionCinta::withoutGlobalScopes()->where('tenant_id', $tenant->id)->exists();
-            if (!$tieneCintas) {
-                \App\Services\DefaultCintasService::crearCintasPorDefecto($tenant->id);
-            }
+            \App\Services\DefaultCintasService::asegurarCintasGlobales();
         }
 
         $config['setup_confirmado'][$paso] = true;
