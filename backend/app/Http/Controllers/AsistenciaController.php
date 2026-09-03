@@ -17,7 +17,7 @@ class AsistenciaController extends Controller
     {
         $mes = $request->get('mes', Carbon::now()->format('Y-m'));
 
-        $alumnos = Alumno::where('estatus', 'activo')->get();
+        $alumnos = Alumno::where('estatus', 'activo')->pluck('id');
         $totalAlumnos = $alumnos->count();
 
         if ($totalAlumnos === 0) {
@@ -28,12 +28,14 @@ class AsistenciaController extends Controller
             ]);
         }
 
-        // Fechas con clase en el mes (fechas que tienen al menos un registro)
-        $fechasConClase = Asistencia::where('fecha', 'like', $mes . '%')
-            ->distinct('fecha')
-            ->pluck('fecha');
+        $carbonMes = Carbon::parse($mes . '-01');
+        $inicioMes = $carbonMes->copy()->startOfMonth()->toDateString();
+        $finMes    = $carbonMes->copy()->endOfMonth()->toDateString();
 
-        $totalClases = $fechasConClase->count();
+        // Fechas con clase en el mes (fechas que tienen al menos un registro)
+        $totalClases = Asistencia::whereBetween('fecha', [$inicioMes, $finMes])
+            ->distinct('fecha')
+            ->count('fecha');
 
         if ($totalClases === 0) {
             return response()->json([
@@ -43,21 +45,26 @@ class AsistenciaController extends Controller
             ]);
         }
 
-        // Traer asistencias del mes de todos los alumnos en 1 sola consulta SQL
-        $asistenciasMes = Asistencia::where('fecha', 'like', $mes . '%')
-            ->whereIn('alumno_id', $alumnos->pluck('id'))
+        // Traer asistencias agregadas por alumno directamente en SQL (rápido y con índice)
+        $asistenciasMes = Asistencia::selectRaw("
+                alumno_id,
+                COUNT(*) as total,
+                SUM(CASE WHEN presente = 1 THEN 1 ELSE 0 END) as asistio
+            ")
+            ->whereBetween('fecha', [$inicioMes, $finMes])
+            ->whereIn('alumno_id', $alumnos)
+            ->groupBy('alumno_id')
             ->get()
-            ->groupBy('alumno_id');
+            ->keyBy('alumno_id');
 
         $sumPct = 0;
         $bajaAsistencia = 0;
 
-        foreach ($alumnos as $alumno) {
-            $registros = $asistenciasMes->get($alumno->id, collect());
-
-            $total    = $registros->count();
-            $asistio  = $registros->where('presente', true)->count();
-            $pct      = $total > 0 ? round(($asistio / $total) * 100) : 0;
+        foreach ($alumnos as $alumnoId) {
+            $reg = $asistenciasMes->get($alumnoId);
+            $total = $reg ? (int) $reg->total : 0;
+            $asistio = $reg ? (int) $reg->asistio : 0;
+            $pct = $total > 0 ? round(($asistio / $total) * 100) : 0;
 
             $sumPct += $pct;
             if ($pct < 60) {
@@ -85,11 +92,17 @@ class AsistenciaController extends Controller
             ->with(['cintaConfig', 'horarioConfig'])
             ->get();
 
-        $asistenciasMes = Asistencia::where('fecha', 'like', $mes . '%')->get();
+        $alumnoIds = $alumnos->pluck('id');
+
+        $asistenciasMes = Asistencia::whereIn('alumno_id', $alumnoIds)
+            ->where('fecha', 'like', $mes . '%')
+            ->select('id', 'alumno_id', 'fecha', 'presente')
+            ->get();
 
         $fechaLimite = Carbon::now()->subDays(60)->toDateString();
-        $asistenciasRecientes = Asistencia::whereIn('alumno_id', $alumnos->pluck('id'))
+        $asistenciasRecientes = Asistencia::whereIn('alumno_id', $alumnoIds)
             ->where('fecha', '>=', $fechaLimite)
+            ->select('id', 'alumno_id', 'fecha', 'presente')
             ->orderBy('fecha', 'desc')
             ->get()
             ->groupBy('alumno_id');
@@ -216,19 +229,29 @@ class AsistenciaController extends Controller
     {
         $mes = $request->get('mes', Carbon::now()->format('Y-m'));
 
-        $registros = Asistencia::where('fecha', 'like', $mes . '%')->get();
+        $carbonMes = Carbon::parse($mes . '-01');
+        $inicioMes = $carbonMes->copy()->startOfMonth()->toDateString();
+        $finMes    = $carbonMes->copy()->endOfMonth()->toDateString();
 
-        $porFecha = $registros->groupBy('fecha')->map(function ($grupo) {
-            $total     = $grupo->count();
-            $asistieron = $grupo->where('presente', true)->count();
-            $pct       = $total > 0 ? round(($asistieron / $total) * 100) : 0;
+        $registros = Asistencia::selectRaw("
+                fecha,
+                COUNT(*) as total,
+                SUM(CASE WHEN presente = 1 THEN 1 ELSE 0 END) as asistieron
+            ")
+            ->whereBetween('fecha', [$inicioMes, $finMes])
+            ->groupBy('fecha')
+            ->get();
 
-            return [
+        $porFecha = [];
+        foreach ($registros as $r) {
+            $total = (int) $r->total;
+            $asistieron = (int) $r->asistieron;
+            $porFecha[$r->fecha] = [
                 'asistieron' => $asistieron,
                 'total'      => $total,
-                'pct'        => $pct,
+                'pct'        => $total > 0 ? (int) round(($asistieron / $total) * 100) : 0,
             ];
-        });
+        }
 
         return response()->json($porFecha);
     }

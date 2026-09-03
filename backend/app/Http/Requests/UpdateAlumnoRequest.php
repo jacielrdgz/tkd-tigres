@@ -37,6 +37,7 @@ class UpdateAlumnoRequest extends FormRequest
             'horario_id'       => ['sometimes', 'required', 'integer', 'exists:horarios,id'],
             'eliminar_foto'    => ['sometimes', Rule::in(['0', '1', 0, 1, true, false])],
             'dia_pago'         => ['sometimes', 'nullable', 'integer', 'min:1', 'max:31'],
+            'fecha_ingreso'    => ['sometimes', 'nullable', 'date'],
         ];
     }
 
@@ -57,6 +58,11 @@ class UpdateAlumnoRequest extends FormRequest
             $val = $this->input('eliminar_foto');
             $this->merge([
                 'eliminar_foto' => ($val === true || $val === 1 || $val === '1') ? '1' : '0',
+            ]);
+        }
+        if ($this->has('fecha_ingreso') && empty($this->input('fecha_ingreso'))) {
+            $this->merge([
+                'fecha_ingreso' => null,
             ]);
         }
     }

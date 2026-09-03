@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
@@ -7,17 +7,63 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearFechaNaturalPDF, guardarODescargarPDF, guardarODescargarExcel } from '../utils/pdfHelper'
+import {
+  obtenerInfoEscuelaParaPDF,
+  dibujarEncabezadoMembrete,
+  agregarPieDePagina,
+  formatearFechaNaturalPDF,
+  guardarODescargarPDF,
+  guardarODescargarExcel
+} from '../utils/pdfHelper'
 import BotonExportar from '../components/Common/BotonExportar'
+import CustomDropdown from '../components/Common/CustomDropdown'
+import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
+import {
+  FiCalendar,
+  FiMapPin,
+  FiDollarSign,
+  FiUserPlus,
+  FiUsers,
+  FiClock,
+  FiCheckCircle,
+  FiCheck,
+  FiX,
+  FiSearch,
+  FiCheckSquare,
+  FiArrowLeft,
+  FiAward,
+  FiShield,
+  FiFileText,
+  FiChevronRight
+} from 'react-icons/fi'
 
-const tieneFoto = (foto) => {
-  if (!foto || foto === 'null' || foto === 'NULL' || foto === '') return false
-  return true
+const COLOR_TIPO = {
+  torneo:       { bg: 'rgba(16, 185, 129, 0.12)', color: '#10b981', border: 'rgba(16, 185, 129, 0.3)' },
+  seminario:    { bg: 'rgba(168, 85, 247, 0.12)', color: '#a855f7', border: 'rgba(168, 85, 247, 0.3)' },
+  fogueo:       { bg: 'rgba(249, 115, 22, 0.12)', color: '#f97316', border: 'rgba(249, 115, 22, 0.3)' },
+  demostracion: { bg: 'rgba(249, 115, 22, 0.12)', color: '#f97316', border: 'rgba(249, 115, 22, 0.3)' },
+  otro:         { bg: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: 'rgba(59, 130, 246, 0.3)' },
 }
 
-const limpiarUrl = (url) => {
-  if (!url) return null
-  return url.replace(/\\\//g, '/')
+const COLOR_MEDALLA = {
+  oro:        { bg: 'rgba(234, 179, 8, 0.15)', color: '#eab308', border: 'rgba(234, 179, 8, 0.35)', label: 'Oro' },
+  plata:      { bg: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8', border: 'rgba(148, 163, 184, 0.35)', label: 'Plata' },
+  bronce:     { bg: 'rgba(205, 127, 50, 0.15)', color: '#cd7f32', border: 'rgba(205, 127, 50, 0.35)', label: 'Bronce' },
+  eliminado:  { bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: 'rgba(239, 68, 68, 0.35)', label: 'Sin medalla' },
+  pendiente:  { bg: 'rgba(100, 116, 139, 0.15)', color: '#64748b', border: 'rgba(100, 116, 139, 0.35)', label: 'Pendiente' },
+}
+
+const formatCosto = (val) => {
+  if (val === null || val === undefined || val === '') return '0'
+  const num = parseFloat(val)
+  if (isNaN(num)) return '0'
+  return num % 1 === 0 ? num.toString() : num.toFixed(2)
+}
+
+const formatFechaNatural = (fecha) => {
+  if (!fecha) return 'Fecha por definir'
+  const d = new Date(fecha + 'T12:00:00')
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 const obtenerIniciales = (nombre, apellido) => {
@@ -27,89 +73,68 @@ const obtenerIniciales = (nombre, apellido) => {
   return (n + a).toUpperCase()
 }
 
-const formatCosto = (val) => {
-  if (!val) return '-'
-  const num = parseFloat(val)
-  if (isNaN(num)) return '-'
-  return num % 1 === 0 ? num.toString() : num.toFixed(2)
-}
-
-const formatFechaNatural = (fecha) => {
-  if (!fecha) return '-'
-  const d = new Date(fecha + 'T12:00:00')
-  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-
-const fmtFecha = (f) => {
-  if (!f) return '—'
-  const d = new Date(f + 'T12:00:00')
-  const dia = String(d.getDate()).padStart(2, '0')
-  return `${dia} ${MESES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`
-}
-
-const formatHora = (hora) => {
-  if (!hora) return ''
-  const [h, m] = hora.split(':')
-  const hrs = parseInt(h)
-  const ampm = hrs >= 12 ? 'PM' : 'AM'
-  const h12 = hrs % 12 || 12
-  return `${h12}:${m} ${ampm}`
-}
-
 export default function EventoDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const [evento, setEvento]       = useState(null)
-  const [inscritos, setInscritos] = useState([])
-  const [alumnos, setAlumnos]     = useState([])
-  const [cintas, setCintas]       = useState([])
-  const [escuelaInfo, setEscuelaInfo] = useState(null)
-  const [horarios, setHorarios]   = useState([])
-  const [cargando, setCargando]   = useState(true)
-  const [rowHover, setRowHover]   = useState(null)
+  const initialCached = getCache(`evento_detalle_${id}`)
 
-  // Modal editar evento base
+  const [evento, setEvento] = useState(() => initialCached?.data?.evento || null)
+  const [inscritos, setInscritos] = useState(() => initialCached?.data?.inscritos || [])
+  const [alumnosDojo, setAlumnosDojo] = useState(() => getCache('alumnos_simple_activos')?.data || [])
+  const [cintasConfig, setCintasConfig] = useState(() => getCache('cintas_config')?.data || [])
+  const [cargando, setCargando] = useState(() => !initialCached?.data?.evento)
+
+  // Filtros
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroPago, setFiltroPago] = useState('todos') // todos, pagado, pendiente
+  const [filtroCinta, setFiltroCinta] = useState('todos')
+  const [filtroMedalla, setFiltroMedalla] = useState('todos') // para torneos: todos, oro, plata, bronce, etc.
+
+  // Modal Editar Evento Base
   const [modalEvento, setModalEvento] = useState(false)
-  const [formEvento, setFormEvento]   = useState({ nombre: '', tipo: '', fecha: '', lugar: '', costo: '' })
+  const [formEvento, setFormEvento] = useState({ nombre: '', tipo: '', fecha: '', lugar: '', costo: '', descripcion: '' })
 
-  // Modal inscripción
-  const [modalInscripcion, setModalInscripcion] = useState(false)
-  const [busquedaAlumno, setBusquedaAlumno]     = useState('')
-  const [guardando, setGuardando]               = useState(false)
+  // Modal Inscribir
+  const [modalInscribir, setModalInscribir] = useState(false)
   const [editandoInscrito, setEditandoInscrito] = useState(null)
-  const [form, setForm] = useState({
-    alumno_id: '', nombre_alumno: '', pagado: false,
-    grado_actual_id: '', grado_siguiente_id: '', costo_examen: '',
-    es_historico: false
+  const [busquedaAlumno, setBusquedaAlumno] = useState('')
+  const [formInscribir, setFormInscribir] = useState({
+    alumno_id: '',
+    nombre_alumno: '',
+    costo: '',
+    pagado: false
   })
 
-  // Búsqueda en tabla
-  const [busquedaTabla, setBusquedaTabla] = useState('')
-  const [actualizando, setActualizando]   = useState({})
+  // Modo múltiple de inscripción
+  const [modoInscribir, setModoInscribir] = useState('multiple') // 'multiple' | 'individual'
+  const [filtroCintaModal, setFiltroCintaModal] = useState('todos')
+  const [seleccionadosModal, setSeleccionadosModal] = useState([])
+  const [costosModal, setCostosModal] = useState({})
+  const [pagadosModal, setPagadosModal] = useState({})
+  const [guardandoInscripcion, setGuardandoInscripcion] = useState(false)
 
-  const obtenerColorResultado = (resultado, esExamen) => {
-    if (esExamen) {
-      if (resultado === 'aprobado') return '#22c55e'
-      if (resultado === 'reprobado') return '#ef4444'
-    } else {
-      if (resultado === 'oro') return '#eab308'
-      if (resultado === 'plata') return '#94a3b8'
-      if (resultado === 'bronce') return '#cd7f32'
-      if (resultado === 'eliminado') return '#ef4444'
-    }
-    return 'var(--text-primary)'
-  }
+  // Selección múltiple para acciones en lote
+  const [seleccionados, setSeleccionados] = useState([])
+  const [procesandoMasivo, setProcesandoMasivo] = useState(false)
 
-  useEffect(() => { cargar() }, [id])
+  // Hover en filas
+  const [rowHover, setRowHover] = useState(null)
+
+  // Responsividad
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
-        setModalInscripcion(false)
+        setModalInscribir(false)
         setModalEvento(false)
       }
     }
@@ -117,921 +142,1562 @@ export default function EventoDetalle() {
     return () => window.removeEventListener('keydown', handleEsc)
   }, [])
 
-  const cargar = async () => {
-    setCargando(true)
+  // 1. CARGA INICIAL
+  const cargar = async (force = false) => {
+    if (!force) {
+      const cached = getCache(`evento_detalle_${id}`)
+      if (cached && cached.data?.evento) {
+        setEvento(cached.data.evento)
+        setInscritos(cached.data.inscritos || [])
+        setCargando(false)
+      } else {
+        setCargando(true)
+      }
+    } else {
+      setCargando(true)
+    }
+
     try {
-      const [resEv, resIns, resA, resC, resEsc, resHor] = await Promise.all([
+      const cachedCintas = getCache('cintas_config')
+      const cachedAlumnos = getCache('alumnos_simple_activos')
+
+      const [resEv, resIns, resAl, resCin] = await Promise.all([
         api.get(`/eventos/${id}`),
         api.get(`/eventos/${id}/inscritos`),
-        api.get('/alumnos'),
-        api.get('/configuraciones-cintas'),
-        api.get('/configuracion-escuela'),
-        api.get('/horarios')
+        cachedAlumnos && !force ? Promise.resolve({ data: cachedAlumnos.data }) : api.get('/alumnos?simple=1&estatus=activo'),
+        cachedCintas && !force ? Promise.resolve({ data: cachedCintas.data }) : api.get('/configuraciones-cintas')
       ])
-      setEvento(resEv.data)
-      setInscritos(resIns.data)
-      setAlumnos(resA.data.filter(a => a.estatus === 'activo'))
-      setCintas(resC.data)
-      setEscuelaInfo(resEsc.data)
-      setHorarios(resHor.data)
-      setFormEvento({ 
-        nombre: resEv.data.nombre, 
-        tipo: resEv.data.tipo, 
-        fecha: resEv.data.fecha, 
-        lugar: resEv.data.lugar || '', 
-        costo: resEv.data.costo || '' 
+
+      const ev = resEv.data.evento || resEv.data
+      const listIns = resIns.data || []
+      setEvento(ev)
+      setInscritos(listIns)
+      setCache(`evento_detalle_${id}`, { evento: ev, inscritos: listIns })
+
+      const listAlu = resAl.data.alumnos || resAl.data || []
+      setAlumnosDojo(listAlu)
+      setCache('alumnos_simple_activos', listAlu, 10 * 60 * 1000)
+
+      const cintas = resCin.data?.configuraciones || resCin.data || []
+      cintas.sort((a, b) => (a.orden || 0) - (b.orden || 0))
+      setCintasConfig(cintas)
+      setCache('cintas_config', cintas, 30 * 60 * 1000)
+
+      setFormEvento({
+        nombre: ev.nombre || '',
+        tipo: ev.tipo || 'torneo',
+        fecha: ev.fecha || '',
+        lugar: ev.lugar || '',
+        costo: ev.costo !== null && ev.costo !== undefined ? String(ev.costo) : '',
+        descripcion: ev.descripcion || ''
       })
-    } catch (e) { console.error(e) }
-    finally { setCargando(false) }
-  }
-
-  const recargarInscritos = async () => {
-    try {
-      const res = await api.get(`/eventos/${id}/inscritos`)
-      setInscritos(res.data)
-    } catch (e) {
-      console.error(e)
-      toast.error('Error al recargar la lista de inscritos')
+    } catch (err) {
+      console.error(err)
+      const cached = getCache(`evento_detalle_${id}`)
+      if (!cached || !cached.data) {
+        toast.error('Error al cargar la información del evento')
+      }
+    } finally {
+      setCargando(false)
     }
   }
 
-  const guardarEvento = async () => {
-    try {
-      await api.put(`/eventos/${id}`, formEvento)
-      setModalEvento(false)
-      cargar()
-      toast.success('Evento actualizado con éxito')
-    } catch (e) { 
-      toast.error('Error al actualizar el evento')
+  useEffect(() => {
+    cargar()
+  }, [id])
+
+  const esTorneo = evento?.tipo === 'torneo'
+  const cTipo = COLOR_TIPO[evento?.tipo] || COLOR_TIPO.otro
+
+  // Resolver cinta del alumno de manera robusta
+  const resolverCinta = useCallback((alumno) => {
+    if (!alumno) return null
+    if (alumno.cinta_config?.nombre_nivel) return alumno.cinta_config
+    if (alumno.cintaConfig?.nombre_nivel) return alumno.cintaConfig
+    if (alumno.configuracion_cinta_id) {
+      const found = cintasConfig.find(c => String(c.id) === String(alumno.configuracion_cinta_id))
+      if (found) return found
     }
+    return null
+  }, [cintasConfig])
+
+  // Obtener costo real de inscripción del alumno (evita mostrar 0 cuando no ha pagado)
+  const obtenerCostoInscrito = useCallback((alumno) => {
+    if (!alumno) return 0
+    const pInsc = parseFloat(alumno.pago_inscripcion)
+    if (!isNaN(pInsc) && pInsc > 0) {
+      return pInsc
+    }
+    const cTorneo = parseFloat(alumno.torneo_detalle?.costo_torneo)
+    if (!isNaN(cTorneo) && cTorneo > 0) {
+      return cTorneo
+    }
+    const cEv = parseFloat(evento?.costo)
+    if (!isNaN(cEv) && cEv > 0) {
+      return cEv
+    }
+    return 0
+  }, [evento])
+
+  // Abrir modal de inscripción
+  const abrirModalInscribir = () => {
+    setEditandoInscrito(null)
+    setModoInscribir('multiple')
+    setSeleccionadosModal([])
+    setCostosModal({})
+    setPagadosModal({})
+    setBusquedaAlumno('')
+    setFiltroCintaModal('todos')
+    setFormInscribir({
+      alumno_id: '',
+      nombre_alumno: '',
+      costo: evento?.costo ? String(evento.costo) : '',
+      pagado: false
+    })
+    setModalInscribir(true)
   }
 
-  const abrirInscripcion = () => {
-    setForm({ 
-      alumno_id: '', 
-      nombre_alumno: '', 
-      pagado: false, 
-      grado_actual_id: '', 
-      grado_siguiente_id: '', 
-      costo: evento?.costo || '',
-      es_historico: false
+  // Abrir modal de edición individual
+  const abrirEditarInscrito = (inscrito) => {
+    setEditandoInscrito(inscrito)
+    setModoInscribir('individual')
+    setBusquedaAlumno('')
+    const cuotaActual = inscrito.pago_inscripcion || inscrito.torneo_detalle?.costo_torneo || (evento?.costo ? String(evento.costo) : '')
+    setFormInscribir({
+      alumno_id: inscrito.id,
+      nombre_alumno: `${inscrito.nombre} ${inscrito.apellido_paterno}`,
+      costo: cuotaActual !== null && cuotaActual !== undefined ? String(cuotaActual) : '',
+      pagado: !!inscrito.pagado
+    })
+    setModalInscribir(true)
+  }
+
+  // Seleccionar un alumno en modo individual
+  const seleccionarAlumno = (alumno) => {
+    setFormInscribir({
+      ...formInscribir,
+      alumno_id: alumno.id,
+      nombre_alumno: `${alumno.nombre} ${alumno.apellido_paterno}`,
+      costo: evento?.costo ? String(evento.costo) : '0'
     })
     setBusquedaAlumno('')
-    setEditandoInscrito(null)
-    setModalInscripcion(true)
   }
 
-  const abrirEditarInscrito = (inscrito) => {
-    setForm({
-      alumno_id: inscrito.id,
-      nombre_alumno: `${inscrito.nombre} ${inscrito.apellido_paterno} ${inscrito.apellido_materno || ''}`.trim(),
-      pagado: inscrito.pagado,
-      grado_actual_id: inscrito.examen_detalle?.grado_actual_id || '',
-      grado_siguiente_id: inscrito.examen_detalle?.grado_siguiente_id || inscrito.torneo_detalle?.grado_siguiente_id || '',
-      costo: esExamen ? (inscrito.examen_detalle?.costo_examen) : (inscrito.torneo_detalle?.costo_torneo || evento?.costo || ''),
-      es_historico: inscrito.examen_detalle?.es_historico || false
+  // Toggle selección modal masivo
+  const toggleSeleccionarAlumnoModal = (alumnoId) => {
+    setSeleccionadosModal(prev => {
+      const strId = String(alumnoId)
+      if (prev.includes(alumnoId)) {
+        return prev.filter(item => item !== alumnoId)
+      } else {
+        if (costosModal[strId] === undefined) {
+          setCostosModal(c => ({ ...c, [strId]: evento?.costo ? String(evento.costo) : '0' }))
+        }
+        return [...prev, alumnoId]
+      }
     })
-    setEditandoInscrito(inscrito.id)
-    setModalInscripcion(true)
   }
 
-  const seleccionarAlumno = async (alumno) => {
-    try {
-      const res = await api.get(`/alumnos/${alumno.id}/predecir-grado`)
-      setForm(prev => ({
-        ...prev,
-        alumno_id: alumno.id,
-        nombre_alumno: `${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`.trim(),
-        grado_actual_id: res.data.grado_actual?.id || '',
-        grado_siguiente_id: res.data.grado_siguiente?.id || '',
-        costo: prev.costo || evento?.costo || '',
-        es_historico: false
-      }))
-    } catch (e) {
-      setForm(prev => ({
-        ...prev,
-        alumno_id: alumno.id,
-        nombre_alumno: `${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`.trim(),
-        costo: prev.costo || evento?.costo || ''
-      }))
-    } finally {
-      setBusquedaAlumno('')
+  const toggleSeleccionarTodosModal = () => {
+    if (seleccionadosModal.length === alumnosFiltradosModal.length) {
+      setSeleccionadosModal([])
+    } else {
+      const todosIds = alumnosFiltradosModal.map(a => a.id)
+      const nuevosCostos = { ...costosModal }
+      alumnosFiltradosModal.forEach(a => {
+        const strId = String(a.id)
+        if (nuevosCostos[strId] === undefined) {
+          nuevosCostos[strId] = evento?.costo ? String(evento.costo) : '0'
+        }
+      })
+      setCostosModal(nuevosCostos)
+      setSeleccionadosModal(todosIds)
     }
   }
 
+  const cambiarCostoAlumnoModal = (alumnoId, valor) => {
+    setCostosModal(prev => ({ ...prev, [String(alumnoId)]: valor }))
+  }
+
+  const togglePagadoAlumnoModal = (alumnoId) => {
+    setPagadosModal(prev => ({ ...prev, [String(alumnoId)]: !prev[String(alumnoId)] }))
+  }
+
+  // Guardar inscripción masiva
+  const guardarInscripcionMasiva = async () => {
+    if (seleccionadosModal.length === 0) {
+      return toast.warning('Selecciona al menos un alumno para inscribir')
+    }
+
+    setGuardandoInscripcion(true)
+    try {
+      const payloadAlumnos = seleccionadosModal.map(alumnoId => {
+        const costoVal = costosModal[String(alumnoId)] !== undefined
+          ? costosModal[String(alumnoId)]
+          : (evento?.costo || 0)
+
+        return {
+          alumno_id: alumnoId,
+          costo: parseFloat(costoVal) || 0,
+          costo_torneo: parseFloat(costoVal) || 0,
+          pagado: !!pagadosModal[String(alumnoId)]
+        }
+      })
+
+      const res = await api.post(`/eventos/${id}/inscribir-masivo`, {
+        alumnos: payloadAlumnos
+      })
+
+      toast.success(`${res.data.count || payloadAlumnos.length} alumnos inscritos correctamente`)
+      setModalInscribir(false)
+      setSeleccionadosModal([])
+      setCostosModal({})
+      setPagadosModal({})
+
+      const resIns = await api.get(`/eventos/${id}/inscritos`)
+      const listIns = resIns.data || []
+      setInscritos(listIns)
+      setCache(`evento_detalle_${id}`, { evento, inscritos: listIns })
+      invalidateCache('eventos_lista')
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Error al inscribir alumnos en lote'
+      toast.error(msg)
+    } finally {
+      setGuardandoInscripcion(false)
+    }
+  }
+
+  // Guardar inscripción individual
   const guardarInscripcion = async () => {
-    if (!form.alumno_id) return
-    setGuardando(true)
+    if (!formInscribir.alumno_id) {
+      return toast.warning('Selecciona un alumno para inscribir')
+    }
+
+    setGuardandoInscripcion(true)
     try {
       const payload = {
-        alumno_id: form.alumno_id,
-        pagado: form.pagado,
-        grado_actual_id: form.grado_actual_id,
-        grado_siguiente_id: form.grado_siguiente_id,
-        es_historico: form.es_historico
-      }
-      
-      if (esExamen) {
-        payload.costo_examen = form.costo === '' ? null : form.costo
-      } else {
-        payload.costo_torneo = form.costo === '' ? null : form.costo
+        alumno_id: formInscribir.alumno_id,
+        costo: parseFloat(formInscribir.costo) || 0,
+        costo_torneo: parseFloat(formInscribir.costo) || 0,
+        pagado: formInscribir.pagado
       }
 
       if (editandoInscrito) {
-        await api.put(`/eventos/${id}/alumnos/${editandoInscrito}`, payload)
+        await api.put(`/eventos/${id}/alumnos/${formInscribir.alumno_id}`, payload)
         toast.success('Inscripción actualizada correctamente')
       } else {
         await api.post(`/eventos/${id}/inscribir`, payload)
         toast.success('Alumno inscrito correctamente')
       }
-      
-      setModalInscripcion(false)
-      recargarInscritos()
+
+      setModalInscribir(false)
+      const resIns = await api.get(`/eventos/${id}/inscritos`)
+      const listIns = resIns.data || []
+      setInscritos(listIns)
+      setCache(`evento_detalle_${id}`, { evento, inscritos: listIns })
+      invalidateCache('eventos_lista')
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al guardar inscripción.')
+      const msg = err.response?.data?.message || 'Error al guardar la inscripción'
+      toast.error(msg)
     } finally {
-      setGuardando(false)
+      setGuardandoInscripcion(false)
     }
   }
 
-  const actualizarAtributo = async (alumnoId, data) => {
-    setActualizando(prev => ({ ...prev, [alumnoId]: true }))
+  // Guardar cambios del evento base
+  const guardarEventoBase = async () => {
+    if (!formEvento.nombre.trim()) return toast.warning('Ingresa el nombre del evento')
+    if (!formEvento.fecha) return toast.warning('Selecciona la fecha del evento')
+
     try {
-      await api.put(`/eventos/${id}/alumnos/${alumnoId}`, data)
-      toast.success('Información actualizada')
-      await recargarInscritos()
-    } catch (e) { 
-      console.error(e)
-      toast.error('Error al actualizar la información')
-    } finally {
-      setActualizando(prev => ({ ...prev, [alumnoId]: false }))
+      await api.put(`/eventos/${id}`, {
+        ...formEvento,
+        costo: formEvento.costo !== '' ? parseFloat(formEvento.costo) : null
+      })
+      toast.success('Evento actualizado')
+      setModalEvento(false)
+      const resEv = await api.get(`/eventos/${id}`)
+      const evData = resEv.data.evento || resEv.data
+      setEvento(evData)
+      setCache(`evento_detalle_${id}`, { evento: evData, inscritos })
+      invalidateCache('eventos_lista')
+    } catch (err) {
+      toast.error('Error al actualizar el evento')
     }
   }
 
-  const eliminarInscrito = async (alumnoId) => {
-    Swal.fire({
-      title: '¿Confirmar borrado?',
-      text: 'El alumno será desinscrito del evento.',
+  // Actualizar atributo optimista
+  const actualizarAtributo = async (alumnoId, cambios) => {
+    const prevInscritos = [...inscritos]
+    const alumnoObj = inscritos.find(a => a.id === alumnoId)
+    const costoVal = obtenerCostoInscrito(alumnoObj)
+
+    const payload = { ...cambios }
+    if (cambios.pagado === true && !cambios.costo_torneo && !cambios.costo) {
+      payload.costo_torneo = costoVal
+      payload.costo = costoVal
+    }
+
+    setInscritos(prev => prev.map(a => {
+      if (a.id !== alumnoId) return a
+      const updated = { ...a, ...payload }
+      if (payload.pagado === true && (!a.pago_inscripcion || parseFloat(a.pago_inscripcion) === 0)) {
+        updated.pago_inscripcion = costoVal
+      }
+      if (cambios.resultado_torneo !== undefined && updated.torneo_detalle) {
+        updated.torneo_detalle = { ...updated.torneo_detalle, resultado: cambios.resultado_torneo }
+      }
+      return updated
+    }))
+
+    try {
+      await api.put(`/eventos/${id}/alumnos/${alumnoId}`, payload)
+      invalidateCache(`evento_detalle_${id}`)
+      invalidateCache('eventos_lista')
+      if (cambios.pagado !== undefined) {
+        toast.success(cambios.pagado ? 'Pago registrado' : 'Pago marcado como pendiente')
+      } else if (cambios.resultado_torneo !== undefined) {
+        toast.info('Resultado actualizado')
+      }
+    } catch (err) {
+      setInscritos(prevInscritos)
+      toast.error('Error al actualizar los datos del alumno')
+    }
+  }
+
+  // Eliminar inscripción individual
+  const eliminarInscripcion = async (alumnoId, nombreAlumno) => {
+    const result = await Swal.fire({
+      title: '¿Quitar alumno del evento?',
+      html: `¿Estás seguro de quitar a <strong>${nombreAlumno}</strong> de este evento?`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Sí, desinscribir',
-      confirmButtonColor: 'var(--accent-red)',
-      background: 'var(--bg-secondary)', color: 'var(--text-primary)'
-    }).then(async r => {
-      if (r.isConfirmed) {
-        try {
-          await api.delete(`/eventos/${id}/alumnos/${alumnoId}`)
-          toast.success('Inscripción eliminada')
-          recargarInscritos()
-        } catch (err) {
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudo eliminar la inscripción.',
-            icon: 'error',
-            confirmButtonColor: 'var(--accent-blue)',
-            background: 'var(--bg-secondary)', color: 'var(--text-primary)'
-          })
-        }
-      }
+      confirmButtonText: 'Sí, quitar',
+      confirmButtonColor: '#ef4444',
+      cancelButtonText: 'Cancelar',
+      background: 'var(--bg-secondary)',
+      color: 'var(--text-primary)'
     })
+
+    if (!result.isConfirmed) return
+
+    const prevInscritos = [...inscritos]
+    setInscritos(prev => prev.filter(a => a.id !== alumnoId))
+    setSeleccionados(prev => prev.filter(itemId => itemId !== alumnoId))
+
+    try {
+      await api.delete(`/eventos/${id}/alumnos/${alumnoId}`)
+      invalidateCache(`evento_detalle_${id}`)
+      invalidateCache('eventos_lista')
+      toast.success('Alumno quitado del evento')
+    } catch (err) {
+      setInscritos(prevInscritos)
+      toast.error('Error al quitar al alumno')
+    }
   }
 
-  const alumnosFiltrados = useMemo(() => {
-    if (!busquedaAlumno || busquedaAlumno.length < 1) return []
-    return alumnos.filter(a =>
-      `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno}`.toLowerCase().includes(busquedaAlumno.toLowerCase())
-    ).slice(0, 6)
-  }, [alumnos, busquedaAlumno])
+  // Selección múltiple
+  const toggleSeleccionarAlumno = (alumnoId) => {
+    setSeleccionados(prev =>
+      prev.includes(alumnoId) ? prev.filter(itemId => itemId !== alumnoId) : [...prev, alumnoId]
+    )
+  }
 
-  const inscritosFiltrados = useMemo(() => {
-    let list = [...inscritos]
-    if (busquedaTabla) {
-      list = list.filter(a =>
-        `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.toLowerCase().includes(busquedaTabla.toLowerCase())
+  const toggleSeleccionarTodo = () => {
+    if (seleccionados.length === inscritosFiltrados.length) {
+      setSeleccionados([])
+    } else {
+      setSeleccionados(inscritosFiltrados.map(a => a.id))
+    }
+  }
+
+  const pagarMasivo = async () => {
+    const listaTarget = seleccionados.length > 0 ? seleccionados : inscritosFiltrados.map(a => a.id)
+    if (listaTarget.length === 0) return toast.warning('No hay alumnos seleccionados')
+
+    const result = await Swal.fire({
+      title: '¿Marcar cuotas como pagadas?',
+      html: `Se registrará como <strong>PAGADA</strong> la cuota de <strong>${listaTarget.length}</strong> alumnos.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: `Sí, marcar ${listaTarget.length} pagados`,
+      confirmButtonColor: '#3b82f6',
+      cancelButtonText: 'Cancelar',
+      background: 'var(--bg-secondary)',
+      color: 'var(--text-primary)'
+    })
+
+    if (!result.isConfirmed) return
+
+    const prevInscritos = [...inscritos]
+    const targetSet = new Set(listaTarget)
+
+    setInscritos(prev => prev.map(a => {
+      if (!targetSet.has(a.id)) return a
+      const costoVal = obtenerCostoInscrito(a)
+      return { ...a, pagado: true, pago_inscripcion: costoVal }
+    }))
+    setSeleccionados([])
+    setProcesandoMasivo(true)
+
+    try {
+      await Promise.all(
+        listaTarget.map(alumnoId => {
+          const alu = prevInscritos.find(a => a.id === alumnoId)
+          const costoVal = obtenerCostoInscrito(alu)
+          return api.put(`/eventos/${id}/alumnos/${alumnoId}`, { pagado: true, costo_torneo: costoVal, costo: costoVal })
+        })
       )
+      invalidateCache(`evento_detalle_${id}`)
+      invalidateCache('eventos_lista')
+      toast.success(`${listaTarget.length} pagos registrados correctamente`)
+    } catch (err) {
+      setInscritos(prevInscritos)
+      toast.error('Error al registrar pagos masivos')
+    } finally {
+      setProcesandoMasivo(false)
     }
-    // Ordenar por fecha de inscripción (más antiguo a más reciente)
-    return list.sort((a, b) => {
-      const dateA = new Date(a.pivot_created_at || 0).getTime()
-      const dateB = new Date(b.pivot_created_at || 0).getTime()
-      return dateA - dateB
-    })
-  }, [inscritos, busquedaTabla])
-
-  const COLOR_TIPO = {
-    examen:       { bg: 'var(--accent-blue-bg)',   color: 'var(--accent-blue)' },
-    torneo:       { bg: 'var(--accent-green-bg)',  color: 'var(--accent-green)' },
-    demostracion: { bg: 'var(--accent-orange-bg)', color: 'var(--accent-orange)' },
-    seminario:    { bg: 'var(--accent-purple-bg)', color: 'var(--accent-purple)' },
   }
 
-  if (cargando) return (
-    <div style={{ padding: '40px', color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }}>Cargando...</div>
-  )
-  if (!evento) return (
-    <div style={{ padding: '40px', color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }}>Evento no encontrado.</div>
-  )
-
-  const c = COLOR_TIPO[evento.tipo] || { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)' }
-  const esExamen = evento.tipo === 'examen'
-
-  const recaudado = inscritosFiltrados.reduce((acc, a) => {
-    if (a.pagado) {
-      const costo = esExamen ? (a.examen_detalle?.costo_examen) : (a.torneo_detalle?.costo_torneo || evento?.costo)
-      return acc + (parseFloat(costo) || 0)
-    }
-    return acc
-  }, 0)
-
-  const handleHover = (e, color) => {
-    e.currentTarget.style.transform = 'translateY(-2px)'
-    e.currentTarget.style.boxShadow = `0 6px 20px ${color}`
-  }
-  const handleOut = (e, color) => {
-    e.currentTarget.style.transform = 'translateY(0)'
-    e.currentTarget.style.boxShadow = `0 4px 15px ${color}`
-  }
-
-  const exportarExcel = async () => {
-    if (inscritosFiltrados.length === 0) return toast.info('No hay datos para exportar')
+  // Generar recibo individual
+  const generarRecibo = async (alumno) => {
     try {
-      const data = inscritosFiltrados.map((a, i) => {
-        const fila = {
-          '#': i + 1,
-          'Alumno': `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
-        }
-        if (esExamen) {
-          fila['Grado Actual'] = a.examen_detalle?.grado_actual?.nombre_nivel || '-'
-          fila['Grado Siguiente'] = a.examen_detalle?.grado_siguiente?.nombre_nivel || '-'
-        }
-        fila['Costo'] = esExamen 
-          ? (a.examen_detalle?.costo_examen ? `$${a.examen_detalle.costo_examen}` : '-')
-          : (a.torneo_detalle?.costo_torneo || evento?.costo ? `$${a.torneo_detalle?.costo_torneo || evento?.costo}` : '-')
-        fila['Estado Pago'] = a.pagado ? 'PAGADO' : 'PENDIENTE'
-        fila['Resultado'] = esExamen 
-          ? (a.examen_detalle?.resultado || 'pendiente')
-          : (a.torneo_detalle?.resultado || 'pendiente')
-        return fila
-      })
-      const ws = XLSX.utils.json_to_sheet(data)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, "Inscritos")
-      await guardarODescargarExcel(wb, `Reporte_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`)
-      toast.success("Excel generado ✓")
-    } catch { toast.error("Error al generar Excel") }
-  }
-
-  const exportarPDF = async () => {
-    if (inscritosFiltrados.length === 0) return toast.info('No hay datos para exportar')
-    try {
-      const escuelaInfo = await obtenerInfoEscuelaParaPDF(user)
+      const escInfo = await obtenerInfoEscuelaParaPDF()
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
 
-      const startY = dibujarEncabezadoMembrete(doc, {
-        escuelaInfo,
-        tipoReporte: esExamen ? 'REPORTE DE EXAMEN' : 'REPORTE DE EVENTO',
-        subtituloEtiqueta: 'Evento / Fecha:',
-        subtituloValor: `${evento.nombre} • ${formatearFechaNaturalPDF(evento.fecha)}`
-      })
-      
-      const head = esExamen 
-        ? [['#', 'Nombre Alumno', 'Grado Actual', 'Siguiente', 'Costo', 'Pago', 'Resultado']]
-        : [['#', 'Nombre Alumno', 'Costo', 'Pago', 'Resultado']]
-
-      const rows = inscritosFiltrados.map((a, i) => {
-        const nombre = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim()
-        const costo = esExamen ? (a.examen_detalle?.costo_examen) : (a.torneo_detalle?.costo_torneo || evento?.costo)
-        const txtCosto = costo ? `$${parseFloat(costo).toFixed(2)}` : '-'
-        const resu = esExamen ? a.examen_detalle?.resultado : a.torneo_detalle?.resultado
-        if (esExamen) {
-          return [
-            i + 1, nombre, 
-            a.examen_detalle?.grado_actual?.nombre_nivel || '-',
-            a.examen_detalle?.grado_siguiente?.nombre_nivel || '-',
-            txtCosto, a.pagado ? 'PAGADO' : 'PEND.', resu || 'pend.'
-          ]
-        }
-        return [i + 1, nombre, txtCosto, a.pagado ? 'PAGADO' : 'PEND.', resu || 'pend.']
-      })
-
-      autoTable(doc, {
-        head: head,
-        body: rows,
-        startY: startY,
-        theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, cellPadding: 2, halign: 'center' },
-        styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
-        columnStyles: {
-          0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 48, halign: 'left' }
-        },
-        margin: { left: 14, right: 14, bottom: 18 }
-      })
-
-      agregarPieDePagina(doc, user)
-
-      await guardarODescargarPDF(doc, `Reporte_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`)
-      toast.success("PDF generado ✓")
-    } catch { toast.error("Error al generar PDF") }
-  }
-
-  const generarRecibo = async (inscrito) => {
-    try {
-      const escuelaInfo = await obtenerInfoEscuelaParaPDF(user)
-      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
+      const nomAlumno = `${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`.trim()
+      const cintaObj = resolverCinta(alumno)
+      const cintaTxt = cintaObj?.nombre_nivel || 'Sin cinta'
+      const costoVal = obtenerCostoInscrito(alumno)
 
       const startY = dibujarEncabezadoMembrete(doc, {
-        escuelaInfo,
-        tipoReporte: 'COMPROBANTE PAGO',
+        escuelaInfo: escInfo,
+        tipoReporte: 'RECIBO OFICIAL DE EVENTO',
         subtituloEtiqueta: 'Evento / Fecha:',
-        subtituloValor: `${evento.nombre} • ${formatearFechaNaturalPDF(inscrito.fecha_pago || new Date().toISOString().split('T')[0])}`
+        subtituloValor: `${evento?.nombre || 'Evento'} • ${formatearFechaNaturalPDF(evento?.fecha)}`
       })
 
-      // SECCIÓN ALUMNO
-      doc.setTextColor(30, 41, 59)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
-      doc.text("DATOS DEL ALUMNO", 15, startY + 5)
+      // Tarjeta de datos del alumno
+      doc.setFillColor(248, 250, 252)
+      doc.roundedRect(14, startY, 188, 24, 2, 2, 'F')
       doc.setDrawColor(226, 232, 240)
-      doc.line(15, startY + 7, 200, startY + 7)
+      doc.roundedRect(14, startY, 188, 24, 2, 2, 'S')
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 41, 59)
+      doc.text(`Alumno: ${nomAlumno}`, 20, startY + 9)
 
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9.5)
-      const nom = `${inscrito.nombre} ${inscrito.apellido_paterno} ${inscrito.apellido_materno || ''}`.trim()
-      doc.text(`Nombre: ${nom}`, 15, startY + 14)
-      doc.text(`ID del Alumno: #${parseInt(inscrito.id)}`, 15, startY + 20)
-      
-      const horario = horarios.find(h => String(h.id) === String(inscrito.horario_id))
-      const txtHorario = horario ? `${formatHora(horario.hora_inicio)} - ${formatHora(horario.hora_fin)}` : '-'
-      doc.text(`Clase / Horario: ${txtHorario}`, 15, startY + 26)
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text(`Grado actual: ${cintaTxt}`, 20, startY + 17)
+      doc.text(`Folio de Alumno: #${String(alumno.id).padStart(4, '0')}`, 130, startY + 17)
 
-      const cintaTxt = esExamen 
-        ? (inscrito.examen_detalle?.grado_actual?.nombre_nivel || inscrito.cinta_config?.nombre_nivel || '-')
-        : (inscrito.cinta_config?.nombre_nivel || '-')
-      doc.text(`Grado / Cinta: ${cintaTxt}`, 15, startY + 32)
-
-      // SECCIÓN PAGO
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.text("DETALLES DEL MOVIMIENTO", 15, startY + 43)
-      doc.line(15, startY + 45, 200, startY + 45)
-
-      const costoNum = parseFloat(esExamen ? (inscrito.examen_detalle?.costo_examen) : (inscrito.torneo_detalle?.costo_torneo || evento?.costo)) || 0
-
-      let concepto = 'INSCRIPCIÓN EVENTO'
-      let detalle = evento.nombre.toUpperCase()
-      if (esExamen) {
-        concepto = 'EXAMEN TAEKWONDO'
-        const act = inscrito.examen_detalle?.grado_actual?.nombre_nivel || inscrito.cinta_config?.nombre_nivel || '-'
-        const sig = inscrito.examen_detalle?.grado_siguiente?.nombre_nivel || '-'
-        detalle = `${act.toUpperCase()} A ${sig.toUpperCase()}`
-      } else if (evento.tipo === 'torneo') {
-        concepto = 'INSCRIPCIÓN TORNEO'
-        const mods = inscrito.torneo_detalle?.modalidades?.map(m => m.nombre.toUpperCase()).join(', ')
-        detalle = mods ? `MODALIDADES: ${mods}` : evento.nombre.toUpperCase()
-      }
-
-      const fechaPagoStr = inscrito.fecha_pago 
-        ? fmtFecha(inscrito.fecha_pago.split(' ')[0]) 
-        : fmtFecha(new Date().toISOString().split('T')[0])
+      // Tabla de desglose
+      const fechaPagoStr = alumno.fecha_pago ? formatearFechaNaturalPDF(alumno.fecha_pago) : formatearFechaNaturalPDF(new Date().toISOString().split('T')[0])
 
       autoTable(doc, {
-        startY: startY + 51,
-        head: [['CONCEPTO', 'DETALLE', 'FECHA PAGO', 'TOTAL']],
+        startY: startY + 30,
+        head: [['CONCEPTO', 'SEDE / LUGAR', 'FECHA DE PAGO', 'MONTO']],
         body: [[
-          concepto,
-          detalle,
+          `Inscripción a ${evento?.tipo?.toUpperCase() || 'EVENTO'}: ${evento?.nombre || ''}`,
+          evento?.lugar || 'Sede oficial',
           fechaPagoStr,
-          `$${costoNum.toFixed(2)}`
+          `$${costoVal.toFixed(2)}`
         ]],
         theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], fontSize: 9.5, halign: 'center', textColor: 255 },
+        headStyles: { fillColor: [37, 99, 235], fontSize: 9, halign: 'center', textColor: 255 },
         columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
-        styles: { fontSize: 9, cellPadding: 5, halign: 'center' },
+        styles: { fontSize: 8.5, cellPadding: 5, halign: 'center' },
         margin: { left: 14, right: 14 }
       })
 
       const finalY = doc.lastAutoTable.finalY + 12
       doc.setFillColor(248, 250, 252)
-      doc.roundedRect(130, finalY, 70, 18, 2, 2, 'F')
+      doc.roundedRect(130, finalY, 72, 18, 2, 2, 'F')
       doc.setDrawColor(37, 99, 235)
-      doc.roundedRect(130, finalY, 70, 18, 2, 2, 'S')
+      doc.roundedRect(130, finalY, 72, 18, 2, 2, 'S')
 
-      doc.setFontSize(13)
+      doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(37, 99, 235)
-      doc.text(`PAGADO: $${costoNum.toFixed(2)}`, 165, finalY + 11.5, { align: 'center' })
+      doc.text(`PAGADO: $${costoVal.toFixed(2)}`, 166, finalY + 11.5, { align: 'center' })
 
-      doc.setTextColor(100)
-      doc.setFontSize(9)
+      // Firmas
+      doc.setTextColor(148, 163, 184)
+      doc.setFontSize(8.5)
       doc.setFont('helvetica', 'normal')
-      doc.line(20, 225, 80, 225)
-      doc.text("Firma de Administración", 50, 230, { align: 'center' })
-      doc.line(135, 225, 195, 225)
-      doc.text("Sello de la Escuela", 165, 230, { align: 'center' })
+      doc.line(24, 230, 84, 230)
+      doc.text("Firma de Administración", 54, 235, { align: 'center' })
+      doc.line(130, 230, 190, 230)
+      doc.text("Sello del Dojo", 160, 235, { align: 'center' })
 
       agregarPieDePagina(doc, user)
 
-      await guardarODescargarPDF(doc, `Recibo_${escuelaInfo?.nombre || 'Evento'}_${nom}_${new Date().toISOString().split('T')[0]}.pdf`)
-      toast.success("Recibo generado ✓")
+      await guardarODescargarPDF(doc, `Recibo_${(evento?.nombre || 'Evento').replace(/\s+/g, '_')}_${nomAlumno.replace(/\s+/g, '_')}.pdf`)
+      toast.success('Recibo PDF generado correctamente')
     } catch (e) {
       console.error(e)
-      toast.error("Error al generar recibo")
+      toast.error('Error al generar el recibo PDF')
     }
   }
 
-  const headers = [
-    '#', 'Alumno',
-    ...(esExamen ? ['Grado Actual', 'Grado Siguiente'] : []),
-    'Costo', 'Pagado', 'Resultado', 'Acciones'
-  ]
+  // --- FILTRADO DE INSCRITOS ---
+  const inscritosFiltrados = useMemo(() => {
+    return inscritos.filter(a => {
+      const nombreCompleto = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.toLowerCase()
+      if (busqueda && !nombreCompleto.includes(busqueda.toLowerCase())) return false
+
+      if (filtroPago === 'pagado' && !a.pagado) return false
+      if (filtroPago === 'pendiente' && a.pagado) return false
+
+      const cid = a.configuracion_cinta_id || a.cintaConfig?.id || a.cinta_config?.id
+      if (filtroCinta !== 'todos' && String(cid) !== String(filtroCinta)) return false
+
+      if (esTorneo && filtroMedalla !== 'todos') {
+        const med = a.torneo_detalle?.resultado || 'pendiente'
+        if (med !== filtroMedalla) return false
+      }
+
+      return true
+    })
+  }, [inscritos, busqueda, filtroPago, filtroCinta, filtroMedalla, esTorneo])
+
+  // --- ESTADÍSTICAS ---
+  const stats = useMemo(() => {
+    const total = inscritos.length
+    const pagados = inscritos.filter(a => a.pagado).length
+    const pendientesPago = total - pagados
+    const recaudado = inscritos.filter(a => a.pagado).reduce((acc, a) => {
+      const costoVal = obtenerCostoInscrito(a)
+      return acc + costoVal
+    }, 0)
+
+    return { total, pagados, pendientesPago, recaudado }
+  }, [inscritos, obtenerCostoInscrito])
+
+  // Filtrado de alumnos para modal masivo
+  const alumnosFiltradosModal = useMemo(() => {
+    const yaInscritosIds = new Set(inscritos.map(i => i.id))
+    return alumnosDojo
+      .filter(a => !yaInscritosIds.has(a.id))
+      .filter(a => {
+        if (filtroCintaModal !== 'todos') {
+          const cid = a.configuracion_cinta_id || a.cintaConfig?.id || a.cinta_config?.id
+          if (String(cid) !== String(filtroCintaModal)) return false
+        }
+        if (busquedaAlumno) {
+          const nom = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.toLowerCase()
+          if (!nom.includes(busquedaAlumno.toLowerCase())) return false
+        }
+        return true
+      })
+  }, [alumnosDojo, inscritos, filtroCintaModal, busquedaAlumno])
+
+  // --- EXPORTAR EXCEL ---
+  const exportarExcel = async () => {
+    if (inscritosFiltrados.length === 0) return toast.warning('No hay participantes para exportar')
+
+    const data = inscritosFiltrados.map((a, i) => {
+      const row = {
+        '#': i + 1,
+        'Alumno': `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
+        'Grado / Cinta': a.cintaConfig?.nombre_nivel || a.cinta_config?.nombre_nivel || 'Sin cinta',
+        'Cuota': `$${formatCosto(a.pago_inscripcion || a.torneo_detalle?.costo_torneo || evento?.costo)}`,
+        'Estado de Pago': a.pagado ? 'PAGADO' : 'PENDIENTE'
+      }
+      if (esTorneo) {
+        row['Resultado / Medalla'] = (a.torneo_detalle?.resultado || 'pendiente').toUpperCase()
+      }
+      return row
+    })
+
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Inscritos')
+    const filename = `Participantes_${(evento?.nombre || 'Evento').replace(/\s+/g, '_')}.xlsx`
+    await guardarODescargarExcel(wb, filename)
+    toast.success('Archivo Excel generado exitosamente')
+  }
+
+  // --- EXPORTAR PDF ---
+  const exportarPDF = async () => {
+    if (inscritosFiltrados.length === 0) return toast.warning('No hay participantes para exportar')
+
+    const escInfo = await obtenerInfoEscuelaParaPDF()
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
+
+    const startY = dibujarEncabezadoMembrete(doc, {
+      escuelaInfo: escInfo,
+      tipoReporte: `LISTA DE PARTICIPANTES - ${evento?.tipo?.toUpperCase() || 'EVENTO'}`,
+      subtituloEtiqueta: 'Evento / Fecha:',
+      subtituloValor: `${evento?.nombre || 'Evento'} • ${formatearFechaNaturalPDF(evento?.fecha)}`
+    })
+
+    const tableColumn = ['#', 'Nombre Alumno', 'Grado / Cinta', 'Cuota', 'Estado', ...(esTorneo ? ['Resultado'] : [])]
+    const tableRows = inscritosFiltrados.map((a, i) => {
+      const fila = [
+        i + 1,
+        `${a.nombre} ${a.apellido_paterno}`,
+        a.cintaConfig?.nombre_nivel || a.cinta_config?.nombre_nivel || '-',
+        `$${formatCosto(a.pago_inscripcion || a.torneo_detalle?.costo_torneo || evento?.costo)}`,
+        a.pagado ? 'PAGADO' : 'PENDIENTE'
+      ]
+      if (esTorneo) {
+        fila.push((a.torneo_detalle?.resultado || 'pendiente').toUpperCase())
+      }
+      return fila
+    })
+
+    autoTable(doc, {
+      startY: startY,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'striped',
+      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, cellPadding: 2.5, halign: 'center' },
+      styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 60, halign: 'left' },
+        2: { cellWidth: 35, halign: 'center' },
+        3: { cellWidth: 25, halign: 'center' },
+        4: { cellWidth: 30, halign: 'center' },
+        ...(esTorneo ? { 5: { cellWidth: 28, halign: 'center' } } : {})
+      },
+      margin: { left: 14, right: 14, bottom: 24 },
+      didParseCell: function (data) {
+        if (data.section === 'body' && data.column.index === 4) {
+          data.cell.styles.textColor = data.cell.raw === 'PAGADO' ? [16, 185, 129] : [239, 68, 68]
+          data.cell.styles.fontStyle = 'bold'
+        }
+      }
+    })
+
+    agregarPieDePagina(doc, user)
+    await guardarODescargarPDF(doc, `Participantes_${(evento?.nombre || 'Evento').replace(/\s+/g, '_')}.pdf`)
+    toast.success('Lista en PDF generada exitosamente')
+  }
+
+  if (cargando) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: '16px', fontWeight: '700' }}>Cargando evento...</div>
+      </div>
+    )
+  }
+
+  if (!evento) {
+    return (
+      <div style={s.emptyState}>
+        <FiCalendar size={36} color="var(--accent-blue)" style={{ marginBottom: '12px' }} />
+        <h3>Evento no encontrado</h3>
+        <button style={s.btnBack} onClick={() => navigate('/eventos')}>
+          ← Volver a Eventos
+        </button>
+      </div>
+    )
+  }
 
   return (
-    <div style={s.container}>
+    <div style={s.page}>
+      {/* ── BOTÓN VOLVER ── */}
+      <button
+        style={s.btnBack}
+        onClick={() => navigate('/eventos')}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'translateX(-3px)'
+          e.currentTarget.style.color = 'var(--accent-blue)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'none'
+          e.currentTarget.style.color = 'var(--text-secondary)'
+        }}
+      >
+        <FiArrowLeft size={16} />
+        <span>Volver a Eventos</span>
+      </button>
 
-      {/* ── HEADER ── */}
-      <div style={s.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <button 
-            style={s.btnBack} 
-            onClick={() => navigate('/eventos')}
-            onMouseOver={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-              e.currentTarget.style.color = '#ffffff';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = 'var(--bg-secondary)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >← Volver</button>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h2 style={s.titulo}>{evento.nombre}</h2>
-              <span style={{ ...s.badge, background: c.bg, color: c.color }}>{evento.tipo.toUpperCase()}</span>
-              <button 
-                style={{ 
-                  ...s.btnEditMini, 
-                  marginLeft: '8px',
-                  background: 'rgba(59,130,246,0.1)',
-                  border: '1px solid rgba(59,130,246,0.3)',
-                  color: '#3b82f6',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s'
-                }} 
-                onClick={() => setModalEvento(true)}
-                onMouseOver={e => {
-                  e.currentTarget.style.background = '#3b82f6';
-                  e.currentTarget.style.color = 'white';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.background = 'rgba(59,130,246,0.1)';
-                  e.currentTarget.style.color = '#3b82f6';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-                title="Editar evento"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-            </div>
-            <p style={s.sub}>📅 {formatFechaNatural(evento.fecha)}{evento.lugar ? ` · 📍 ${evento.lugar}` : ''}</p>
+      {/* ── HERO HEADER DEL EVENTO ── */}
+      <div style={s.heroCard}>
+        <div style={s.heroInfo}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ ...s.tipoBadge, background: cTipo.bg, color: cTipo.color, border: `1px solid ${cTipo.border}` }}>
+              {(evento.tipo === 'demostracion' || evento.tipo === 'fogueo') ? 'FOGUEO' : (evento.tipo?.toUpperCase() || 'EVENTO')}
+            </span>
+            <span style={s.heroFecha}>
+              <FiCalendar size={13} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+              {formatFechaNatural(evento.fecha)}
+            </span>
+            {evento.lugar && (
+              <span style={s.heroLugar}>
+                <FiMapPin size={13} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                {evento.lugar}
+              </span>
+            )}
+            <span style={s.heroCosto}>
+              <FiDollarSign size={13} style={{ marginRight: '2px', verticalAlign: 'middle' }} />
+              {evento.costo > 0 ? `Cuota base: $${parseFloat(evento.costo).toFixed(2)}` : 'Evento Gratuito'}
+            </span>
           </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
+            <h1 style={s.heroTitulo}>{evento.nombre}</h1>
+            <button
+              style={s.btnEditEventoMini}
+              onClick={() => setModalEvento(true)}
+              title="Editar datos del evento"
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)'
+                e.currentTarget.style.transform = 'scale(1.05)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'
+                e.currentTarget.style.transform = 'none'
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+            </button>
+          </div>
+
+          {evento.descripcion && (
+            <p style={s.heroDesc}>{evento.descripcion}</p>
+          )}
         </div>
-        
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={s.statBadge}>
-            <span style={s.statLabel}>Total Inscritos</span>
-            <span style={s.statValor}>{inscritosFiltrados.length}</span>
-          </div>
-          <div style={{ ...s.statBadge, background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.3)' }}>
-            <span style={s.statLabel}>Total Recaudado</span>
-            <span style={s.statValor}>${recaudado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
-          <button 
-            style={s.btnNuevo} 
-            onClick={abrirInscripcion}
-            onMouseOver={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+
+        <div style={s.heroActions}>
+          <button
+            style={s.btnInscribir}
+            onClick={abrirModalInscribir}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)'
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+              e.currentTarget.style.filter = 'brightness(1.08)'
             }}
-            onMouseOut={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'none'
+              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.filter = 'none'
             }}
-          >+ Inscribir Alumno</button>
+          >
+            <FiUserPlus size={16} />
+            <span>Inscribir alumno</span>
+          </button>
         </div>
       </div>
 
-      {/* ── BARRA BÚSQUEDA Y EXPORTACIONES ── */}
-      <div style={s.filtrosSecundarios}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+      {/* ── SUMMARY CARDS DE PARTICIPACIÓN Y RECAUDACIÓN ── */}
+      <div style={s.statsGrid}>
+        {/* Inscritos Totales */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-blue)' }}>
+            <FiUsers size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Inscritos Totales</span>
+            <div style={{ ...s.statValor, color: 'var(--accent-blue)' }}>{stats.total}</div>
+            <span style={s.statSublabel}>Alumnos registrados</span>
+          </div>
+        </div>
+
+        {/* Cuotas Pagadas */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-green)' }}>
+            <FiCheckCircle size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Cuotas Pagadas</span>
+            <div style={{ ...s.statValor, color: 'var(--accent-green)' }}>{stats.pagados}</div>
+            <span style={s.statSublabel}>Al corriente con pago</span>
+          </div>
+        </div>
+
+        {/* Pendientes de Pago */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}>
+            <FiClock size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Pendientes de Pago</span>
+            <div style={{ ...s.statValor, color: '#f59e0b' }}>{stats.pendientesPago}</div>
+            <span style={s.statSublabel}>Por liquidar cuota</span>
+          </div>
+        </div>
+
+        {/* Total Recaudado */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-green)' }}>
+            <FiDollarSign size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Total Recaudado</span>
+            <div style={{ ...s.statValor, color: 'var(--text-primary)' }}>
+              ${Math.round(stats.recaudado).toLocaleString('es-MX')}
+            </div>
+            <span style={s.statSublabel}>Cuotas cobradas con éxito</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── BARRA DE HERRAMIENTAS Y ACCIONES ── */}
+      <div style={s.barraAcciones}>
+        <div style={s.searchWrapper}>
+          <FiSearch style={s.searchIcon} size={16} />
           <input
             style={s.search}
-            placeholder="🔍  Buscar por nombre de alumno..."
-            value={busquedaTabla}
-            onChange={e => setBusquedaTabla(e.target.value)}
+            placeholder="Buscar participante por nombre..."
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            onFocus={e => {
+              e.currentTarget.style.borderColor = 'var(--accent-blue)'
+              e.currentTarget.style.background = 'var(--bg-tertiary)'
+              e.currentTarget.style.boxShadow = '0 0 12px rgba(59, 130, 246, 0.3)'
+            }}
+            onBlur={e => {
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.background = 'var(--bg-secondary)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
           />
         </div>
-        
-        <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} />
-      </div>
 
-      {/* ── TABLA ── */}
-      <style>{`
-        @keyframes skeletonPulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 1; }
-        }
-      `}</style>
+        <div style={s.filtrosSecundarios}>
+          <CustomDropdown
+            label="Estado de pago"
+            icon={<FiDollarSign size={13} />}
+            options={[
+              { value: 'todos', label: 'Todos los pagos' },
+              { value: 'pagado', label: 'Pagados' },
+              { value: 'pendiente', label: 'Pendientes de pago' }
+            ]}
+            value={filtroPago}
+            onChange={val => setFiltroPago(val)}
+            minWidth="195px"
+          />
 
-      <div style={s.tabla}>
-        <div style={s.tablaScroll}>
-          <table style={{ ...s.table, tableLayout: 'fixed' }}>
-            <colgroup>
-              <col style={{ width: '45px' }} />
-              <col style={{ width: '220px' }} />
-              {esExamen && <col style={{ width: '140px' }} />}
-              {esExamen && <col style={{ width: '140px' }} />}
-              <col style={{ width: '90px' }} />
-              <col style={{ width: '120px' }} />
-              <col style={{ width: '140px' }} />
-              <col style={{ width: '100px' }} />
-            </colgroup>
-            <thead>
-              <tr>
-                {headers.map(h => (
-                  <th key={h} style={{ ...s.th, textAlign: h === 'Alumno' ? 'left' : 'center' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {inscritosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan={headers.length} style={s.tdCenter}>
-                    {busquedaTabla ? 'No se encontraron resultados.' : 'Aún no hay alumnos inscritos.'}
-                  </td>
-                </tr>
-              ) : (
-                inscritosFiltrados.map((a, idx) => (
-                  <tr
-                    key={a.id}
-                    style={{
-                      ...s.tr,
-                      background: rowHover === a.id ? 'var(--bg-tertiary)' : 'transparent',
-                      transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={() => setRowHover(a.id)}
-                    onMouseLeave={() => setRowHover(null)}
-                  >
-                    {/* # */}
-                    <td style={{ ...s.td, color: 'var(--text-muted)', fontWeight: '500' }}>{idx + 1}</td>
+          <CustomDropdown
+            label="Todas las cintas"
+            icon={<FiShield size={13} />}
+            options={[
+              { value: 'todos', label: 'Todas las cintas' },
+              ...cintasConfig.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
+            ]}
+            value={filtroCinta}
+            onChange={val => setFiltroCinta(val)}
+            minWidth="185px"
+          />
 
-                    {/* Alumno */}
-                    <td style={{ ...s.td, textAlign: 'left' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={s.fotoBox}>
-                          {tieneFoto(a.foto_url) ? (
-                            <img 
-                              src={limpiarUrl(a.foto_url)} 
-                              alt="foto" 
-                              style={s.fotoImg} 
-                              onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }}
-                            />
-                          ) : null}
-                          <div style={{ ...s.fotoVacia, display: tieneFoto(a.foto_url) ? 'none' : 'flex' }}>
-                            {obtenerIniciales(a.nombre, a.apellido_paterno)}
-                          </div>
-                        </div>
-                        <div>
-                          <div 
-                            title={`${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`}
-                            style={{ ...s.nombreNom, maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                          >
-                            {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
-                          </div>
-                          <div style={s.emailSub}>
-                            {`ID: ${parseInt(a.id)}`}
-                            {a.examen_detalle?.es_historico && (
-                              <span style={{ marginLeft: '6px', color: 'var(--accent-orange)', fontSize: '9px', fontWeight: '800', background: 'rgba(249, 115, 22, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>
-                                HIST
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
+          {esTorneo && (
+            <CustomDropdown
+              label="Todas las medallas"
+              icon={<FiAward size={13} />}
+              options={[
+                { value: 'todos', label: 'Todas las medallas' },
+                { value: 'oro', label: 'Medalla de Oro' },
+                { value: 'plata', label: 'Medalla de Plata' },
+                { value: 'bronce', label: 'Medalla de Bronce' },
+                { value: 'eliminado', label: 'Sin medalla' },
+                { value: 'pendiente', label: 'Pendiente' }
+              ]}
+              value={filtroMedalla}
+              onChange={val => setFiltroMedalla(val)}
+              minWidth="185px"
+            />
+          )}
 
-                    {/* Grado Actual */}
-                    {esExamen && (
-                      <td style={s.td}>
-                        <span style={{ 
-                          ...s.cinta, 
-                          background: a.examen_detalle?.grado_actual?.color_hex || 'var(--bg-tertiary)', 
-                          color: a.examen_detalle?.grado_actual?.color_texto || 'var(--text-primary)' 
-                        }}>
-                          {a.examen_detalle?.grado_actual?.nombre_nivel || '-'}
-                        </span>
-                      </td>
-                    )}
-
-                    {/* Grado Siguiente */}
-                    {esExamen && (
-                      <td style={s.td}>
-                        <span style={{ 
-                          ...s.cinta, 
-                          background: a.examen_detalle?.grado_siguiente?.color_hex || 'var(--accent-blue-bg)', 
-                          color: a.examen_detalle?.grado_siguiente?.color_texto || 'var(--accent-blue)' 
-                        }}>
-                          {a.examen_detalle?.grado_siguiente?.nombre_nivel || '-'}
-                        </span>
-                      </td>
-                    )}
-
-                    {/* Costo */}
-                    <td style={s.td}>
-                      <div style={s.costoBadge}>
-                        {esExamen
-                          ? (a.examen_detalle?.costo_examen ? `$${formatCosto(a.examen_detalle.costo_examen)}` : '-')
-                          : (a.torneo_detalle?.costo_torneo ? `$${formatCosto(a.torneo_detalle.costo_torneo)}` : '-')}
-                      </div>
-                    </td>
-
-                    {/* Pagado */}
-                    <td style={s.td}>
-                      <button
-                        onClick={() => actualizarAtributo(a.id, { pagado: !a.pagado })}
-                        disabled={actualizando[a.id]}
-                        onMouseOver={e => {
-                          if (actualizando[a.id]) return;
-                          e.currentTarget.style.transform = 'scale(1.05)';
-                          e.currentTarget.style.filter = 'brightness(1.1)';
-                        }}
-                        onMouseOut={e => {
-                          if (actualizando[a.id]) return;
-                          e.currentTarget.style.transform = 'scale(1)';
-                          e.currentTarget.style.filter = 'brightness(1)';
-                        }}
-                        style={{
-                          ...s.paymentBadge,
-                          background: a.pagado ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                          color: a.pagado ? '#22c55e' : '#ef4444',
-                          borderColor: a.pagado ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
-                          opacity: actualizando[a.id] ? 0.6 : 1,
-                          pointerEvents: actualizando[a.id] ? 'none' : 'auto'
-                        }}
-                      >
-                        <span style={{ fontSize: '10px' }}>{actualizando[a.id] ? '○' : (a.pagado ? '●' : '○')}</span>
-                        {actualizando[a.id] ? 'ACTUALIZANDO...' : (a.pagado ? 'PAGADO' : 'PENDIENTE')}
-                      </button>
-                    </td>
-
-                    {/* Resultado */}
-                    <td style={s.td}>
-                      <div style={{ position: 'relative', display: 'inline-block' }}>
-                        <select
-                          disabled={actualizando[a.id]}
-                          style={{
-                            ...s.selectCompact,
-                            color: obtenerColorResultado(esExamen ? (a.examen_detalle?.resultado) : (a.torneo_detalle?.resultado), esExamen),
-                            opacity: actualizando[a.id] ? 0.6 : 1
-                          }}
-                          value={esExamen ? (a.examen_detalle?.resultado || 'pendiente') : (a.torneo_detalle?.resultado || 'pendiente')}
-                          onChange={e => actualizarAtributo(a.id, esExamen ? { resultado_examen: e.target.value } : { resultado_torneo: e.target.value })}
-                        >
-                        <option value="pendiente">Pendiente</option>
-                        {esExamen ? (
-                          <>
-                            <option value="aprobado">Aprobado</option>
-                            <option value="reprobado">Reprobado</option>
-                          </>
-                        ) : (
-                          <>
-                            <option value="oro">Oro</option>
-                            <option value="plata">Plata</option>
-                            <option value="bronce">Bronce</option>
-                            <option value="eliminado">Eliminado</option>
-                          </>
-                        )}
-                        </select>
-                      </div>
-                    </td>
-
-                    {/* Acciones */}
-                    <td style={s.td}>
-                      <div style={s.acciones}>
-                        {a.pagado && (
-                          <button
-                            style={{ ...s.btnIcon, background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}
-                            onClick={() => generarRecibo(a)}
-                            onMouseOver={e => { e.currentTarget.style.background = '#3b82f6'; e.currentTarget.style.color = 'white'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(59, 130, 246, 0.3)'; }}
-                            onMouseOut={e => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'; e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                            title="Descargar Recibo"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                          </button>
-                        )}
-                        <button
-                          style={{ ...s.btnIcon, ...s.btnEditRow }}
-                          onClick={() => abrirEditarInscrito(a)}
-                          onMouseOver={e => {
-                            e.currentTarget.style.background = '#3b82f6';
-                            e.currentTarget.style.color = 'white';
-                            e.currentTarget.style.transform = 'scale(1.1)';
-                          }}
-                          onMouseOut={e => {
-                            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                            e.currentTarget.style.color = '#3b82f6';
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }}
-                          title="Editar"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                        </button>
-                        <button
-                          style={{ ...s.btnIcon, ...s.btnDelRow }}
-                          onClick={() => eliminarInscrito(a.id)}
-                          onMouseOver={e => {
-                            e.currentTarget.style.background = '#ef4444';
-                            e.currentTarget.style.color = 'white';
-                            e.currentTarget.style.transform = 'scale(1.1)';
-                          }}
-                          onMouseOut={e => {
-                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                            e.currentTarget.style.color = '#ef4444';
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }}
-                          title="Eliminar"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} />
         </div>
       </div>
 
-      {/* ── MODAL INSCRIBIR ── */}
-      {modalInscripcion && (
+      {/* ── BARRA FLOTANTE DE SELECCIÓN MASIVA ── */}
+      {seleccionados.length > 0 && (
+        <div style={s.bulkBar}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontWeight: '700', color: 'var(--accent-blue)', fontSize: '13.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <FiCheckSquare size={16} />
+              <span>{seleccionados.length} alumno{seleccionados.length > 1 ? 's' : ''} seleccionado{seleccionados.length > 1 ? 's' : ''}</span>
+            </span>
+            <button style={s.btnDesmarcar} onClick={() => setSeleccionados([])}>
+              Desmarcar selección
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              style={s.btnPagarMasivo}
+              onClick={pagarMasivo}
+              disabled={procesandoMasivo}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-1px)'
+                e.currentTarget.style.boxShadow = '0 6px 18px rgba(59, 130, 246, 0.4)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'none'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.35)'
+              }}
+            >
+              <FiDollarSign size={15} />
+              <span>Marcar Pagados ({seleccionados.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── VISTA RESPONSIVA: TABLA EN ESCRITORIO / TARJETAS EN MÓVIL ── */}
+      {isMobile ? (
+        /* VISTA MÓVIL (TARJETAS TÁCTILES SIN SCROLL HORIZONTAL) */
+        <div style={s.mobileCardList}>
+          {inscritosFiltrados.length === 0 ? (
+            <div style={s.emptyState}>
+              <FiUsers size={36} color="var(--accent-blue)" style={{ marginBottom: '10px' }} />
+              <p style={{ margin: 0, fontSize: '13.5px' }}>No hay participantes con los filtros aplicados</p>
+            </div>
+          ) : (
+            inscritosFiltrados.map((a) => {
+              const cintaActual = resolverCinta(a)
+              const isSelected = seleccionados.includes(a.id)
+              const costoMostrar = obtenerCostoInscrito(a)
+              const resTorneo = a.torneo_detalle?.resultado || 'pendiente'
+              const cMed = COLOR_MEDALLA[resTorneo] || COLOR_MEDALLA.pendiente
+
+              return (
+                <div
+                  key={a.id}
+                  style={{
+                    ...s.mobileCard,
+                    background: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-secondary)',
+                    borderColor: isSelected ? 'var(--accent-blue)' : 'var(--border)'
+                  }}
+                >
+                  {/* Fila superior: Checkbox, Avatar, Nombre y Acciones */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSeleccionarAlumno(a.id)}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-blue)', flexShrink: 0 }}
+                      />
+                      <div style={s.avatarSmall}>
+                        {a.foto_url ? (
+                          <img src={a.foto_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          obtenerIniciales(a.nombre, a.apellido_paterno)
+                        )}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontWeight: '700',
+                            fontSize: '14px',
+                            color: 'var(--text-primary)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => navigate(`/alumnos/${a.id}`)}
+                          title="Ver perfil del alumno"
+                        >
+                          {a.nombre} {a.apellido_paterno}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botones de acción móvil */}
+                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                      {!!a.pagado && (
+                        <button
+                          style={{ ...s.btnIcon, background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}
+                          onClick={() => generarRecibo(a)}
+                          title="Descargar Recibo PDF"
+                        >
+                          <FiFileText size={14} />
+                        </button>
+                      )}
+                      <button
+                        style={{ ...s.btnIcon, ...s.btnEdit }}
+                        onClick={() => abrirEditarInscrito(a)}
+                        onMouseOver={e => {
+                          e.currentTarget.style.background = '#3b82f6'
+                          e.currentTarget.style.color = 'white'
+                          e.currentTarget.style.transform = 'scale(1.1)'
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'
+                          e.currentTarget.style.color = '#3b82f6'
+                          e.currentTarget.style.transform = 'scale(1)'
+                        }}
+                        title="Editar inscripción"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                      </button>
+                      <button
+                        style={{ ...s.btnIcon, ...s.btnDel }}
+                        onClick={() => eliminarInscripcion(a.id, `${a.nombre} ${a.apellido_paterno}`)}
+                        onMouseOver={e => {
+                          e.currentTarget.style.background = '#ef4444'
+                          e.currentTarget.style.color = 'white'
+                          e.currentTarget.style.transform = 'scale(1.1)'
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                          e.currentTarget.style.color = '#ef4444'
+                          e.currentTarget.style.transform = 'scale(1)'
+                        }}
+                        title="Quitar participante"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Fila intermedia: Cinta y Resultado si aplica */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '10px 0', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        ...s.badgeCinta,
+                        background: cintaActual?.color_hex || 'var(--bg-tertiary)',
+                        color: cintaActual?.color_texto || 'var(--text-primary)'
+                      }}
+                    >
+                      {cintaActual?.nombre_nivel || 'Sin grado'}
+                    </span>
+
+                    {esTorneo && (
+                      <select
+                        style={{
+                          ...s.selectMedalla,
+                          background: cMed.bg,
+                          color: cMed.color,
+                          borderColor: cMed.border
+                        }}
+                        value={resTorneo}
+                        onChange={e => actualizarAtributo(a.id, { resultado_torneo: e.target.value })}
+                      >
+                        <option value="pendiente">Pendiente</option>
+                        <option value="oro">Medalla de Oro</option>
+                        <option value="plata">Medalla de Plata</option>
+                        <option value="bronce">Medalla de Bronce</option>
+                        <option value="eliminado">Sin medalla</option>
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Fila inferior: Costo y Toggle de Pago */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                        ${formatCosto(costoMostrar)}
+                      </span>
+                      <button
+                        style={{
+                          ...s.btnBadgeStatus,
+                          background: a.pagado ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: a.pagado ? '#10b981' : '#ef4444',
+                          border: `1px solid ${a.pagado ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
+                        }}
+                        onClick={() => actualizarAtributo(a.id, { pagado: !a.pagado, costo: costoMostrar, costo_torneo: costoMostrar })}
+                        title="Toca para cambiar estado de pago"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {a.pagado ? <FiCheck size={11} strokeWidth={2.5} /> : <FiX size={11} strokeWidth={2.5} />}
+                          <span>{a.pagado ? 'PAGADO' : 'PENDIENTE'}</span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      ) : (
+        /* VISTA ESCRITORIO (TABLA DETALLADA) */
+        <div style={s.tableContainer}>
+          <div style={s.tablaScroll}>
+            <table style={s.table}>
+              <colgroup>
+                <col style={{ width: '45px' }} />  {/* Checkbox */}
+                <col style={{ width: '280px' }} /> {/* Alumno */}
+                <col style={{ width: '160px' }} /> {/* Grado Actual */}
+                <col style={{ width: '110px' }} /> {/* Costo */}
+                <col style={{ width: '150px' }} /> {/* Estado de Pago */}
+                {esTorneo && <col style={{ width: '150px' }} />} {/* Resultado */}
+                <col style={{ width: '110px' }} /> {/* Acciones */}
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ ...s.th, textAlign: 'center', paddingLeft: '12px' }}>
+                    <input
+                      type="checkbox"
+                      checked={inscritosFiltrados.length > 0 && seleccionados.length === inscritosFiltrados.length}
+                      onChange={toggleSeleccionarTodo}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent-blue)' }}
+                      title="Seleccionar / desmarcar todos"
+                    />
+                  </th>
+                  <th style={{ ...s.th, textAlign: 'left' }}>Alumno</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Grado Actual</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Costo</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Estado de Pago</th>
+                  {esTorneo && <th style={{ ...s.th, textAlign: 'center' }}>Resultado</th>}
+                  <th style={{ ...s.th, textAlign: 'center', paddingRight: '20px' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inscritosFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={esTorneo ? 7 : 6} style={{ ...s.td, padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No hay participantes registrados que coincidan con los filtros aplicados
+                    </td>
+                  </tr>
+                ) : (
+                  inscritosFiltrados.map((a) => {
+                    const cintaActual = resolverCinta(a)
+                    const costoMostrar = obtenerCostoInscrito(a)
+                    const resTorneo = a.torneo_detalle?.resultado || 'pendiente'
+                    const cMed = COLOR_MEDALLA[resTorneo] || COLOR_MEDALLA.pendiente
+
+                    return (
+                      <tr
+                        key={a.id}
+                        style={{
+                          ...s.tr,
+                          background: seleccionados.includes(a.id)
+                            ? 'rgba(59, 130, 246, 0.1)'
+                            : (rowHover === a.id ? 'var(--bg-tertiary)' : 'transparent'),
+                          transition: 'background 0.15s ease',
+                        }}
+                        onMouseEnter={() => setRowHover(a.id)}
+                        onMouseLeave={() => setRowHover(null)}
+                      >
+                        {/* Checkbox */}
+                        <td style={{ ...s.td, textAlign: 'center', paddingLeft: '12px' }}>
+                          <input
+                            type="checkbox"
+                            checked={seleccionados.includes(a.id)}
+                            onChange={() => toggleSeleccionarAlumno(a.id)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent-blue)' }}
+                          />
+                        </td>
+
+                        {/* ALUMNO */}
+                        <td style={{ ...s.td, textAlign: 'left' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={s.avatarSmall}>
+                              {a.foto_url ? (
+                                <img src={a.foto_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                              ) : (
+                                obtenerIniciales(a.nombre, a.apellido_paterno)
+                              )}
+                            </div>
+                            <div>
+                              <div
+                                style={{
+                                  fontWeight: '700',
+                                  color: 'var(--text-primary)',
+                                  whiteSpace: 'nowrap',
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => navigate(`/alumnos/${a.id}`)}
+                                title="Clic para ver perfil"
+                              >
+                                {a.nombre} {a.apellido_paterno}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Grado Actual */}
+                        <td style={{ ...s.td, textAlign: 'center' }}>
+                          <span
+                            style={{
+                              ...s.badgeCinta,
+                              background: cintaActual?.color_hex || 'var(--bg-tertiary)',
+                              color: cintaActual?.color_texto || 'var(--text-primary)',
+                            }}
+                          >
+                            {cintaActual?.nombre_nivel || 'Sin grado'}
+                          </span>
+                        </td>
+
+                        {/* Costo */}
+                        <td style={{ ...s.td, textAlign: 'center' }}>
+                          <span style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '14px' }}>
+                            ${formatCosto(costoMostrar)}
+                          </span>
+                        </td>
+
+                        {/* Toggle Pago */}
+                        <td style={{ ...s.td, textAlign: 'center' }}>
+                          <button
+                            style={{
+                              ...s.btnBadgeStatus,
+                              background: a.pagado ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              color: a.pagado ? '#10b981' : '#ef4444',
+                              border: `1px solid ${a.pagado ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
+                            }}
+                            onClick={() => actualizarAtributo(a.id, { pagado: !a.pagado, costo: costoMostrar, costo_torneo: costoMostrar })}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.transform = 'scale(1.04)'
+                              e.currentTarget.style.boxShadow = a.pagado ? '0 0 12px rgba(16, 185, 129, 0.4)' : '0 0 12px rgba(239, 68, 68, 0.4)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.transform = 'none'
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                            title="Clic para cambiar estado de pago"
+                          >
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              {a.pagado ? <FiCheck size={12} strokeWidth={2.5} /> : <FiX size={12} strokeWidth={2.5} />}
+                              <span>{a.pagado ? 'PAGADO' : 'PENDIENTE'}</span>
+                            </span>
+                          </button>
+                        </td>
+
+                        {/* Resultado / Medalla si es torneo */}
+                        {esTorneo && (
+                          <td style={{ ...s.td, textAlign: 'center' }}>
+                            <select
+                              style={{
+                                ...s.selectMedalla,
+                                background: cMed.bg,
+                                color: cMed.color,
+                                borderColor: cMed.border
+                              }}
+                              value={resTorneo}
+                              onChange={e => actualizarAtributo(a.id, { resultado_torneo: e.target.value })}
+                            >
+                              <option value="pendiente">Pendiente</option>
+                              <option value="oro">Medalla de Oro</option>
+                              <option value="plata">Medalla de Plata</option>
+                              <option value="bronce">Medalla de Bronce</option>
+                              <option value="eliminado">Sin medalla</option>
+                            </select>
+                          </td>
+                        )}
+
+                        {/* Acciones */}
+                        <td style={{ ...s.td, textAlign: 'center', paddingRight: '20px' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                            {!!a.pagado && (
+                              <button
+                                style={{ ...s.btnIcon, background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}
+                                onClick={() => generarRecibo(a)}
+                                onMouseOver={e => {
+                                  e.currentTarget.style.background = '#f59e0b'
+                                  e.currentTarget.style.color = 'white'
+                                  e.currentTarget.style.transform = 'scale(1.1)'
+                                }}
+                                onMouseOut={e => {
+                                  e.currentTarget.style.background = 'rgba(245, 158, 11, 0.12)'
+                                  e.currentTarget.style.color = '#f59e0b'
+                                  e.currentTarget.style.transform = 'scale(1)'
+                                }}
+                                title="Descargar Recibo PDF"
+                              >
+                                <FiFileText size={15} />
+                              </button>
+                            )}
+
+                            <button
+                              style={{ ...s.btnIcon, ...s.btnEdit }}
+                              onClick={() => abrirEditarInscrito(a)}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#3b82f6'
+                                e.currentTarget.style.color = 'white'
+                                e.currentTarget.style.transform = 'scale(1.1)'
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'
+                                e.currentTarget.style.color = '#3b82f6'
+                                e.currentTarget.style.transform = 'scale(1)'
+                              }}
+                              title="Editar"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                            </button>
+
+                            <button
+                              style={{ ...s.btnIcon, ...s.btnDel }}
+                              onClick={() => eliminarInscripcion(a.id, `${a.nombre} ${a.apellido_paterno}`)}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#ef4444'
+                                e.currentTarget.style.color = 'white'
+                                e.currentTarget.style.transform = 'scale(1.1)'
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                                e.currentTarget.style.color = '#ef4444'
+                                e.currentTarget.style.transform = 'scale(1)'
+                              }}
+                              title="Quitar"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL INSCRIBIR (MULTIPLE / INDIVIDUAL) ── */}
+      {modalInscribir && (
         <div style={s.overlay}>
-          <div style={{ ...s.modal, overflow: 'visible' }}>
+          <div style={{ ...s.modal, maxWidth: modoInscribir === 'multiple' ? '700px' : '520px' }} className="mobile-fullscreen-modal">
             <div style={s.modalHeader}>
-              <div>
-                <h3 style={s.modalTitulo}>{editandoInscrito ? 'Editar Inscripción' : 'Inscribir Alumno'}</h3>
-                <p style={s.modalSub}>Selecciona al alumno y asigna los detalles</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ ...s.statIconBox, width: '38px', height: '38px', background: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-blue)' }}>
+                  <FiUserPlus size={18} />
+                </div>
+                <div>
+                  <h3 style={s.modalTitulo}>{editandoInscrito ? 'Editar Inscripción' : 'Inscribir Participante'}</h3>
+                  <p style={s.modalSub}>{editandoInscrito ? 'Modifica la cuota o estado de pago' : 'Selecciona alumnos para el evento'}</p>
+                </div>
               </div>
-              <button 
-                style={s.btnCerrar} 
-                onClick={() => setModalInscripcion(false)}
-                onMouseOver={e => {
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >✕</button>
+              <button
+                className="btn-cerrar-circular"
+                style={s.btnCerrarCircular}
+                onClick={() => setModalInscribir(false)}
+              >
+                <FiX size={18} />
+              </button>
             </div>
 
-            <div style={s.grid2}>
-              {/* Buscador (solo si no es edición) */}
-              <div style={{ gridColumn: '1 / -1', position: 'relative' }}>
-                <label style={s.label}>Alumno</label>
-                <input
-                  style={{ ...s.input, background: editandoInscrito ? 'var(--bg-tertiary)' : 'var(--bg-primary)' }}
-                  placeholder="Escribe el nombre..."
-                  value={form.nombre_alumno || busquedaAlumno}
-                  readOnly={!!editandoInscrito}
-                  autoFocus={!editandoInscrito}
-                  onChange={e => {
-                    if (editandoInscrito) return
-                    setBusquedaAlumno(e.target.value)
-                    if (form.alumno_id) setForm({ ...form, alumno_id: '', nombre_alumno: '' })
-                  }}
-                />
-                {!editandoInscrito && alumnosFiltrados.length > 0 && (
-                  <div style={s.dropdown}>
-                    {alumnosFiltrados.map(a => {
-                      const cintaActual = cintas.find(c => c.id === a.configuracion_cinta_id);
-                      return (
-                        <div 
-                          key={a.id} 
-                          style={{ ...s.dropItem, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} 
-                          onMouseDown={() => seleccionarAlumno(a)}
-                        >
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: '14px' }}>{a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}</div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {Number(a.id)}</div>
-                          </div>
-                          {cintaActual && (
-                            <span style={{
-                              fontSize: '11px',
-                              fontWeight: '700',
-                              padding: '4px 10px',
-                              borderRadius: '12px',
-                              background: cintaActual.color_hex || 'var(--bg-tertiary)',
-                              color: cintaActual.color_texto || 'var(--text-primary)',
-                              border: '1px solid rgba(0,0,0,0.1)'
-                            }}>
-                              {cintaActual.nombre_nivel}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+            {/* Pestañas de modo (solo al crear) */}
+            {!editandoInscrito && (
+              <div style={s.modoSelector}>
+                <button
+                  style={modoInscribir === 'multiple' ? s.modoBtnActive : s.modoBtn}
+                  onClick={() => setModoInscribir('multiple')}
+                >
+                  Inscripción en Lote (Múltiple)
+                </button>
+                <button
+                  style={modoInscribir === 'individual' ? s.modoBtnActive : s.modoBtn}
+                  onClick={() => setModoInscribir('individual')}
+                >
+                  Inscripción Individual
+                </button>
               </div>
+            )}
 
-              {/* Grados (solo examen) */}
-              {esExamen && (
-                <>
-                  <div style={{ gridColumn: '1 / -1', marginBottom: '8px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', color: 'var(--accent-orange)' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={form.es_historico} 
-                        onChange={e => setForm({ ...form, es_historico: e.target.checked })} 
+            <div style={s.modalContent}>
+              {modoInscribir === 'multiple' && !editandoInscrito ? (
+                /* MODO MÚLTIPLE */
+                <div>
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                    <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
+                      <FiSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={15} />
+                      <input
+                        style={{ ...s.input, paddingLeft: '36px', height: '38px' }}
+                        placeholder="Buscar alumno..."
+                        value={busquedaAlumno}
+                        onChange={e => setBusquedaAlumno(e.target.value)}
                       />
-                      REGISTRO HISTÓRICO (No actualiza cinta actual del alumno)
+                    </div>
+                    <select
+                      style={{ ...s.select, width: '160px', height: '38px' }}
+                      value={filtroCintaModal}
+                      onChange={e => setFiltroCintaModal(e.target.value)}
+                    >
+                      <option value="todos">Todas las cintas</option>
+                      {cintasConfig.map(c => (
+                        <option key={c.id} value={String(c.id)}>{c.nombre_nivel}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>
+                      {alumnosFiltradosModal.length} alumnos disponibles ({seleccionadosModal.length} seleccionados)
+                    </span>
+                    <button
+                      type="button"
+                      style={s.btnTextoSecundario}
+                      onClick={toggleSeleccionarTodosModal}
+                    >
+                      {seleccionadosModal.length === alumnosFiltradosModal.length ? 'Desmarcar todos' : 'Seleccionar todos'}
+                    </button>
+                  </div>
+
+                  <div style={s.listaAlumnosModal}>
+                    {alumnosFiltradosModal.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                        No hay alumnos disponibles para inscribir
+                      </div>
+                    ) : (
+                      alumnosFiltradosModal.map(a => {
+                        const isSel = seleccionadosModal.includes(a.id)
+                        const strId = String(a.id)
+                        const costoVal = costosModal[strId] !== undefined ? costosModal[strId] : (evento?.costo ? String(evento.costo) : '0')
+                        const pagadoVal = !!pagadosModal[strId]
+                        const cintaActual = a.cintaConfig || a.cinta_config
+
+                        return (
+                          <div
+                            key={a.id}
+                            style={{
+                              ...s.itemAlumnoModal,
+                              background: isSel ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-primary)',
+                              borderColor: isSel ? 'var(--accent-blue)' : 'var(--border)'
+                            }}
+                          >
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flex: 1, minWidth: 0 }}>
+                              <input
+                                type="checkbox"
+                                checked={isSel}
+                                onChange={() => toggleSeleccionarAlumnoModal(a.id)}
+                                style={{ width: '16px', height: '16px', accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
+                              />
+                              <div style={s.avatarTiny}>
+                                {obtenerIniciales(a.nombre, a.apellido_paterno)}
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: '600', fontSize: '13px', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {a.nombre} {a.apellido_paterno}
+                                </div>
+                                <div style={{ fontSize: '11px', color: cintaActual?.color_hex || 'var(--text-muted)' }}>
+                                  {cintaActual?.nombre_nivel || 'Sin cinta'}
+                                </div>
+                              </div>
+                            </label>
+
+                            {isSel && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>$</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    style={{ ...s.input, width: '70px', height: '30px', padding: '0 6px', fontSize: '12px', textAlign: 'right' }}
+                                    value={costoVal}
+                                    onChange={e => cambiarCostoAlumnoModal(a.id, e.target.value)}
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  style={{
+                                    ...s.btnMiniTogglePago,
+                                    background: pagadoVal ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-tertiary)',
+                                    color: pagadoVal ? '#10b981' : 'var(--text-muted)',
+                                    borderColor: pagadoVal ? 'rgba(16, 185, 129, 0.35)' : 'var(--border)'
+                                  }}
+                                  onClick={() => togglePagadoAlumnoModal(a.id)}
+                                >
+                                  {pagadoVal ? 'Pagado' : 'Pendiente'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* MODO INDIVIDUAL / EDITAR */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {!editandoInscrito ? (
+                    <div style={s.campoGroup}>
+                      <label style={s.label}>Seleccionar Alumno *</label>
+                      <div style={{ position: 'relative' }}>
+                        <FiSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={15} />
+                        <input
+                          style={{ ...s.input, paddingLeft: '36px' }}
+                          placeholder="Escribe el nombre del alumno..."
+                          value={formInscribir.nombre_alumno || busquedaAlumno}
+                          onChange={e => {
+                            setBusquedaAlumno(e.target.value)
+                            setFormInscribir({ ...formInscribir, alumno_id: '', nombre_alumno: '' })
+                          }}
+                        />
+                      </div>
+
+                      {busquedaAlumno && !formInscribir.alumno_id && (
+                        <div style={s.dropdownSugerencias}>
+                          {alumnosDojo
+                            .filter(a => `${a.nombre} ${a.apellido_paterno}`.toLowerCase().includes(busquedaAlumno.toLowerCase()))
+                            .slice(0, 5)
+                            .map(a => (
+                              <div
+                                key={a.id}
+                                style={s.itemSugerencia}
+                                onClick={() => seleccionarAlumno(a)}
+                              >
+                                <span style={{ fontWeight: '600' }}>{a.nombre} {a.apellido_paterno}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{a.cintaConfig?.nombre_nivel || a.cinta_config?.nombre_nivel || ''}</span>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={s.campoGroup}>
+                      <label style={s.label}>Alumno</label>
+                      <div style={{ ...s.input, display: 'flex', alignItems: 'center', background: 'var(--bg-tertiary)' }}>
+                        <strong>{formInscribir.nombre_alumno}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={s.campoGroup}>
+                    <label style={s.label}>Cuota de Inscripción ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="10"
+                      style={s.input}
+                      placeholder="0.00"
+                      value={formInscribir.costo}
+                      onChange={e => setFormInscribir({ ...formInscribir, costo: e.target.value })}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                    <input
+                      type="checkbox"
+                      id="chkPagadoIndiv"
+                      checked={formInscribir.pagado}
+                      onChange={e => setFormInscribir({ ...formInscribir, pagado: e.target.checked })}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="chkPagadoIndiv" style={{ fontSize: '13.5px', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: '600' }}>
+                      Marcar cuota como pagada inmediatamente
                     </label>
                   </div>
-                  <div>
-                    <label style={s.label}>Grado Actual</label>
-                    <select 
-                      disabled={!form.es_historico} 
-                      style={{ ...s.select, opacity: form.es_historico ? 1 : 0.6, background: form.es_historico ? 'var(--bg-primary)' : 'var(--bg-tertiary)' }} 
-                      value={form.grado_actual_id}
-                      onChange={e => setForm({ ...form, grado_actual_id: e.target.value })}
-                    >
-                      <option value="">-</option>
-                      {cintas.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={s.label}>Grado Siguiente</label>
-                    <select style={s.select} value={form.grado_siguiente_id} onChange={e => setForm({ ...form, grado_siguiente_id: e.target.value })}>
-                      <option value="">-</option>
-                      {cintas.map(c => <option key={c.id} value={c.id}>{c.nombre_nivel}</option>)}
-                    </select>
-                  </div>
-                </>
+                </div>
               )}
-
-              <div>
-                <label style={s.label}>{esExamen ? 'Costo Examen' : 'Costo Torneo'} ($)</label>
-                <input style={s.input} type="number" value={form.costo} onChange={e => setForm({ ...form, costo: e.target.value })} />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '4px' }}>
-                <label style={{ ...s.label, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={form.pagado} onChange={e => setForm({ ...form, pagado: e.target.checked })} />
-                  ¿Pago realizado?
-                </label>
-              </div>
             </div>
 
             <div style={s.modalFooter}>
-              <button 
-                style={s.btnSecondary} 
-                onClick={() => setModalInscripcion(false)}
-                onMouseOver={e => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.background = 'var(--bg-tertiary)';
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >Cancelar</button>
-              <button 
-                style={s.btnPrimaryModal} 
-                onClick={guardarInscripcion} 
-                disabled={!form.alumno_id || guardando}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.4)';
-                }}
-              >
-                {guardando ? 'Guardando...' : (editandoInscrito ? 'Guardar Cambios' : 'Inscribir Ahora')}
+              <button style={s.btnSecondary} onClick={() => setModalInscribir(false)}>
+                Cancelar
               </button>
+              {modoInscribir === 'multiple' && !editandoInscrito ? (
+                <button
+                  style={s.btnPrimaryModal}
+                  onClick={guardarInscripcionMasiva}
+                  disabled={guardandoInscripcion || seleccionadosModal.length === 0}
+                >
+                  {guardandoInscripcion ? 'Inscribiendo...' : `Inscribir ${seleccionadosModal.length} Alumnos`}
+                </button>
+              ) : (
+                <button
+                  style={s.btnPrimaryModal}
+                  onClick={guardarInscripcion}
+                  disabled={guardandoInscripcion}
+                >
+                  {guardandoInscripcion ? 'Guardando...' : (editandoInscrito ? 'Guardar Cambios' : 'Inscribir Alumno')}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1040,103 +1706,101 @@ export default function EventoDetalle() {
       {/* ── MODAL EDITAR EVENTO BASE ── */}
       {modalEvento && (
         <div style={s.overlay}>
-          <div style={s.modal}>
+          <div style={s.modal} className="mobile-fullscreen-modal">
             <div style={s.modalHeader}>
-              <div>
-                <h3 style={s.modalTitulo}>Editar Detalles del Evento</h3>
-                <p style={s.modalSub}>Completa los detalles para tu actividad</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ ...s.statIconBox, width: '38px', height: '38px', background: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-blue)' }}>
+                  <FiCalendar size={18} />
+                </div>
+                <div>
+                  <h3 style={s.modalTitulo}>Editar Evento</h3>
+                  <p style={s.modalSub}>Modifica los datos principales de la convocatoria</p>
+                </div>
               </div>
-              <button 
-                style={s.btnCerrar} 
+              <button
+                className="btn-cerrar-circular"
+                style={s.btnCerrarCircular}
                 onClick={() => setModalEvento(false)}
-                onMouseOver={e => {
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >✕</button>
+              >
+                <FiX size={18} />
+              </button>
             </div>
-            <div style={s.campoGroup}>
-              <label style={s.label}>Nombre del Evento</label>
-              <input 
-                style={s.input} 
-                value={formEvento.nombre} 
-                onChange={e => setFormEvento({...formEvento, nombre: e.target.value})} 
-              />
-            </div>
-            <div style={s.grid2}>
-              <div>
-                <label style={s.label}>Tipo</label>
-                <select 
-                  style={s.select} 
-                  value={formEvento.tipo} 
-                  onChange={e => setFormEvento({...formEvento, tipo: e.target.value})}
-                >
-                  <option value="examen">Examen</option>
-                  <option value="torneo">Torneo</option>
-                  <option value="seminario">Seminario</option>
-                  <option value="demostracion">Demostración</option>
-                </select>
+
+            <div style={s.modalContent}>
+              <div style={s.campoGroup}>
+                <label style={s.label}>Nombre del Evento *</label>
+                <input
+                  style={s.input}
+                  value={formEvento.nombre}
+                  onChange={e => setFormEvento({ ...formEvento, nombre: e.target.value })}
+                />
               </div>
-              <div>
-                <label style={s.label}>Fecha</label>
-                <input 
-                  style={s.input} 
-                  type="date" 
-                  value={formEvento.fecha} 
-                  onChange={e => setFormEvento({...formEvento, fecha: e.target.value})} 
+
+              <div style={s.grid2} className="mobile-grid-1">
+                <div style={s.campoGroup}>
+                  <label style={s.label}>Tipo de Evento *</label>
+                  <select
+                    style={s.select}
+                    value={formEvento.tipo}
+                    onChange={e => setFormEvento({ ...formEvento, tipo: e.target.value })}
+                  >
+                    <option value="torneo">Torneo / Competencia</option>
+                    <option value="seminario">Seminario / Curso</option>
+                    <option value="fogueo">Fogueo / Intercambio</option>
+                    <option value="otro">Otro Evento / Convivencia</option>
+                  </select>
+                </div>
+
+                <div style={s.campoGroup}>
+                  <label style={s.label}>Fecha del Evento *</label>
+                  <input
+                    type="date"
+                    style={{ ...s.input, colorScheme: 'dark' }}
+                    value={formEvento.fecha}
+                    onChange={e => setFormEvento({ ...formEvento, fecha: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={s.grid2} className="mobile-grid-1">
+                <div style={s.campoGroup}>
+                  <label style={s.label}>Ubicación / Sede</label>
+                  <input
+                    style={s.input}
+                    value={formEvento.lugar}
+                    onChange={e => setFormEvento({ ...formEvento, lugar: e.target.value })}
+                  />
+                </div>
+
+                <div style={s.campoGroup}>
+                  <label style={s.label}>Costo General ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    style={s.input}
+                    value={formEvento.costo}
+                    onChange={e => setFormEvento({ ...formEvento, costo: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={s.campoGroup}>
+                <label style={s.label}>Descripción / Observaciones</label>
+                <textarea
+                  style={{ ...s.input, minHeight: '75px', resize: 'vertical' }}
+                  value={formEvento.descripcion}
+                  onChange={e => setFormEvento({ ...formEvento, descripcion: e.target.value })}
                 />
               </div>
             </div>
-            <div style={s.grid2}>
-              <div>
-                <label style={s.label}>Lugar</label>
-                <input 
-                  style={s.input} 
-                  value={formEvento.lugar} 
-                  onChange={e => setFormEvento({...formEvento, lugar: e.target.value})} 
-                />
-              </div>
-              <div>
-                <label style={s.label}>Costo General ($)</label>
-                <input 
-                  style={s.input} 
-                  type="number"
-                  value={formEvento.costo} 
-                  onChange={e => setFormEvento({...formEvento, costo: e.target.value})} 
-                />
-              </div>
-            </div>
+
             <div style={s.modalFooter}>
-              <button 
-                style={s.btnSecondary} 
-                onClick={() => setModalEvento(false)}
-                onMouseOver={e => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.background = 'var(--bg-tertiary)';
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >Cancelar</button>
-              <button 
-                style={s.btnPrimaryModal} 
-                onClick={guardarEvento}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.4)';
-                }}
-              >Guardar Cambios</button>
+              <button style={s.btnSecondary} onClick={() => setModalEvento(false)}>
+                Cancelar
+              </button>
+              <button style={s.btnPrimaryModal} onClick={guardarEventoBase}>
+                Guardar Cambios
+              </button>
             </div>
           </div>
         </div>
@@ -1145,74 +1809,623 @@ export default function EventoDetalle() {
   )
 }
 
-
 const s = {
-  container:   { scrollbarGutter: 'stable', paddingBottom: '40px', fontFamily: 'Inter, sans-serif', width: '100%', boxSizing: 'border-box', overflowX: 'hidden' },
-  header:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
-  titulo:      { fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
-  sub:         { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' },
-  badge:       { padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', border: '1px solid rgba(0,0,0,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '100px' },
-  btnBack:     { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '9px 16px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '13px', transition: 'all 0.2s' },
-  btnNuevo:    { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' },
-  barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '16px' },
-  search:      { flex: 1, maxWidth: '395px', padding: '10px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '80px', color: 'var(--text-primary)', outline: 'none', transition: 'all 0.3s ease', fontSize: '14px' },
-  tabla:       { background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-md)', width: '100%', boxSizing: 'border-box' },
-  tablaScroll: { width: '100%', overflowX: 'auto', overflowY: 'hidden' },
-  table:       { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '1000px' },
-  th:          { padding: '14px 16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: 'var(--bg-tertiary)' },
-  tr:          { borderBottom: '1px solid var(--border)' },
-  td:          { padding: '14px 16px', fontSize: '14px', color: 'var(--text-secondary)', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden' },
-  tdCenter:    { padding: '48px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' },
-  filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
-  btnExportExcel: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' },
-  btnExportPdf: { background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)' },
-  statBadge: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '12px 24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.3)', color: '#fff', minWidth: '140px' },
-  statLabel: { fontSize: '10px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  statValor: { fontSize: '22px', fontWeight: '900', color: '#fff', lineHeight: 1.2 },
-  fotoBox:     { width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border)', flexShrink: 0, background: 'var(--bg-tertiary)', position: 'relative' },
-  fotoImg:     { width: '100%', height: '100%', objectFit: 'cover' },
-  fotoVacia:   { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: 'var(--accent-blue)', position: 'absolute', top: 0, left: 0 },
-  nombreNom:   { fontWeight: '600', color: 'var(--text-primary)', fontSize: '14px' },
-  emailSub:    { fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' },
-  cinta:       { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', textAlign: 'center', minWidth: '110px', verticalAlign: 'middle' },
-  btnEditMini: { background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px', transition: 'all 0.2s' },
-  paymentBadge: { 
-    display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', 
-    fontSize: '11px', fontWeight: '800', cursor: 'pointer', border: '1px solid transparent', 
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', outline: 'none'
+  page: {
+    scrollbarGutter: 'stable',
+    paddingBottom: '50px'
   },
-  costoBadge: { 
-    display: 'inline-block', padding: '4px 10px', borderRadius: '8px', 
-    background: 'var(--bg-tertiary)', color: 'var(--text-primary)', 
-    fontWeight: '700', fontSize: '13px', border: '1px solid var(--border)' 
+  btnBack: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--text-secondary)',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    marginBottom: '16px',
+    padding: '4px 0',
+    transition: 'all 0.2s ease'
   },
-  btnIcon:     { width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease' },
-  btnEditRow:  { background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' },
-  btnDelRow:   { background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' },
-  selectCompact: { 
-    padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border)', 
-    fontSize: '12px', fontWeight: '700', background: 'var(--bg-tertiary)', 
-    color: 'var(--text-primary)', cursor: 'pointer', minWidth: '110px', 
-    outline: 'none', transition: 'all 0.2s', appearance: 'none',
-    textAlign: 'center', boxShadow: 'var(--shadow-sm)'
+
+  // HERO CARD
+  heroCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '20px',
+    padding: '24px 28px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '20px',
+    flexWrap: 'wrap',
+    marginBottom: '24px',
+    boxShadow: 'var(--shadow-sm)'
   },
-  acciones:    { display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' },
-  overlay:         { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal:           { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '20px', padding: '32px', width: '560px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' },
-  modalHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  modalTitulo:     { fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
-  modalSub:        { fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' },
-  btnCerrar:       { background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', transition: 'all 0.2s' },
-  
-  campoGroup:      { marginBottom: '16px' },
-  label:           { display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' },
-  input:           { width: '100%', padding: '12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none', fontSize: '14px', transition: 'border-color 0.2s' },
-  select:          { width: '100%', padding: '12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none', fontSize: '14px' },
-  grid2:           { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' },
-  
-  modalFooter:     { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid var(--border)' },
-  btnPrimaryModal: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)', transition: 'all 0.2s' },
-  btnSecondary:    { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 20px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' },
-  dropdown:    { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', zIndex: 100, maxHeight: '220px', overflowY: 'auto' },
-  dropItem:    { padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', transition: 'background 0.15s' },
+  heroInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    flex: 1,
+    minWidth: '280px'
+  },
+  tipoBadge: {
+    padding: '3px 9px',
+    borderRadius: '6px',
+    fontSize: '10.5px',
+    fontWeight: '800',
+    letterSpacing: '0.04em'
+  },
+  heroFecha: {
+    fontSize: '12.5px',
+    color: 'var(--text-secondary)',
+    fontWeight: '600'
+  },
+  heroLugar: {
+    fontSize: '12.5px',
+    color: 'var(--text-secondary)',
+    fontWeight: '500'
+  },
+  heroCosto: {
+    fontSize: '12.5px',
+    color: 'var(--accent-green)',
+    fontWeight: '700'
+  },
+  heroTitulo: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: 0,
+    letterSpacing: '-0.02em',
+    lineHeight: 1.2
+  },
+  heroDesc: {
+    margin: '4px 0 0',
+    fontSize: '13px',
+    color: 'var(--text-muted)',
+    lineHeight: 1.4,
+    maxWidth: '650px'
+  },
+  btnEditEventoMini: {
+    width: '30px',
+    height: '30px',
+    borderRadius: '8px',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
+    background: 'rgba(59, 130, 246, 0.1)',
+    color: '#3b82f6',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease'
+  },
+  heroActions: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
+    flexWrap: 'wrap'
+  },
+  btnInscribir: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 18px',
+    fontSize: '13.5px',
+    fontWeight: '700',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
+  },
+
+  // SUMMARY CARDS
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '16px',
+    marginBottom: '24px'
+  },
+  statCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '18px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    boxShadow: 'var(--shadow-sm)',
+    minHeight: '94px',
+    boxSizing: 'border-box',
+    transition: 'all 0.15s ease',
+    overflow: 'hidden'
+  },
+  statIconBox: {
+    width: '46px',
+    height: '46px',
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
+  statContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+    flex: 1
+  },
+  statLabel: {
+    fontSize: '11px',
+    fontWeight: '700',
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
+  },
+  statValor: {
+    fontSize: '22px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: '3px 0 1px',
+    lineHeight: 1.2
+  },
+  statSublabel: {
+    fontSize: '11.5px',
+    color: 'var(--text-muted)'
+  },
+
+  // TOOLBAR
+  barraAcciones: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '14px',
+    marginBottom: '24px'
+  },
+  searchWrapper: {
+    position: 'relative',
+    flex: 1,
+    minWidth: '240px',
+    maxWidth: '380px'
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: '14px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: 'var(--text-muted)'
+  },
+  search: {
+    width: '100%',
+    height: '38px',
+    padding: '0 14px 0 38px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    fontSize: '13.5px',
+    boxSizing: 'border-box'
+  },
+  filtrosSecundarios: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap'
+  },
+
+  // BULK BAR
+  bulkBar: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--accent-blue)',
+    borderRadius: '14px',
+    padding: '12px 20px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px',
+    marginBottom: '20px',
+    boxShadow: '0 4px 20px rgba(59, 130, 246, 0.15)',
+    flexWrap: 'wrap'
+  },
+  btnDesmarcar: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--text-muted)',
+    fontSize: '12.5px',
+    cursor: 'pointer',
+    textDecoration: 'underline'
+  },
+  btnPagarMasivo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '8px 16px',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.35)',
+    transition: 'all 0.2s ease'
+  },
+
+  // TABLA ESCRITORIO
+  tableContainer: {
+    background: 'var(--bg-secondary)',
+    borderRadius: '16px',
+    border: '1px solid var(--border)',
+    overflow: 'hidden',
+    boxShadow: 'var(--shadow-md)',
+    width: '100%',
+    boxSizing: 'border-box'
+  },
+  tablaScroll: {
+    width: '100%',
+    overflowX: 'auto',
+    overflowY: 'hidden',
+    boxSizing: 'border-box'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    minWidth: '100%'
+  },
+  th: {
+    padding: '12px 14px',
+    textAlign: 'center',
+    fontSize: '11.5px',
+    color: 'var(--text-muted)',
+    borderBottom: '1px solid var(--border)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    whiteSpace: 'nowrap',
+    fontWeight: '700'
+  },
+  tr: {
+    borderBottom: '1px solid var(--border)'
+  },
+  td: {
+    padding: '12px 14px',
+    fontSize: '13.5px',
+    color: 'var(--text-secondary)',
+    verticalAlign: 'middle'
+  },
+  avatarSmall: {
+    width: '38px',
+    height: '38px',
+    borderRadius: '50%',
+    background: 'var(--accent-blue-bg)',
+    color: 'var(--accent-blue)',
+    fontWeight: '700',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '13px',
+    flexShrink: 0,
+    border: '2px solid var(--border)'
+  },
+  badgeCinta: {
+    padding: '4px 12px',
+    borderRadius: '20px',
+    fontSize: '12px',
+    fontWeight: '600',
+    display: 'inline-block',
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+    verticalAlign: 'middle',
+    border: '1px solid rgba(0,0,0,0.1)'
+  },
+  btnBadgeStatus: {
+    padding: '4px 10px',
+    borderRadius: '16px',
+    fontSize: '11px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    letterSpacing: '0.02em',
+    fontFamily: 'Inter, sans-serif'
+  },
+  selectMedalla: {
+    padding: '4px 10px',
+    borderRadius: '16px',
+    border: '1px solid',
+    fontSize: '11.5px',
+    fontWeight: '700',
+    outline: 'none',
+    cursor: 'pointer'
+  },
+
+  // ICON BUTTONS
+  btnIcon: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease'
+  },
+  btnEdit: {
+    background: 'rgba(59, 130, 246, 0.1)',
+    color: '#3b82f6'
+  },
+  btnDel: {
+    background: 'rgba(239, 68, 68, 0.1)',
+    color: '#ef4444'
+  },
+
+  // TARJETAS MÓVILES
+  mobileCardList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    width: '100%'
+  },
+  mobileCard: {
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '14px 16px',
+    boxShadow: 'var(--shadow-sm)',
+    transition: 'all 0.15s ease'
+  },
+
+  // MODALES
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.75)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '16px'
+  },
+  modal: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '20px',
+    width: '100%',
+    boxShadow: 'var(--shadow-2xl)',
+    display: 'flex',
+    flexDirection: 'column',
+    maxHeight: '90vh',
+    overflow: 'hidden'
+  },
+  modalHeader: {
+    padding: '18px 24px',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  modalTitulo: {
+    fontSize: '17px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: 0
+  },
+  modalSub: {
+    fontSize: '12.5px',
+    color: 'var(--text-muted)',
+    marginTop: '2px',
+    margin: 0
+  },
+  btnCerrarCircular: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-muted)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease'
+  },
+  modoSelector: {
+    display: 'flex',
+    padding: '6px',
+    margin: '12px 24px 0',
+    background: 'var(--bg-tertiary)',
+    borderRadius: '12px',
+    gap: '6px'
+  },
+  modoBtn: {
+    flex: 1,
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: 'none',
+    background: 'transparent',
+    color: 'var(--text-muted)',
+    fontSize: '12.5px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease'
+  },
+  modoBtnActive: {
+    flex: 1,
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: 'none',
+    background: 'var(--bg-secondary)',
+    color: 'var(--accent-blue)',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: 'var(--shadow-sm)'
+  },
+  modalContent: {
+    padding: '20px 24px',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
+  },
+  campoGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '14px'
+  },
+  label: {
+    fontSize: '12px',
+    fontWeight: '700',
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em'
+  },
+  input: {
+    height: '40px',
+    padding: '0 14px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-primary)',
+    fontSize: '13.5px',
+    outline: 'none',
+    boxSizing: 'border-box'
+  },
+  select: {
+    height: '40px',
+    padding: '0 14px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-primary)',
+    fontSize: '13.5px',
+    outline: 'none',
+    cursor: 'pointer',
+    boxSizing: 'border-box'
+  },
+  listaAlumnosModal: {
+    maxHeight: '260px',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    padding: '4px'
+  },
+  itemAlumnoModal: {
+    padding: '8px 12px',
+    borderRadius: '10px',
+    border: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
+    transition: 'all 0.15s ease'
+  },
+  avatarTiny: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    background: 'var(--bg-tertiary)',
+    color: 'var(--text-primary)',
+    fontSize: '11px',
+    fontWeight: '700',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
+  btnMiniTogglePago: {
+    padding: '4px 8px',
+    borderRadius: '6px',
+    fontSize: '11px',
+    fontWeight: '700',
+    border: '1px solid',
+    cursor: 'pointer'
+  },
+  btnTextoSecundario: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--accent-blue)',
+    cursor: 'pointer',
+    fontWeight: '600',
+    padding: '2px 0'
+  },
+  dropdownSugerencias: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    marginTop: '4px',
+    boxShadow: 'var(--shadow-lg)',
+    zIndex: 10,
+    overflow: 'hidden'
+  },
+  itemSugerencia: {
+    padding: '10px 14px',
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid var(--border)',
+    fontSize: '13px'
+  },
+  modalFooter: {
+    padding: '16px 24px',
+    borderTop: '1px solid var(--border)',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    background: 'var(--bg-primary)'
+  },
+  btnSecondary: {
+    padding: '9px 16px',
+    borderRadius: '10px',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-secondary)',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
+  btnPrimaryModal: {
+    padding: '9px 20px',
+    borderRadius: '10px',
+    background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)',
+    border: 'none',
+    color: '#ffffff',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: 'var(--shadow-glow-blue)'
+  },
+
+  // EMPTY STATE
+  emptyState: {
+    textAlign: 'center',
+    padding: '60px 20px',
+    background: 'var(--bg-secondary)',
+    borderRadius: '20px',
+    border: '1px solid var(--border)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center'
+  }
 }

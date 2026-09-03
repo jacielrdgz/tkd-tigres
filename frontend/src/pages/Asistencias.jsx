@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
+import { FiUser, FiCalendar } from 'react-icons/fi'
 
 import AsistenciasTopbar from '../components/Asistencias/AsistenciasTopbar'
 import AsistenciasSummaryCards from '../components/Asistencias/AsistenciasSummaryCards'
@@ -152,6 +153,46 @@ export default function Asistencias() {
     if (tab === 'fecha') cargarPorFecha()
   }, [tab, cargarPorFecha])
 
+  // ── Precarga silenciosa en segundo plano de meses adyacentes ─────────────
+  useEffect(() => {
+    if (!mes) return
+
+    const [anio, mesNum] = mes.split('-').map(Number)
+    const prevDate = new Date(anio, mesNum - 2, 1)
+    const nextDate = new Date(anio, mesNum, 1)
+
+    const mesPrev = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
+    const mesNext = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`
+
+    const timer = setTimeout(() => {
+      // Precargar mes anterior
+      if (!getCache(`asistencias_fecha_${mesPrev}`)) {
+        api.get('/asistencias/por-fecha', { params: { mes: mesPrev } })
+          .then(res => setCache(`asistencias_fecha_${mesPrev}`, res.data))
+          .catch(() => {})
+      }
+      // Precargar mes siguiente
+      if (!getCache(`asistencias_fecha_${mesNext}`)) {
+        api.get('/asistencias/por-fecha', { params: { mes: mesNext } })
+          .then(res => setCache(`asistencias_fecha_${mesNext}`, res.data))
+          .catch(() => {})
+      }
+      // Precargar resumen anterior y siguiente
+      if (!getCache(`asistencias_resumen_${mesPrev}`)) {
+        api.get('/asistencias/resumen', { params: { mes: mesPrev } })
+          .then(res => setCache(`asistencias_resumen_${mesPrev}`, res.data))
+          .catch(() => {})
+      }
+      if (!getCache(`asistencias_resumen_${mesNext}`)) {
+        api.get('/asistencias/resumen', { params: { mes: mesNext } })
+          .then(res => setCache(`asistencias_resumen_${mesNext}`, res.data))
+          .catch(() => {})
+      }
+    }, 200)
+
+    return () => clearTimeout(timer)
+  }, [mes])
+
   // ── Stats para las cards del tab Por Fecha (calculadas del datosPorFecha) ─
   const resumenFecha = useMemo(() => {
     const entradas = Object.entries(datosPorFecha)
@@ -259,13 +300,13 @@ export default function Asistencias() {
         <TabButton
           active={tab === 'alumno'}
           onClick={() => setTab('alumno')}
-          icon="👤"
+          icon={<FiUser size={14} />}
           label="Por Alumno"
         />
         <TabButton
           active={tab === 'fecha'}
           onClick={() => setTab('fecha')}
-          icon="📅"
+          icon={<FiCalendar size={14} />}
           label="Por Fecha"
         />
       </div>
@@ -360,7 +401,7 @@ function TabButton({ active, onClick, icon, label }) {
         border: 'none',
         background: active ? 'var(--accent-blue)' : 'transparent',
         color: active ? '#fff' : 'var(--text-muted)',
-        fontSize: 13, fontWeight: active ? 700 : 500,
+        fontSize: 13, fontWeight: active ? 700 : 600,
         cursor: 'pointer',
         boxShadow: active ? 'var(--shadow-glow-blue)' : 'none',
         transition: 'all 0.2s',
@@ -368,8 +409,8 @@ function TabButton({ active, onClick, icon, label }) {
       }}
       onClick={onClick}
     >
-      <span>{icon}</span>
-      {label}
+      {icon && <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>}
+      <span>{label}</span>
     </button>
   )
 }

@@ -23,7 +23,9 @@ import {
   FiChevronDown,
   FiUsers,
   FiUser,
-  FiArrowRight
+  FiArrowRight,
+  FiCheckSquare,
+  FiFileText
 } from 'react-icons/fi'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -32,6 +34,7 @@ import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagin
 import CustomDropdown from '../components/Common/CustomDropdown'
 import BotonExportar from '../components/Common/BotonExportar'
 import * as XLSX from 'xlsx'
+import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 const formatCosto = (val) => {
   if (val === null || val === undefined || val === '') return '0'
@@ -66,15 +69,25 @@ export default function ExamenDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const [examen, setExamen] = useState(null)
-  const [inscritos, setInscritos] = useState([])
-  const [alumnosDojo, setAlumnosDojo] = useState([])
-  const [cintasConfig, setCintasConfig] = useState([])
-  const [cargando, setCargando] = useState(true)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const initialCached = getCache(`examen_detalle_${id}`)
+
+  const [examen, setExamen] = useState(() => initialCached?.data?.examen || null)
+  const [inscritos, setInscritos] = useState(() => initialCached?.data?.inscritos || [])
+  const [alumnosDojo, setAlumnosDojo] = useState(() => getCache('alumnos_simple_activos')?.data || [])
+  const [cintasConfig, setCintasConfig] = useState(() => getCache('cintas_config')?.data || [])
+  const [cargando, setCargando] = useState(() => !initialCached?.data?.examen)
 
   // Filtros
   const [busqueda, setBusqueda] = useState('')
-  const [filtroResultado, setFiltroResultado] = useState('todos') // todos, pendiente, aprobado, reprobado
+  const [filtroPago, setFiltroPago] = useState('todos') // todos, pagado, pendiente
   const [filtroCinta, setFiltroCinta] = useState('todos')
 
   // Modal Inscribir
@@ -130,26 +143,55 @@ export default function ExamenDetalle() {
     return () => window.removeEventListener('keydown', handleEsc)
   }, [])
 
-  const cargarTodo = async () => {
-    setCargando(true)
+  const cargarTodo = async (force = false) => {
+    if (!force) {
+      const cached = getCache(`examen_detalle_${id}`)
+      if (cached && cached.data?.examen) {
+        setExamen(cached.data.examen)
+        setInscritos(cached.data.inscritos || [])
+        setCargando(false)
+      } else {
+        setCargando(true)
+      }
+    } else {
+      setCargando(true)
+    }
+
     try {
-      const [resEx, resIns, resAlu, resCin] = await Promise.all([
+      const cachedCintas = getCache('cintas_config')
+      const cachedAlumnos = getCache('alumnos_simple_activos')
+
+      const promesas = [
         api.get(`/eventos/${id}`),
         api.get(`/eventos/${id}/inscritos`),
-        api.get('/alumnos'),
-        api.get('/configuraciones-cintas')
-      ])
-      setExamen(resEx.data)
-      setInscritos(Array.isArray(resIns.data) ? resIns.data : [])
+        cachedAlumnos && !force ? Promise.resolve({ data: cachedAlumnos.data }) : api.get('/alumnos?simple=1&estatus=activo'),
+        cachedCintas && !force ? Promise.resolve({ data: cachedCintas.data }) : api.get('/configuraciones-cintas')
+      ]
+
+      const [resEx, resIns, resAlu, resCin] = await Promise.all(promesas)
+
+      const evData = resEx.data
+      const insData = Array.isArray(resIns.data) ? resIns.data : []
+      setExamen(evData)
+      setInscritos(insData)
+      setCache(`examen_detalle_${id}`, { examen: evData, inscritos: insData })
 
       const listAlu = Array.isArray(resAlu.data) 
         ? resAlu.data 
         : (Array.isArray(resAlu.data?.data) ? resAlu.data.data : [])
       setAlumnosDojo(listAlu)
-      setCintasConfig(Array.isArray(resCin.data) ? resCin.data : (resCin.data?.data || []))
+      setCache('alumnos_simple_activos', listAlu, 10 * 60 * 1000)
+
+      const listCin = Array.isArray(resCin.data) ? resCin.data : (resCin.data?.data || [])
+      listCin.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+      setCintasConfig(listCin)
+      setCache('cintas_config', listCin, 30 * 60 * 1000)
     } catch (err) {
       console.error(err)
-      toast.error('Error al cargar la información del examen')
+      const cached = getCache(`examen_detalle_${id}`)
+      if (!cached || !cached.data) {
+        toast.error('Error al cargar la información del examen')
+      }
     } finally {
       setCargando(false)
     }
@@ -182,6 +224,24 @@ export default function ExamenDetalle() {
     }
     return ''
   }, [obtenerGradosAlumno, examen])
+
+  const obtenerCostoInscrito = useCallback((alumno) => {
+    if (!alumno) return 0
+    if (alumno.pago_inscripcion && parseFloat(alumno.pago_inscripcion) > 0) {
+      return parseFloat(alumno.pago_inscripcion)
+    }
+    if (alumno.examen_detalle?.costo_examen && parseFloat(alumno.examen_detalle.costo_examen) > 0) {
+      return parseFloat(alumno.examen_detalle.costo_examen)
+    }
+    const sugerido = obtenerCostoSugerido(alumno)
+    if (sugerido && parseFloat(sugerido) > 0) {
+      return parseFloat(sugerido)
+    }
+    if (examen?.costo && parseFloat(examen.costo) > 0) {
+      return parseFloat(examen.costo)
+    }
+    return 0
+  }, [obtenerCostoSugerido, examen])
 
   const abrirModalInscribir = async () => {
     setEditandoInscrito(null)
@@ -288,7 +348,7 @@ export default function ExamenDetalle() {
         alumnos: payloadAlumnos
       })
 
-      toast.success(`¡${res.data.count || payloadAlumnos.length} alumnos inscritos correctamente! 🎉`)
+      toast.success(`${res.data.count || payloadAlumnos.length} alumnos inscritos correctamente`)
       setModalInscribir(false)
       setSeleccionadosModal([])
       setCostosModal({})
@@ -296,7 +356,10 @@ export default function ExamenDetalle() {
 
       // Actualizar únicamente la lista de inscritos (sin parpadeo)
       const resIns = await api.get(`/eventos/${id}/inscritos`)
-      setInscritos(Array.isArray(resIns.data) ? resIns.data : [])
+      const listInsc = Array.isArray(resIns.data) ? resIns.data : []
+      setInscritos(listInsc)
+      setCache(`examen_detalle_${id}`, { examen, inscritos: listInsc })
+      invalidateCache('examenes_lista')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al inscribir alumnos en lote')
     } finally {
@@ -353,116 +416,90 @@ export default function ExamenDetalle() {
     }
   }
 
+  // Guardar inscripción individual / editar
   const guardarInscripcion = async () => {
-    if (!formInscribir.alumno_id) return toast.warning('Selecciona un alumno')
-    if (!formInscribir.grado_actual_id || !formInscribir.grado_siguiente_id) {
-      return toast.warning('Selecciona el grado actual y el grado siguiente')
+    if (!formInscribir.alumno_id) {
+      return toast.warning('Selecciona un alumno para inscribir')
     }
+
     setGuardandoInscripcion(true)
     try {
       if (editandoInscrito) {
-        await api.put(`/eventos/${id}/alumnos/${editandoInscrito}`, formInscribir)
+        await api.put(`/eventos/${id}/alumnos/${formInscribir.alumno_id}`, {
+          costo_examen: parseFloat(formInscribir.costo_examen) || 0,
+          grado_actual_id: formInscribir.grado_actual_id || null,
+          grado_siguiente_id: formInscribir.grado_siguiente_id || null,
+          pagado: formInscribir.pagado,
+        })
         toast.success('Inscripción actualizada correctamente')
       } else {
-        await api.post(`/eventos/${id}/inscribir`, formInscribir)
+        await api.post(`/eventos/${id}/inscribir`, {
+          alumno_id: formInscribir.alumno_id,
+          costo_examen: parseFloat(formInscribir.costo_examen) || 0,
+          grado_actual_id: formInscribir.grado_actual_id || null,
+          grado_siguiente_id: formInscribir.grado_siguiente_id || null,
+          pagado: formInscribir.pagado,
+        })
         toast.success('Alumno inscrito correctamente')
       }
+
       setModalInscribir(false)
-      setEditandoInscrito(null)
-      setFormInscribir({ alumno_id: '', nombre_alumno: '', grado_actual_id: '', grado_siguiente_id: '', costo_examen: '', pagado: false, fecha_pago: '' })
-      // Solo recargar la lista de inscritos, no toda la página
       const resIns = await api.get(`/eventos/${id}/inscritos`)
-      setInscritos(Array.isArray(resIns.data) ? resIns.data : [])
+      const listInsc = resIns.data || []
+      setInscritos(listInsc)
+      setCache(`examen_detalle_${id}`, { examen, inscritos: listInsc })
+      invalidateCache('examenes_lista')
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al guardar inscripción')
+      const msg = err.response?.data?.message || 'Error al guardar la inscripción'
+      toast.error(msg)
     } finally {
       setGuardandoInscripcion(false)
     }
   }
 
+  // Actualizar atributo optimista (pago)
   const actualizarAtributo = async (alumnoId, cambios) => {
-    // Guardar estado previo para poder revertir en caso de error
     const prevInscritos = [...inscritos]
-    
-    // Actualización optimista inmediata
+    const alumnoObj = inscritos.find(a => a.id === alumnoId)
+    const costoVal = obtenerCostoInscrito(alumnoObj)
+
+    const payload = { ...cambios }
+    if (cambios.pagado === true && !cambios.costo_examen && !cambios.costo) {
+      payload.costo_examen = costoVal
+      payload.costo = costoVal
+    }
+
     setInscritos(prev => prev.map(a => {
       if (a.id !== alumnoId) return a
-      const updated = { ...a }
-      if (cambios.pagado !== undefined) updated.pagado = cambios.pagado
-      if (cambios.resultado_examen) {
-        updated.examen_detalle = { ...updated.examen_detalle, resultado: cambios.resultado_examen }
+      const updated = { ...a, ...payload }
+      if (payload.pagado === true && (!a.pago_inscripcion || parseFloat(a.pago_inscripcion) === 0)) {
+        updated.pago_inscripcion = costoVal
       }
       return updated
     }))
-    
+
     try {
-      await api.put(`/eventos/${id}/alumnos/${alumnoId}`, cambios)
-      if (cambios.resultado_examen === 'aprobado') {
-        toast.success('¡Alumno APROBADO! Su cinta ha sido promovida automáticamente en su perfil.')
-      } else if (cambios.resultado_examen) {
-        toast.info('Resultado actualizado')
-      } else {
-        toast.success('Registro actualizado')
+      await api.put(`/eventos/${id}/alumnos/${alumnoId}`, payload)
+      invalidateCache(`examen_detalle_${id}`)
+      invalidateCache('examenes_lista')
+      if (cambios.pagado !== undefined) {
+        toast.success(cambios.pagado ? 'Pago registrado' : 'Pago marcado como pendiente')
       }
     } catch (err) {
-      // Revertir en caso de error
       setInscritos(prevInscritos)
-      toast.error('No se pudo actualizar el registro')
+      toast.error('Error al actualizar los datos del alumno')
     }
   }
 
+  // Eliminar inscripción individual
   const eliminarInscripcion = async (alumnoId, nombreAlumno) => {
-    Swal.fire({
+    const result = await Swal.fire({
       title: '¿Quitar alumno del examen?',
-      text: `Se eliminará a ${nombreAlumno} de esta lista de examen.`,
+      html: `¿Estás seguro de quitar a <strong>${nombreAlumno}</strong> de este examen?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, quitar',
-      confirmButtonColor: 'var(--accent-red)',
-      background: 'var(--bg-secondary)',
-      color: 'var(--text-primary)'
-    }).then(async r => {
-      if (r.isConfirmed) {
-        const prevInscritos = [...inscritos]
-        setInscritos(prev => prev.filter(a => a.id !== alumnoId))
-        setSeleccionados(prev => prev.filter(i => i !== alumnoId))
-        try {
-          await api.delete(`/eventos/${id}/alumnos/${alumnoId}`)
-          toast.success('Inscripción eliminada')
-        } catch {
-          setInscritos(prevInscritos)
-          toast.error('Error al eliminar inscripción')
-        }
-      }
-    })
-  }
-
-  // --- SELECCIÓN MÚLTIPLE Y ACCIONES MASIVAS ---
-  const toggleSeleccionarTodo = () => {
-    if (seleccionados.length === inscritosFiltrados.length) {
-      setSeleccionados([])
-    } else {
-      setSeleccionados(inscritosFiltrados.map(a => a.id))
-    }
-  }
-
-  const toggleSeleccionarAlumno = (alumnoId) => {
-    setSeleccionados(prev =>
-      prev.includes(alumnoId) ? prev.filter(i => i !== alumnoId) : [...prev, alumnoId]
-    )
-  }
-
-  const aprobarMasivo = async (idsAprobar = null) => {
-    const listaTarget = idsAprobar || (seleccionados.length > 0 ? seleccionados : inscritosFiltrados.map(a => a.id))
-    if (listaTarget.length === 0) return toast.warning('No hay alumnos seleccionados para aprobar')
-
-    const result = await Swal.fire({
-      title: '¿Aprobar alumnos?',
-      html: `Se marcarán como <strong>APROBADOS</strong> a <strong>${listaTarget.length}</strong> alumnos.<br/><small style="color:#64748b;">Sus cintas serán promovidas automáticamente en su perfil.</small>`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: `Sí, aprobar ${listaTarget.length}`,
-      confirmButtonColor: '#10b981',
+      confirmButtonColor: '#ef4444',
       cancelButtonText: 'Cancelar',
       background: 'var(--bg-secondary)',
       color: 'var(--text-primary)'
@@ -471,28 +508,36 @@ export default function ExamenDetalle() {
     if (!result.isConfirmed) return
 
     const prevInscritos = [...inscritos]
-    const targetSet = new Set(listaTarget)
-    
-    // Actualización optimista inmediata
-    setInscritos(prev => prev.map(a => {
-      if (!targetSet.has(a.id)) return a
-      return { ...a, examen_detalle: { ...a.examen_detalle, resultado: 'aprobado' } }
-    }))
-    setSeleccionados([])
+    setInscritos(prev => prev.filter(a => a.id !== alumnoId))
+    setSeleccionados(prev => prev.filter(id => id !== alumnoId))
 
-    setProcesandoMasivo(true)
     try {
-      await Promise.all(
-        listaTarget.map(alumnoId =>
-          api.put(`/eventos/${id}/alumnos/${alumnoId}`, { resultado_examen: 'aprobado' })
-        )
-      )
-      toast.success(`¡${listaTarget.length} alumnos aprobados y promovidos exitosamente! 🎉`)
+      await api.delete(`/eventos/${id}/alumnos/${alumnoId}`)
+      invalidateCache(`examen_detalle_${id}`)
+      invalidateCache('examenes_lista')
+      toast.success('Alumno quitado del examen')
     } catch (err) {
       setInscritos(prevInscritos)
-      toast.error('Error al procesar la aprobación masiva')
-    } finally {
-      setProcesandoMasivo(false)
+      toast.error('Error al quitar al alumno')
+    }
+  }
+
+  // --- SELECCIÓN MÚLTIPLE Y ACCIONES MASIVAS ---
+  const toggleSeleccionarAlumno = (alumnoId) => {
+    setSeleccionados(prev => {
+      if (prev.includes(alumnoId)) {
+        return prev.filter(id => id !== alumnoId)
+      } else {
+        return [...prev, alumnoId]
+      }
+    })
+  }
+
+  const toggleSeleccionarTodo = () => {
+    if (seleccionados.length === inscritosFiltrados.length) {
+      setSeleccionados([])
+    } else {
+      setSeleccionados(inscritosFiltrados.map(a => a.id))
     }
   }
 
@@ -517,21 +562,26 @@ export default function ExamenDetalle() {
     const prevInscritos = [...inscritos]
     const targetSet = new Set(listaTarget)
     
-    // Actualización optimista inmediata
+    // Actualización optimista inmediata con costo
     setInscritos(prev => prev.map(a => {
       if (!targetSet.has(a.id)) return a
-      return { ...a, pagado: true }
+      const costoVal = obtenerCostoInscrito(a)
+      return { ...a, pagado: true, pago_inscripcion: costoVal }
     }))
     setSeleccionados([])
 
     setProcesandoMasivo(true)
     try {
       await Promise.all(
-        listaTarget.map(alumnoId =>
-          api.put(`/eventos/${id}/alumnos/${alumnoId}`, { pagado: true })
-        )
+        listaTarget.map(alumnoId => {
+          const alu = prevInscritos.find(a => a.id === alumnoId)
+          const costoVal = obtenerCostoInscrito(alu)
+          return api.put(`/eventos/${id}/alumnos/${alumnoId}`, { pagado: true, costo_examen: costoVal, costo: costoVal })
+        })
       )
-      toast.success(`¡${listaTarget.length} pagos registrados correctamente! 💰`)
+      invalidateCache(`examen_detalle_${id}`)
+      invalidateCache('examenes_lista')
+      toast.success(`${listaTarget.length} pagos registrados correctamente`)
     } catch (err) {
       setInscritos(prevInscritos)
       toast.error('Error al registrar los pagos masivos')
@@ -541,23 +591,17 @@ export default function ExamenDetalle() {
   }
 
   // --- FILTRADO Y ORDENAMIENTO DE INSCRITOS ---
-  const getOrdenCinta = (alumno) => {
-    if (alumno.examen_detalle?.grado_actual?.orden !== undefined && alumno.examen_detalle?.grado_actual?.orden !== null) {
-      return parseInt(alumno.examen_detalle.grado_actual.orden, 10)
-    }
-    if (alumno.cinta_config?.orden !== undefined && alumno.cinta_config?.orden !== null) {
-      return parseInt(alumno.cinta_config.orden, 10)
-    }
-    if (alumno.examen_detalle?.grado_actual_id !== undefined && alumno.examen_detalle?.grado_actual_id !== null) {
-      return parseInt(alumno.examen_detalle.grado_actual_id, 10)
-    }
-    return 999
+  const getOrdenCinta = (a) => {
+    const cid = a.examen_detalle?.grado_actual_id || a.configuracion_cinta_id
+    if (!cid) return 999
+    const c = cintasConfig.find(item => String(item.id) === String(cid))
+    return c ? (c.orden ?? 999) : 999
   }
 
-  const getEdad = (alumno) => {
-    if (alumno.edad !== undefined && alumno.edad !== null) return parseInt(alumno.edad, 10)
-    if (alumno.fecha_nacimiento) {
-      const fn = new Date(alumno.fecha_nacimiento)
+  const getEdad = (a) => {
+    if (!a.fecha_nacimiento) return 999
+    const fn = new Date(a.fecha_nacimiento)
+    if (!isNaN(fn.getTime())) {
       const hoy = new Date()
       let e = hoy.getFullYear() - fn.getFullYear()
       const m = hoy.getMonth() - fn.getMonth()
@@ -573,8 +617,8 @@ export default function ExamenDetalle() {
         const nombreCompleto = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.toLowerCase()
         if (busqueda && !nombreCompleto.includes(busqueda.toLowerCase())) return false
 
-        const resultado = a.examen_detalle?.resultado || 'pendiente'
-        if (filtroResultado !== 'todos' && resultado !== filtroResultado) return false
+        if (filtroPago === 'pagado' && !a.pagado) return false
+        if (filtroPago === 'pendiente' && a.pagado) return false
 
         const gradoActualId = a.examen_detalle?.grado_actual_id
         if (filtroCinta !== 'todos' && String(gradoActualId) !== String(filtroCinta)) return false
@@ -591,40 +635,155 @@ export default function ExamenDetalle() {
         const edadB = getEdad(b)
         return edadA - edadB // menor a mayor edad si la cinta es la misma
       })
-  }, [inscritos, busqueda, filtroResultado, filtroCinta])
+  }, [inscritos, busqueda, filtroPago, filtroCinta])
 
   // --- ESTADÍSTICAS DEL EXAMEN ---
   const stats = useMemo(() => {
     const total = inscritos.length
-    const aprobados = inscritos.filter(a => a.examen_detalle?.resultado === 'aprobado').length
-    const reprobados = inscritos.filter(a => a.examen_detalle?.resultado === 'reprobado').length
-    const pendientes = inscritos.filter(a => !a.examen_detalle?.resultado || a.examen_detalle?.resultado === 'pendiente').length
+    const pagados = inscritos.filter(a => a.pagado).length
+    const pendientesPago = total - pagados
     const recaudado = inscritos.filter(a => a.pagado).reduce((acc, a) => acc + (parseFloat(a.pago_inscripcion) || 0), 0)
 
-    return { total, aprobados, reprobados, pendientes, recaudado }
+    return { total, pagados, pendientesPago, recaudado }
   }, [inscritos])
+
+  // Resolver grados con fallback seguro para que nunca muestre "Sin grado"
+  const resolverGrados = useCallback((alumno) => {
+    if (!alumno) return { gradoAct: null, gradoSig: null }
+    let gradoAct = alumno.examen_detalle?.grado_actual
+    if (!gradoAct && alumno.examen_detalle?.grado_actual_id) {
+      gradoAct = cintasConfig.find(c => String(c.id) === String(alumno.examen_detalle.grado_actual_id))
+        || cintasConfig.find(c => c.orden === Number(alumno.examen_detalle.grado_actual_id))
+    }
+    if (!gradoAct) {
+      gradoAct = alumno.cinta_config 
+        || alumno.cintaConfig 
+        || cintasConfig.find(c => String(c.id) === String(alumno.configuracion_cinta_id))
+    }
+
+    let gradoSig = alumno.examen_detalle?.grado_siguiente
+    if (!gradoSig && alumno.examen_detalle?.grado_siguiente_id) {
+      gradoSig = cintasConfig.find(c => String(c.id) === String(alumno.examen_detalle.grado_siguiente_id))
+        || cintasConfig.find(c => c.orden === Number(alumno.examen_detalle.grado_siguiente_id))
+    }
+    if (!gradoSig && gradoAct) {
+      const cintasOrdenadas = [...cintasConfig].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+      const idx = cintasOrdenadas.findIndex(c => String(c.id) === String(gradoAct.id))
+      gradoSig = (idx >= 0 && idx < cintasOrdenadas.length - 1) ? cintasOrdenadas[idx + 1] : gradoAct
+    }
+
+    return { gradoAct, gradoSig }
+  }, [cintasConfig])
+
+  // Generar recibo individual de examen en PDF
+  const generarRecibo = async (alumno) => {
+    try {
+      const escInfo = await obtenerInfoEscuelaParaPDF()
+      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' })
+
+      const nomAlumno = `${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`.trim()
+      const { gradoAct, gradoSig } = resolverGrados(alumno)
+
+      const cintaTxt = gradoAct?.nombre_nivel || 'Sin cinta'
+      const aspiraTxt = gradoSig?.nombre_nivel || 'Siguiente grado'
+      const costoVal = parseFloat(alumno.pago_inscripcion || alumno.examen_detalle?.costo_examen || examen?.costo) || 0
+
+      const startY = dibujarEncabezadoMembrete(doc, {
+        escuelaInfo: escInfo,
+        tipoReporte: 'RECIBO OFICIAL DE EXAMEN',
+        subtituloEtiqueta: 'Examen / Fecha:',
+        subtituloValor: `${examen?.nombre || 'Examen'} • ${formatearFechaNaturalPDF(examen?.fecha)}`
+      })
+
+      // Tarjeta de datos del alumno
+      doc.setFillColor(248, 250, 252)
+      doc.roundedRect(14, startY, 188, 24, 2, 2, 'F')
+      doc.setDrawColor(226, 232, 240)
+      doc.roundedRect(14, startY, 188, 24, 2, 2, 'S')
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 41, 59)
+      doc.text(`Alumno: ${nomAlumno}`, 20, startY + 9)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text(`Grado actual: ${cintaTxt}  →  Aspira a: ${aspiraTxt}`, 20, startY + 17)
+      doc.text(`Folio de Alumno: #${String(alumno.id).padStart(4, '0')}`, 130, startY + 17)
+
+      // Tabla de desglose
+      const fechaPagoStr = alumno.fecha_pago ? formatearFechaNaturalPDF(alumno.fecha_pago) : formatearFechaNaturalPDF(new Date().toISOString().split('T')[0])
+
+      autoTable(doc, {
+        startY: startY + 30,
+        head: [['CONCEPTO', 'GRADO A PROMOVER', 'FECHA DE PAGO', 'MONTO']],
+        body: [[
+          `Derecho a Examen de Promoción: ${examen?.nombre || ''}`,
+          aspiraTxt,
+          fechaPagoStr,
+          `$${costoVal.toFixed(2)}`
+        ]],
+        theme: 'striped',
+        headStyles: { fillColor: [37, 99, 235], fontSize: 9, halign: 'center', textColor: 255 },
+        columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
+        styles: { fontSize: 8.5, cellPadding: 5, halign: 'center' },
+        margin: { left: 14, right: 14 }
+      })
+
+      const finalY = doc.lastAutoTable.finalY + 12
+      doc.setFillColor(248, 250, 252)
+      doc.roundedRect(130, finalY, 72, 18, 2, 2, 'F')
+      doc.setDrawColor(37, 99, 235)
+      doc.roundedRect(130, finalY, 72, 18, 2, 2, 'S')
+
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(37, 99, 235)
+      doc.text(`PAGADO: $${costoVal.toFixed(2)}`, 166, finalY + 11.5, { align: 'center' })
+
+      // Firmas
+      doc.setTextColor(148, 163, 184)
+      doc.setFontSize(8.5)
+      doc.setFont('helvetica', 'normal')
+      doc.line(24, 230, 84, 230)
+      doc.text("Firma de Administración", 54, 235, { align: 'center' })
+      doc.line(130, 230, 190, 230)
+      doc.text("Sello del Dojo / Sinodal", 160, 235, { align: 'center' })
+
+      agregarPieDePagina(doc, user)
+
+      await guardarODescargarPDF(doc, `Recibo_Examen_${(examen?.nombre || 'Examen').replace(/\s+/g, '_')}_${nomAlumno.replace(/\s+/g, '_')}.pdf`)
+      toast.success('Recibo PDF generado correctamente')
+    } catch (e) {
+      console.error(e)
+      toast.error('Error al generar el recibo PDF')
+    }
+  }
 
   // --- EXPORTAR EXCEL ---
   const exportarExcel = async () => {
     if (inscritosFiltrados.length === 0) {
       return toast.warning('No hay alumnos para exportar')
     }
-    const data = inscritosFiltrados.map((a, i) => ({
-      '#': i + 1,
-      'Alumno': `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
-      'Grado Actual': a.examen_detalle?.grado_actual?.nombre_nivel || a.cinta_config?.nombre_nivel || '-',
-      'Grado Siguiente': a.examen_detalle?.grado_siguiente?.nombre_nivel || '-',
-      'Costo Examen': (a.examen_detalle?.costo_examen || a.pago_inscripcion) ? `$${formatCosto(a.examen_detalle?.costo_examen || a.pago_inscripcion)}` : '-',
-      'Estado de Pago': a.pagado ? 'PAGADO' : 'PENDIENTE',
-      'Resultado': (a.examen_detalle?.resultado || 'pendiente').toUpperCase()
-    }))
+    const data = inscritosFiltrados.map((a, i) => {
+      const { gradoAct, gradoSig } = resolverGrados(a)
+      return {
+        '#': i + 1,
+        'Alumno': `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
+        'Grado Actual': gradoAct?.nombre_nivel || 'Sin grado',
+        'Grado Siguiente': gradoSig?.nombre_nivel || 'Siguiente',
+        'Costo Examen': (a.examen_detalle?.costo_examen || a.pago_inscripcion) ? `$${formatCosto(a.examen_detalle?.costo_examen || a.pago_inscripcion)}` : '-',
+        'Estado de Pago': a.pagado ? 'PAGADO' : 'PENDIENTE'
+      }
+    })
 
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Acta Examen')
     const filename = `Acta_Examen_${(examen?.nombre || 'Grados').replace(/\s+/g, '_')}.xlsx`
     await guardarODescargarExcel(wb, filename)
-    toast.success('Archivo Excel generado 📊')
+    toast.success('Archivo Excel generado exitosamente')
   }
 
   // --- EXPORTAR PDF (Hoja Membretada) ---
@@ -644,16 +803,18 @@ export default function ExamenDetalle() {
     })
 
     // TABLA
-    const tableColumn = ['#', 'Nombre Alumno', 'Grado Actual', 'Aspirado', 'Costo', 'Estado', 'Resultado']
-    const tableRows = inscritosFiltrados.map((a, i) => [
-      i + 1,
-      `${a.nombre} ${a.apellido_paterno}`,
-      a.examen_detalle?.grado_actual?.nombre_nivel || a.cinta_config?.nombre_nivel || '-',
-      a.examen_detalle?.grado_siguiente?.nombre_nivel || '-',
-      `$${formatCosto(a.pago_inscripcion)}`,
-      a.pagado ? 'PAGADO' : 'PENDIENTE',
-      (a.examen_detalle?.resultado || 'pendiente').toUpperCase()
-    ])
+    const tableColumn = ['#', 'Nombre Alumno', 'Grado Actual', 'Aspirado', 'Costo', 'Estado']
+    const tableRows = inscritosFiltrados.map((a, i) => {
+      const { gradoAct, gradoSig } = resolverGrados(a)
+      return [
+        i + 1,
+        `${a.nombre} ${a.apellido_paterno}`,
+        gradoAct?.nombre_nivel || '-',
+        gradoSig?.nombre_nivel || '-',
+        `$${formatCosto(a.pago_inscripcion)}`,
+        a.pagado ? 'PAGADO' : 'PENDIENTE'
+      ]
+    })
 
     autoTable(doc, {
       startY: startY,
@@ -663,13 +824,12 @@ export default function ExamenDetalle() {
       headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5, cellPadding: 2, halign: 'center' },
       styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
       columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 46, halign: 'left' },
-        2: { cellWidth: 26, halign: 'center' },
-        3: { cellWidth: 26, halign: 'center' },
-        4: { cellWidth: 20, halign: 'center' },
-        5: { cellWidth: 24, halign: 'center' },
-        6: { cellWidth: 26, halign: 'center' }
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 54, halign: 'left' },
+        2: { cellWidth: 32, halign: 'center' },
+        3: { cellWidth: 32, halign: 'center' },
+        4: { cellWidth: 26, halign: 'center' },
+        5: { cellWidth: 30, halign: 'center' }
       },
       margin: { left: 14, right: 14, bottom: 24 },
       didParseCell: function (data) {
@@ -678,15 +838,6 @@ export default function ExamenDetalle() {
             data.cell.styles.textColor = [16, 185, 129]
             data.cell.styles.fontStyle = 'bold'
           } else {
-            data.cell.styles.textColor = [239, 68, 68]
-            data.cell.styles.fontStyle = 'bold'
-          }
-        }
-        if (data.section === 'body' && data.column.index === 6) {
-          if (data.cell.raw === 'APROBADO') {
-            data.cell.styles.textColor = [16, 185, 129]
-            data.cell.styles.fontStyle = 'bold'
-          } else if (data.cell.raw === 'REPROBADO') {
             data.cell.styles.textColor = [239, 68, 68]
             data.cell.styles.fontStyle = 'bold'
           }
@@ -720,7 +871,7 @@ export default function ExamenDetalle() {
 
     const filename = `Acta_Examen_${(examen?.nombre || 'Grados').replace(/\s+/g, '_')}.pdf`
     await guardarODescargarPDF(doc, filename)
-    toast.success('Documento PDF generado 📄')
+    toast.success('Documento PDF generado exitosamente')
   }
 
   // Alumnos no inscritos aún para el modal (soporta búsqueda y filtro por cinta)
@@ -754,7 +905,18 @@ export default function ExamenDetalle() {
   return (
     <div style={s.page}>
       {/* Botón Volver */}
-      <button style={s.btnVolver} onClick={() => navigate('/examenes')}>
+      <button
+        style={s.btnVolver}
+        onClick={() => navigate('/examenes')}
+        onMouseEnter={e => {
+          e.currentTarget.style.color = 'var(--text-primary)'
+          e.currentTarget.style.transform = 'translateX(-3px)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.color = 'var(--text-muted)'
+          e.currentTarget.style.transform = 'none'
+        }}
+      >
         <FiArrowLeft size={16} />
         <span>Volver a Exámenes</span>
       </button>
@@ -768,18 +930,22 @@ export default function ExamenDetalle() {
                 <FiAward size={12} style={{ marginRight: '4px' }} />
                 EXAMEN DE CINTA
               </span>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>• {formatearFechaNatural(examen?.fecha)}</span>
+              <span style={{ fontSize: '12.5px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <FiCalendar size={12} />
+                {formatearFechaNatural(examen?.fecha)}
+              </span>
             </div>
             <h1 style={s.titulo}>{examen?.nombre}</h1>
             <div style={{ display: 'flex', gap: '16px', marginTop: '8px', flexWrap: 'wrap' }}>
               {examen?.lugar && (
                 <span style={s.infoSub}>
-                  <FiMapPin size={14} style={{ marginRight: '4px' }} />
+                  <FiMapPin size={13} style={{ marginRight: '5px', color: 'var(--text-muted)' }} />
                   {examen.lugar}
                 </span>
               )}
               <span style={s.infoSub}>
-                💰 Costo Base: ${formatCosto(examen?.costo)}
+                <FiDollarSign size={13} style={{ marginRight: '4px', color: 'var(--accent-green)' }} />
+                Costo Base: <strong>${formatCosto(examen?.costo)}</strong>
               </span>
             </div>
           </div>
@@ -788,43 +954,72 @@ export default function ExamenDetalle() {
             style={s.btnInscribir}
             onClick={abrirModalInscribir}
             onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)'
-              e.currentTarget.style.filter = 'brightness(1.1)'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+              e.currentTarget.style.filter = 'brightness(1.08)'
             }}
             onMouseLeave={e => {
               e.currentTarget.style.transform = 'none'
-              e.currentTarget.style.boxShadow = 'var(--shadow-glow-blue)'
+              e.currentTarget.style.boxShadow = 'none'
               e.currentTarget.style.filter = 'none'
             }}
           >
             <FiUserPlus size={16} />
-            <span>Inscribir Alumno</span>
+            <span>Inscribir alumno</span>
           </button>
         </div>
       </div>
 
-      {/* Tarjetas de Métricas */}
-      <div style={s.gridStats}>
+      {/* Tarjetas de Métricas idénticas a Pagos y Asistencias */}
+      <div style={s.statsGrid}>
+        {/* Inscritos Totales */}
         <div style={s.statCard}>
-          <span style={s.statTitle}>Inscritos Totales</span>
-          <span style={s.statNumber}>{stats.total}</span>
-          <span style={s.statSub}>Alumnos convocados</span>
+          <div style={{ ...s.statIconBox, background: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-blue)' }}>
+            <FiUsers size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Inscritos Totales</span>
+            <div style={{ ...s.statValor, color: 'var(--accent-blue)' }}>{stats.total}</div>
+            <span style={s.statSublabel}>Alumnos convocados</span>
+          </div>
         </div>
-        <div style={{ ...s.statCard, borderLeft: '4px solid #10b981' }}>
-          <span style={s.statTitle}>Aprobados</span>
-          <span style={{ ...s.statNumber, color: '#10b981' }}>{stats.aprobados}</span>
-          <span style={s.statSub}>Promovidos a nueva cinta</span>
+
+        {/* Cuotas Pagadas */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-green)' }}>
+            <FiCheckCircle size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Cuotas Pagadas</span>
+            <div style={{ ...s.statValor, color: 'var(--accent-green)' }}>{stats.pagados}</div>
+            <span style={s.statSublabel}>Alumnos al corriente</span>
+          </div>
         </div>
-        <div style={{ ...s.statCard, borderLeft: '4px solid #f59e0b' }}>
-          <span style={s.statTitle}>Pendientes</span>
-          <span style={{ ...s.statNumber, color: '#f59e0b' }}>{stats.pendientes}</span>
-          <span style={s.statSub}>Por evaluar</span>
+
+        {/* Pendientes de Pago */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}>
+            <FiClock size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Pendientes de Pago</span>
+            <div style={{ ...s.statValor, color: '#f59e0b' }}>{stats.pendientesPago}</div>
+            <span style={s.statSublabel}>Por liquidar cuota</span>
+          </div>
         </div>
-        <div style={{ ...s.statCard, borderLeft: '4px solid #3b82f6' }}>
-          <span style={s.statTitle}>Total Recaudado</span>
-          <span style={{ ...s.statNumber, color: 'var(--accent-blue)' }}>${Math.round(stats.recaudado)}</span>
-          <span style={s.statSub}>Cuotas de examen pagadas</span>
+
+        {/* Total Recaudado */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-green)' }}>
+            <FiDollarSign size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Total Recaudado</span>
+            <div style={{ ...s.statValor, color: 'var(--text-primary)' }}>
+              ${Math.round(stats.recaudado).toLocaleString('es-MX')}
+            </div>
+            <span style={s.statSublabel}>Cuotas de examen liquidadas</span>
+          </div>
         </div>
       </div>
 
@@ -852,47 +1047,29 @@ export default function ExamenDetalle() {
 
         <div style={s.filtrosSecundarios}>
           <CustomDropdown
-            label="Todos los resultados"
+            label="Estado de pago"
+            icon={<FiDollarSign size={13} />}
             options={[
-              { value: 'todos', label: 'Todos los resultados' },
-              { value: 'aprobado', label: 'Aprobados' },
-              { value: 'pendiente', label: 'Pendientes' },
-              { value: 'reprobado', label: 'No Aprobados' }
+              { value: 'todos', label: 'Todos los pagos' },
+              { value: 'pagado', label: 'Pagados' },
+              { value: 'pendiente', label: 'Pendientes de pago' }
             ]}
-            value={filtroResultado}
-            onChange={val => setFiltroResultado(val)}
-            minWidth="175px"
+            value={filtroPago}
+            onChange={val => setFiltroPago(val)}
+            minWidth="195px"
           />
 
           <CustomDropdown
             label="Todas las cintas"
+            icon={<FiShield size={13} />}
             options={[
               { value: 'todos', label: 'Todas las cintas' },
               ...cintasConfig.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
             ]}
             value={filtroCinta}
             onChange={val => setFiltroCinta(val)}
-            minWidth="160px"
+            minWidth="185px"
           />
-
-          {/* Botón Aprobar Todos (cuando no hay selección individual) */}
-          <button
-            style={s.btnAprobarTodos}
-            onClick={() => aprobarMasivo(inscritosFiltrados.map(a => a.id))}
-            disabled={procesandoMasivo || inscritosFiltrados.length === 0}
-            title="Aprobar masivamente a todos los alumnos mostrados"
-            onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-1px)'
-              e.currentTarget.style.boxShadow = '0 0 12px rgba(16, 185, 129, 0.4)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.transform = 'none'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
-          >
-            <FiCheckCircle size={14} />
-            <span>Aprobar Todos</span>
-          </button>
 
           <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} />
         </div>
@@ -902,32 +1079,16 @@ export default function ExamenDetalle() {
       {seleccionados.length > 0 && (
         <div style={s.bulkBar}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontWeight: '700', color: 'var(--accent-blue)', fontSize: '13.5px' }}>
-              ☑ {seleccionados.length} alumno{seleccionados.length > 1 ? 's' : ''} seleccionado{seleccionados.length > 1 ? 's' : ''}
+            <span style={{ fontWeight: '700', color: 'var(--accent-blue)', fontSize: '13.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <FiCheckSquare size={16} />
+              <span>{seleccionados.length} alumno{seleccionados.length > 1 ? 's' : ''} seleccionado{seleccionados.length > 1 ? 's' : ''}</span>
             </span>
             <button style={s.btnDesmarcar} onClick={() => setSeleccionados([])}>
               Desmarcar selección
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button
-              style={s.btnAprobarMasivo}
-              onClick={() => aprobarMasivo(seleccionados)}
-              disabled={procesandoMasivo}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-1px)'
-                e.currentTarget.style.boxShadow = '0 6px 18px rgba(16, 185, 129, 0.4)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'none'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.35)'
-              }}
-            >
-              <FiCheckCircle size={15} />
-              <span>Aprobar Seleccionados ({seleccionados.length})</span>
-            </button>
-
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               style={s.btnPagarMasivo}
               onClick={() => pagarMasivo(seleccionados)}
@@ -948,245 +1109,394 @@ export default function ExamenDetalle() {
         </div>
       )}
 
-      {/* Tabla de Inscritos */}
-      <div style={s.tableContainer}>
-        <div style={s.tablaScroll}>
-          <table style={s.table}>
-            <colgroup>
-              <col style={{ width: '38px' }} />  {/* Checkbox */}
-              <col style={{ width: '45px' }} />  {/* # */}
-              <col style={{ width: '220px' }} /> {/* Alumno */}
-              <col style={{ width: '135px' }} /> {/* Grado Actual */}
-              <col style={{ width: '145px' }} /> {/* Grado a Aspirar */}
-              <col style={{ width: '75px' }} />  {/* Costo */}
-              <col style={{ width: '125px' }} /> {/* Estado de Pago */}
-              <col style={{ width: '100px' }} /> {/* Resultado */}
-              <col style={{ width: '105px' }} /> {/* Acciones */}
-            </colgroup>
-            <thead>
-              <tr>
-                <th style={{ ...s.th, textAlign: 'center', paddingLeft: '12px' }}>
-                  <input
-                    type="checkbox"
-                    checked={inscritosFiltrados.length > 0 && seleccionados.length === inscritosFiltrados.length}
-                    onChange={toggleSeleccionarTodo}
-                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent-blue)' }}
-                    title="Seleccionar / desmarcar todos"
-                  />
-                </th>
-                <th style={{ ...s.th, textAlign: 'center' }}>#</th>
-                <th style={{ ...s.th, textAlign: 'left' }}>Alumno</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Grado Actual</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Grado a Aspirar</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Costo</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Estado de Pago</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Resultado</th>
-                <th style={{ ...s.th, textAlign: 'center', paddingRight: '20px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {inscritosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ ...s.td, padding: '40px', textAlign: 'center', color: '#64748b' }}>
-                    No hay alumnos inscritos en este examen que coincidan con los filtros
-                  </td>
-                </tr>
-              ) : (
-                inscritosFiltrados.map((a, i) => {
-                  const res = a.examen_detalle?.resultado || 'pendiente'
-                  const gradoAct = a.examen_detalle?.grado_actual
-                  const gradoSig = a.examen_detalle?.grado_siguiente
+      {/* VISTA RESPONSIVA: TABLA EN DESKTOP / TARJETAS EN MÓVIL */}
+      {isMobile ? (
+        /* VISTA MÓVIL (TARJETAS TÁCTILES SIN SCROLL HORIZONTAL) */
+        <div style={s.mobileCardList}>
+          {inscritosFiltrados.length === 0 ? (
+            <div style={s.emptyState}>
+              <FiAward size={36} color="var(--accent-blue)" style={{ marginBottom: '10px' }} />
+              <p style={{ margin: 0, fontSize: '13.5px' }}>No hay alumnos inscritos en este examen con los filtros seleccionados</p>
+            </div>
+          ) : (
+            inscritosFiltrados.map((a) => {
+              const { gradoAct, gradoSig } = resolverGrados(a)
+              const costoMostrar = obtenerCostoInscrito(a)
+              const isSelected = seleccionados.includes(a.id)
 
-                  return (
-                    <tr
-                      key={a.id}
-                      style={{
-                        ...s.tr,
-                        background: seleccionados.includes(a.id)
-                          ? 'rgba(59, 130, 246, 0.1)'
-                          : (rowHover === a.id ? 'var(--bg-tertiary)' : 'transparent'),
-                        transition: 'background 0.15s ease',
-                      }}
-                      onMouseEnter={() => setRowHover(a.id)}
-                      onMouseLeave={() => setRowHover(null)}
-                    >
-                      <td style={{ ...s.td, textAlign: 'center', paddingLeft: '12px' }}>
-                        <input
-                          type="checkbox"
-                          checked={seleccionados.includes(a.id)}
-                          onChange={() => toggleSeleccionarAlumno(a.id)}
-                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent-blue)' }}
-                        />
-                      </td>
-                      <td style={{ ...s.td, textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                        {i + 1}
-                      </td>
-
-                      {/* ALUMNO */}
-                      <td style={{ ...s.td, textAlign: 'left' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={s.avatarSmall}>
-                            {a.foto_url ? (
-                              <img src={a.foto_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                            ) : (
-                              obtenerIniciales(a.nombre, a.apellido_paterno)
-                            )}
-                          </div>
-                          <div>
-                            <div
-                              style={{
-                                fontWeight: '600',
-                                color: 'var(--text-primary)',
-                                whiteSpace: 'nowrap',
-                                cursor: 'pointer'
-                              }}
-                              onClick={() => navigate(`/alumnos/${a.id}`)}
-                              title="Clic para ver perfil"
-                            >
-                              {a.nombre} {a.apellido_paterno}
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', whiteSpace: 'nowrap' }}>
-                              #{i + 1}
-                            </div>
-                          </div>
+              return (
+                <div
+                  key={a.id}
+                  style={{
+                    ...s.mobileCard,
+                    background: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-secondary)',
+                    borderColor: isSelected ? 'var(--accent-blue)' : 'var(--border)'
+                  }}
+                >
+                  {/* Fila superior: Checkbox, Avatar, Nombre y Acciones */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSeleccionarAlumno(a.id)}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-blue)', flexShrink: 0 }}
+                      />
+                      <div style={s.avatarSmall}>
+                        {a.foto_url ? (
+                          <img src={a.foto_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          obtenerIniciales(a.nombre, a.apellido_paterno)
+                        )}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontWeight: '700',
+                            fontSize: '14px',
+                            color: 'var(--text-primary)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => navigate(`/alumnos/${a.id}`)}
+                          title="Ver perfil"
+                        >
+                          {a.nombre} {a.apellido_paterno}
                         </div>
-                      </td>
+                      </div>
+                    </div>
 
-                      {/* Grado Actual */}
-                      <td style={{ ...s.td, textAlign: 'center' }}>
-                        <span
-                          style={{
-                            ...s.badgeCinta,
-                            background: gradoAct?.color_hex || 'var(--bg-tertiary)',
-                            color: gradoAct?.color_texto || 'var(--text-primary)',
-                          }}
-                        >
-                          {gradoAct?.nombre_nivel || 'Sin grado'}
-                        </span>
-                      </td>
-
-                      {/* Grado a Aspirar */}
-                      <td style={{ ...s.td, textAlign: 'center' }}>
-                        <span
-                          style={{
-                            ...s.badgeCinta,
-                            background: gradoSig?.color_hex || 'var(--accent-blue-bg)',
-                            color: gradoSig?.color_texto || 'var(--accent-blue)',
-                          }}
-                        >
-                          {gradoSig?.nombre_nivel || 'Siguiente'}
-                        </span>
-                      </td>
-
-                      {/* Costo Examen */}
-                      <td style={{ ...s.td, textAlign: 'center' }}>
-                        <span style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '14px' }}>
-                          ${formatCosto(a.pago_inscripcion)}
-                        </span>
-                      </td>
-
-                      {/* Toggle Pago */}
-                      <td style={{ ...s.td, textAlign: 'center' }}>
+                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                      {!!a.pagado && (
                         <button
-                          style={{
-                            ...s.btnBadgeStatus,
-                            background: a.pagado ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                            color: a.pagado ? '#10b981' : '#ef4444',
-                            border: `1px solid ${a.pagado ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
-                          }}
-                          onClick={() => actualizarAtributo(a.id, { pagado: !a.pagado })}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.transform = 'scale(1.04)'
-                            e.currentTarget.style.boxShadow = a.pagado ? '0 0 12px rgba(16, 185, 129, 0.4)' : '0 0 12px rgba(239, 68, 68, 0.4)'
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.transform = 'none'
-                            e.currentTarget.style.boxShadow = 'none'
-                          }}
-                          title="Clic para cambiar estado de pago"
+                          style={{ ...s.btnIcon, background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}
+                          onClick={() => generarRecibo(a)}
+                          title="Descargar Recibo PDF"
                         >
-                          {a.pagado ? '✓ PAGADO' : '✗ PENDIENTE'}
+                          <FiFileText size={14} />
                         </button>
-                      </td>
+                      )}
+                      <button
+                        style={{ ...s.btnIcon, ...s.btnEdit }}
+                        onClick={() => abrirEditarInscrito(a)}
+                        onMouseOver={e => {
+                          e.currentTarget.style.background = '#3b82f6'
+                          e.currentTarget.style.color = 'white'
+                          e.currentTarget.style.transform = 'scale(1.1)'
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'
+                          e.currentTarget.style.color = '#3b82f6'
+                          e.currentTarget.style.transform = 'scale(1)'
+                        }}
+                        title="Editar"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                      </button>
+                      <button
+                        style={{ ...s.btnIcon, ...s.btnDel }}
+                        onClick={() => eliminarInscripcion(a.id, `${a.nombre} ${a.apellido_paterno}`)}
+                        onMouseOver={e => {
+                          e.currentTarget.style.background = '#ef4444'
+                          e.currentTarget.style.color = 'white'
+                          e.currentTarget.style.transform = 'scale(1.1)'
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                          e.currentTarget.style.color = '#ef4444'
+                          e.currentTarget.style.transform = 'scale(1)'
+                        }}
+                        title="Eliminar"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                      </button>
+                    </div>
+                  </div>
 
-                      {/* Resultado Dropdown */}
-                      <td style={{ ...s.td, textAlign: 'center' }}>
-                        <select
-                          style={{
-                            ...s.selectResultado,
-                            borderColor: res === 'aprobado' ? '#10b981' : (res === 'reprobado' ? '#ef4444' : 'var(--border)'),
-                            color: res === 'aprobado' ? '#10b981' : (res === 'reprobado' ? '#ef4444' : 'var(--text-primary)'),
-                            background: res === 'aprobado' ? 'rgba(16, 185, 129, 0.12)' : (res === 'reprobado' ? 'rgba(239, 68, 68, 0.12)' : 'var(--bg-secondary)')
-                          }}
-                          value={res}
-                          onChange={e => actualizarAtributo(a.id, { resultado_examen: e.target.value })}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.transform = 'translateY(-1px)'
-                            e.currentTarget.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.25)'
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.transform = 'none'
-                            e.currentTarget.style.boxShadow = 'none'
-                          }}
-                        >
-                          <option value="pendiente">Pendiente</option>
-                          <option value="aprobado">Aprobado</option>
-                          <option value="reprobado">No Aprobado</option>
-                        </select>
-                      </td>
+                  {/* Fila intermedia: Transición de cintas */}
+                  <div style={s.mobileBeltRow}>
+                    <span
+                      style={{
+                        ...s.badgeCinta,
+                        fontSize: '11px',
+                        padding: '3px 9px',
+                        background: gradoAct?.color_hex || 'var(--bg-tertiary)',
+                        color: gradoAct?.color_texto || 'var(--text-primary)'
+                      }}
+                    >
+                      {gradoAct?.nombre_nivel || 'Sin grado'}
+                    </span>
+                    <FiArrowRight size={13} style={{ color: 'var(--text-muted)' }} />
+                    <span
+                      style={{
+                        ...s.badgeCinta,
+                        fontSize: '11px',
+                        padding: '3px 9px',
+                        background: gradoSig?.color_hex || 'var(--accent-blue-bg)',
+                        color: gradoSig?.color_texto || 'var(--accent-blue)'
+                      }}
+                    >
+                      {gradoSig?.nombre_nivel || 'Siguiente'}
+                    </span>
+                  </div>
 
-                      {/* Acciones */}
-                      <td style={{ ...s.td, textAlign: 'center', paddingRight: '20px' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
-                          <button //EDITAR
-                            style={{ ...s.btnIcon, ...s.btnEdit }}
-                            onClick={() => abrirEditarInscrito(a)}
-                            onMouseOver={e => {
-                              e.currentTarget.style.background = '#3b82f6';
-                              e.currentTarget.style.color = 'white';
-                              e.currentTarget.style.transform = 'scale(1.1)';
-                            }}
-                            onMouseOut={e => {
-                              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                              e.currentTarget.style.color = '#3b82f6';
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }}
-                            title="Editar"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                          </button>
-
-                          <button //BORRAR
-                            style={{ ...s.btnIcon, ...s.btnDel }}
-                            onClick={() => eliminarInscripcion(a.id, `${a.nombre} ${a.apellido_paterno}`)}
-                            onMouseOver={e => {
-                              e.currentTarget.style.background = '#ef4444';
-                              e.currentTarget.style.color = 'white';
-                              e.currentTarget.style.transform = 'scale(1.1)';
-                            }}
-                            onMouseOut={e => {
-                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                              e.currentTarget.style.color = '#ef4444';
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }}
-                            title="Borrar"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                  {/* Fila inferior: Costo, Toggle Pago y Selector de Resultado */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                        ${formatCosto(costoMostrar)}
+                      </span>
+                      <button
+                        style={{
+                          ...s.btnBadgeStatus,
+                          background: a.pagado ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: a.pagado ? '#10b981' : '#ef4444',
+                          border: `1px solid ${a.pagado ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
+                        }}
+                        onClick={() => actualizarAtributo(a.id, { pagado: !a.pagado })}
+                        title="Toca para cambiar estado de pago"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {a.pagado ? <FiCheck size={11} strokeWidth={2.5} /> : <FiX size={11} strokeWidth={2.5} />}
+                          <span>{a.pagado ? 'PAGADO' : 'PENDIENTE'}</span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
-      </div>
+      ) : (
+        /* VISTA ESCRITORIO (TABLA DETALLADA) */
+        <div style={s.tableContainer}>
+          <div style={s.tablaScroll}>
+            <table style={s.table}>
+              <colgroup>
+                <col style={{ width: '45px' }} />  {/* Checkbox */}
+                <col style={{ width: '280px' }} /> {/* Alumno */}
+                <col style={{ width: '160px' }} /> {/* Grado Actual */}
+                <col style={{ width: '170px' }} /> {/* Grado a Aspirar */}
+                <col style={{ width: '110px' }} /> {/* Costo */}
+                <col style={{ width: '150px' }} /> {/* Estado de Pago */}
+                <col style={{ width: '110px' }} /> {/* Acciones */}
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ ...s.th, textAlign: 'center', paddingLeft: '12px' }}>
+                    <input
+                      type="checkbox"
+                      checked={inscritosFiltrados.length > 0 && seleccionados.length === inscritosFiltrados.length}
+                      onChange={toggleSeleccionarTodo}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent-blue)' }}
+                      title="Seleccionar / desmarcar todos"
+                    />
+                  </th>
+                  <th style={{ ...s.th, textAlign: 'left' }}>Alumno</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Grado Actual</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Grado a Aspirar</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Costo</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Estado de Pago</th>
+                  <th style={{ ...s.th, textAlign: 'center', paddingRight: '20px' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inscritosFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ ...s.td, padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No hay alumnos inscritos en este examen que coincidan con los filtros
+                    </td>
+                  </tr>
+                ) : (
+                  inscritosFiltrados.map((a) => {
+                    const { gradoAct, gradoSig } = resolverGrados(a)
+                    const costoMostrar = obtenerCostoInscrito(a)
+
+                    return (
+                      <tr
+                        key={a.id}
+                        style={{
+                          ...s.tr,
+                          background: seleccionados.includes(a.id)
+                            ? 'rgba(59, 130, 246, 0.1)'
+                            : (rowHover === a.id ? 'var(--bg-tertiary)' : 'transparent'),
+                          transition: 'background 0.15s ease',
+                        }}
+                        onMouseEnter={() => setRowHover(a.id)}
+                        onMouseLeave={() => setRowHover(null)}
+                      >
+                        <td style={{ ...s.td, textAlign: 'center', paddingLeft: '12px' }}>
+                          <input
+                            type="checkbox"
+                            checked={seleccionados.includes(a.id)}
+                            onChange={() => toggleSeleccionarAlumno(a.id)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent-blue)' }}
+                          />
+                        </td>
+
+                        {/* ALUMNO */}
+                        <td style={{ ...s.td, textAlign: 'left' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={s.avatarSmall}>
+                              {a.foto_url ? (
+                                <img src={a.foto_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                              ) : (
+                                obtenerIniciales(a.nombre, a.apellido_paterno)
+                              )}
+                            </div>
+                            <div>
+                              <div
+                                style={{
+                                  fontWeight: '600',
+                                  color: 'var(--text-primary)',
+                                  whiteSpace: 'nowrap',
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => navigate(`/alumnos/${a.id}`)}
+                                title="Clic para ver perfil"
+                              >
+                                {a.nombre} {a.apellido_paterno}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Grado Actual */}
+                        <td style={{ ...s.td, textAlign: 'center' }}>
+                          <span
+                            style={{
+                              ...s.badgeCinta,
+                              background: gradoAct?.color_hex || 'var(--bg-tertiary)',
+                              color: gradoAct?.color_texto || 'var(--text-primary)',
+                            }}
+                          >
+                            {gradoAct?.nombre_nivel || 'Sin grado'}
+                          </span>
+                        </td>
+
+                        {/* Grado a Aspirar */}
+                        <td style={{ ...s.td, textAlign: 'center' }}>
+                          <span
+                            style={{
+                              ...s.badgeCinta,
+                              background: gradoSig?.color_hex || 'var(--accent-blue-bg)',
+                              color: gradoSig?.color_texto || 'var(--accent-blue)',
+                            }}
+                          >
+                            {gradoSig?.nombre_nivel || 'Siguiente'}
+                          </span>
+                        </td>
+
+                        {/* Costo Examen */}
+                        <td style={{ ...s.td, textAlign: 'center' }}>
+                          <span style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '14px' }}>
+                            ${formatCosto(costoMostrar)}
+                          </span>
+                        </td>
+
+                        {/* Toggle Pago */}
+                        <td style={{ ...s.td, textAlign: 'center' }}>
+                          <button
+                            style={{
+                              ...s.btnBadgeStatus,
+                              background: a.pagado ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              color: a.pagado ? '#10b981' : '#ef4444',
+                              border: `1px solid ${a.pagado ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
+                            }}
+                            onClick={() => actualizarAtributo(a.id, { pagado: !a.pagado })}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.transform = 'scale(1.04)'
+                              e.currentTarget.style.boxShadow = a.pagado ? '0 0 12px rgba(16, 185, 129, 0.4)' : '0 0 12px rgba(239, 68, 68, 0.4)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.transform = 'none'
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                            title="Clic para cambiar estado de pago"
+                          >
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              {a.pagado ? <FiCheck size={12} strokeWidth={2.5} /> : <FiX size={12} strokeWidth={2.5} />}
+                              <span>{a.pagado ? 'PAGADO' : 'PENDIENTE'}</span>
+                            </span>
+                          </button>
+                        </td>
+
+                        {/* Acciones */}
+                        <td style={{ ...s.td, textAlign: 'center', paddingRight: '20px' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                            {!!a.pagado && (
+                              <button
+                                style={{ ...s.btnIcon, background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}
+                                onClick={() => generarRecibo(a)}
+                                onMouseOver={e => {
+                                  e.currentTarget.style.background = '#f59e0b'
+                                  e.currentTarget.style.color = 'white'
+                                  e.currentTarget.style.transform = 'scale(1.1)'
+                                }}
+                                onMouseOut={e => {
+                                  e.currentTarget.style.background = 'rgba(245, 158, 11, 0.12)'
+                                  e.currentTarget.style.color = '#f59e0b'
+                                  e.currentTarget.style.transform = 'scale(1)'
+                                }}
+                                title="Descargar Recibo PDF"
+                              >
+                                <FiFileText size={15} />
+                              </button>
+                            )}
+
+                            <button
+                              style={{ ...s.btnIcon, ...s.btnEdit }}
+                              onClick={() => abrirEditarInscrito(a)}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#3b82f6'
+                                e.currentTarget.style.color = 'white'
+                                e.currentTarget.style.transform = 'scale(1.1)'
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'
+                                e.currentTarget.style.color = '#3b82f6'
+                                e.currentTarget.style.transform = 'scale(1)'
+                              }}
+                              title="Editar"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                            </button>
+
+                            <button
+                              style={{ ...s.btnIcon, ...s.btnDel }}
+                              onClick={() => eliminarInscripcion(a.id, `${a.nombre} ${a.apellido_paterno}`)}
+                              onMouseOver={e => {
+                                e.currentTarget.style.background = '#ef4444'
+                                e.currentTarget.style.color = 'white'
+                                e.currentTarget.style.transform = 'scale(1.1)'
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                                e.currentTarget.style.color = '#ef4444'
+                                e.currentTarget.style.transform = 'scale(1)'
+                              }}
+                              title="Borrar"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* MODAL INSCRIBIR / EDITAR ALUMNO */}
       {modalInscribir && (
-        <div style={s.overlay} onClick={() => setModalInscribir(false)}>
+        <div style={s.overlay} className="mobile-fullscreen-overlay" onClick={() => setModalInscribir(false)}>
           <div
             style={{
               ...s.modal,
@@ -1194,6 +1504,7 @@ export default function ExamenDetalle() {
               maxWidth: '94vw',
               overflow: 'visible'
             }}
+            className="mobile-fullscreen-modal"
             onClick={e => e.stopPropagation()}
           >
             <div style={s.modalHeader}>
@@ -1211,8 +1522,26 @@ export default function ExamenDetalle() {
                       : 'Selecciona al alumno para asignar su grado actual y ascenso')}
                 </p>
               </div>
-              <button style={s.btnCerrar} onClick={() => setModalInscribir(false)} title="Cerrar">
-                <FiX size={18} />
+              <button
+                type="button"
+                className="btn-cerrar-circular"
+                style={s.btnCerrarCircular}
+                onClick={() => setModalInscribir(false)}
+                title="Cerrar modal"
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                  e.currentTarget.style.color = 'var(--accent-red)'
+                  e.currentTarget.style.transform = 'rotate(90deg)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-muted)'
+                  e.currentTarget.style.transform = 'none'
+                }}
+              >
+                <FiX size={17} />
               </button>
             </div>
 
@@ -1527,7 +1856,7 @@ export default function ExamenDetalle() {
                   )}
                 </div>
 
-                <div style={s.grid2}>
+                <div style={s.grid2} className="mobile-grid-1">
                   <div>
                     <label style={s.label}>Grado Actual</label>
                     <select
@@ -1557,13 +1886,13 @@ export default function ExamenDetalle() {
                   </div>
                 </div>
 
-                <div style={s.grid2}>
+                <div style={s.grid2} className="mobile-grid-1">
                   <div>
                     <label style={s.label}>Costo del Examen ($)</label>
                     <input
                       style={s.input}
                       type="number"
-                      placeholder="Ej. 650"
+                      placeholder="Ej. 650.00"
                       value={formInscribir.costo_examen}
                       onChange={e => setFormInscribir({ ...formInscribir, costo_examen: e.target.value })}
                     />
@@ -1577,7 +1906,7 @@ export default function ExamenDetalle() {
                       onChange={e => setFormInscribir({ ...formInscribir, pagado: e.target.checked })}
                       style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10b981' }}
                     />
-                    <label htmlFor="chkPagado" style={{ fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                    <label htmlFor="chkPagado" style={{ fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', color: formInscribir.pagado ? '#10b981' : 'var(--text-primary)' }}>
                       Marcar como pagado
                     </label>
                   </div>
@@ -1602,107 +1931,553 @@ export default function ExamenDetalle() {
 }
 
 const s = {
-  page: { paddingBottom: '40px', width: '100%', boxSizing: 'border-box', fontFamily: 'Inter, sans-serif' },
-
-  btnVolver: { display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', marginBottom: '16px', padding: '6px 0' },
-
-  headerCard: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: 'var(--shadow-sm)', boxSizing: 'border-box', width: '100%' },
-  badgeTipo: { display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', border: '1px solid rgba(59, 130, 246, 0.3)' },
-  titulo: { fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)', margin: '4px 0' },
-  infoSub: { fontSize: '13px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center' },
-
-  btnInscribir: { display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)' },
-
-  gridStats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px', width: '100%', boxSizing: 'border-box' },
-  statCard: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column' },
-  statTitle: { fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' },
-  statNumber: { fontSize: '26px', fontWeight: '900', color: 'var(--text-primary)', margin: '4px 0' },
-  statSub: { fontSize: '11px', color: 'var(--text-muted)' },
-
-  barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px', width: '100%', boxSizing: 'border-box' },
-  searchWrapper: { position: 'relative', flex: 1, maxWidth: '350px' },
-  searchIcon: { position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' },
-  search: { width: '100%', padding: '10px 16px 10px 40px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '80px', color: 'var(--text-primary)', outline: 'none', fontSize: '14px', boxSizing: 'border-box' },
-
-  filtrosSecundarios: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
-  selectFiltro: { padding: '9px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer' },
-  btnSecundario: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s ease' },
-  btnExport: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-
-  btnAprobarTodos: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '10px', color: '#10b981', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s ease' },
-
-  bulkBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12))', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '14px', padding: '12px 20px', marginBottom: '16px', boxShadow: 'var(--shadow-md)' },
-  btnAprobarMasivo: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)', transition: 'all 0.2s ease' },
-  btnPagarMasivo: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.35)', transition: 'all 0.2s ease' },
-  btnDesmarcar: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', textDecoration: 'underline' },
-
-  tableContainer: { background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', minHeight: 'auto', boxShadow: 'var(--shadow-md)', width: '100%', boxSizing: 'border-box' },
-  tablaScroll: { width: '100%', overflowX: 'auto', overflowY: 'hidden', boxSizing: 'border-box' },
-  table: { width: '100%', borderCollapse: 'collapse', minWidth: '100%' },
-  th: { padding: '12px 14px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' },
-  tr: { borderBottom: '1px solid var(--border)' },
-  td: { padding: '12px 14px', fontSize: '14px', color: 'var(--text-secondary)', verticalAlign: 'middle' },
-
-  avatarSmall: { width: '38px', height: '38px', borderRadius: '50%', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0, border: '2px solid var(--border)' },
-  badgeCinta: { padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', textAlign: 'center', whiteSpace: 'nowrap', verticalAlign: 'middle' },
-  btnBadgeStatus: { padding: '4px 10px', borderRadius: '16px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s ease', letterSpacing: '0.2px' },
-  selectResultado: { padding: '4px 8px', borderRadius: '8px', border: '1px solid', fontSize: '11.5px', fontWeight: '700', outline: 'none', cursor: 'pointer', transition: 'all 0.2s ease' },
-
-  btnIcon: { width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease' },
-  btnVer: { background: 'rgba(255, 255, 255, 0.1)', color: '#94a3b8' },
-  btnEdit: { background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' },
-  btnDel: { background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' },
-
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '18px', padding: '22px 26px', width: '590px', maxWidth: '94vw', boxShadow: 'var(--shadow-lg)' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' },
-  modalTitulo: { fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
-  modalSub: { fontSize: '12.5px', color: 'var(--text-muted)', margin: '3px 0 0' },
-  btnCerrar: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', transition: 'all 0.15s ease' },
-
-  campoGroup: { marginBottom: '12px' },
-  label: { display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' },
-  input: { width: '100%', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none', fontSize: '13px' },
-  select: { width: '100%', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none', fontSize: '13px' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' },
-
-  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--border)' },
-  btnPrimaryModal: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '700', fontSize: '12.5px', cursor: 'pointer', boxShadow: 'var(--shadow-glow-blue)', display: 'inline-flex', alignItems: 'center', gap: '6px' },
-  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', fontSize: '12.5px', cursor: 'pointer' },
-
-  dropdown: { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 100, maxHeight: '220px', overflowY: 'auto' },
-  dropItem: { padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', transition: 'background 0.15s' },
-
-  btnSecundario: {
-    display: 'flex',
+  page: {
+    paddingBottom: '40px',
+    width: '100%',
+    boxSizing: 'border-box',
+    fontFamily: 'Inter, sans-serif'
+  },
+  btnVolver: {
+    display: 'inline-flex',
     alignItems: 'center',
-    gap: '7px',
-    padding: '9px 16px',
-    background: 'var(--bg-secondary)',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
-    color: 'var(--text-secondary)',
+    gap: '8px',
+    background: 'none',
+    border: 'none',
+    color: 'var(--text-muted)',
     fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.15s',
-    fontFamily: 'inherit',
+    marginBottom: '16px',
+    padding: '6px 0',
+    transition: 'all 0.15s ease',
+    fontFamily: 'Inter, sans-serif'
   },
-  dropdownExport: {
+
+  headerCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '24px',
+    marginBottom: '24px',
+    boxShadow: 'var(--shadow-sm)',
+    boxSizing: 'border-box',
+    width: '100%'
+  },
+  badgeTipo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '3px 10px',
+    borderRadius: '20px',
+    fontSize: '9.5px',
+    fontWeight: '800',
+    letterSpacing: '0.04em',
+    background: 'var(--accent-blue-bg)',
+    color: 'var(--accent-blue)',
+    border: '1px solid rgba(59, 130, 246, 0.25)'
+  },
+  titulo: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: '4px 0',
+    letterSpacing: '-0.02em'
+  },
+  infoSub: {
+    fontSize: '13px',
+    color: 'var(--text-muted)',
+    display: 'inline-flex',
+    alignItems: 'center'
+  },
+  btnInscribir: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 18px',
+    fontSize: '13.5px',
+    fontWeight: '700',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease'
+  },
+
+  // SUMMARY CARDS
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '16px',
+    marginBottom: '24px',
+    width: '100%',
+    boxSizing: 'border-box'
+  },
+  statCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '18px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    boxShadow: 'var(--shadow-sm)',
+    minHeight: '94px',
+    boxSizing: 'border-box',
+    transition: 'all 0.15s ease',
+    overflow: 'hidden'
+  },
+  statIconBox: {
+    width: '46px',
+    height: '46px',
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
+  statContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+    flex: 1
+  },
+  statLabel: {
+    fontSize: '12px',
+    color: 'var(--text-muted)',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em'
+  },
+  statValor: {
+    fontSize: '22px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    lineHeight: 1.25,
+    marginTop: '2px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  statSublabel: {
+    fontSize: '11.5px',
+    color: 'var(--text-muted)',
+    marginTop: '3px'
+  },
+
+  // TOOLBAR Y ACCIONES
+  barraAcciones: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '12px',
+    marginBottom: '20px',
+    width: '100%',
+    boxSizing: 'border-box'
+  },
+  searchWrapper: {
+    position: 'relative',
+    flex: 1,
+    minWidth: '240px',
+    maxWidth: '380px'
+  },
+  searchIcon: {
     position: 'absolute',
-    top: 'calc(100% + 8px)',
+    left: '13px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: 'var(--text-muted)'
+  },
+  search: {
+    width: '100%',
+    padding: '0 16px 0 38px',
+    height: '38px',
+    minHeight: '38px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    fontSize: '13.5px',
+    boxSizing: 'border-box',
+    fontFamily: 'Inter, sans-serif',
+    transition: 'all 0.2s ease'
+  },
+  filtrosSecundarios: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    flexWrap: 'wrap'
+  },
+  btnAprobarTodos: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    height: '38px',
+    padding: '0 14px',
+    background: 'rgba(16, 185, 129, 0.12)',
+    border: '1px solid rgba(16, 185, 129, 0.35)',
+    borderRadius: '10px',
+    color: '#10b981',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    fontFamily: 'Inter, sans-serif'
+  },
+
+  // BARRA MASIVA
+  bulkBar: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '12px',
+    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12))',
+    border: '1px solid rgba(59, 130, 246, 0.4)',
+    borderRadius: '14px',
+    padding: '12px 20px',
+    marginBottom: '18px',
+    boxShadow: 'var(--shadow-md)'
+  },
+  btnAprobarMasivo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 16px',
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+    transition: 'all 0.2s ease',
+    fontFamily: 'Inter, sans-serif'
+  },
+  btnPagarMasivo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 16px',
+    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.35)',
+    transition: 'all 0.2s ease',
+    fontFamily: 'Inter, sans-serif'
+  },
+  btnDesmarcar: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--text-muted)',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    fontFamily: 'Inter, sans-serif'
+  },
+
+  // TABLA ESCRITORIO
+  tableContainer: {
+    background: 'var(--bg-secondary)',
+    borderRadius: '16px',
+    border: '1px solid var(--border)',
+    overflow: 'hidden',
+    boxShadow: 'var(--shadow-md)',
+    width: '100%',
+    boxSizing: 'border-box'
+  },
+  tablaScroll: {
+    width: '100%',
+    overflowX: 'auto',
+    overflowY: 'hidden',
+    boxSizing: 'border-box'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    minWidth: '100%'
+  },
+  th: {
+    padding: '12px 14px',
+    textAlign: 'center',
+    fontSize: '11.5px',
+    color: 'var(--text-muted)',
+    borderBottom: '1px solid var(--border)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    whiteSpace: 'nowrap',
+    fontWeight: '700'
+  },
+  tr: {
+    borderBottom: '1px solid var(--border)'
+  },
+  td: {
+    padding: '12px 14px',
+    fontSize: '13.5px',
+    color: 'var(--text-secondary)',
+    verticalAlign: 'middle'
+  },
+
+  avatarSmall: {
+    width: '38px',
+    height: '38px',
+    borderRadius: '50%',
+    background: 'var(--accent-blue-bg)',
+    color: 'var(--accent-blue)',
+    fontWeight: '700',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '13px',
+    flexShrink: 0,
+    border: '2px solid var(--border)'
+  },
+  badgeCinta: {
+    padding: '4px 12px',
+    borderRadius: '20px',
+    fontSize: '12px',
+    fontWeight: '600',
+    display: 'inline-block',
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+    verticalAlign: 'middle',
+    border: '1px solid rgba(0,0,0,0.1)'
+  },
+  btnBadgeStatus: {
+    padding: '4px 10px',
+    borderRadius: '16px',
+    fontSize: '11px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    letterSpacing: '0.02em',
+    fontFamily: 'Inter, sans-serif'
+  },
+
+  btnIcon: {
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease'
+  },
+  btnEdit: {
+    background: 'rgba(59, 130, 246, 0.1)',
+    color: '#3b82f6'
+  },
+  btnDel: {
+    background: 'rgba(239, 68, 68, 0.1)',
+    color: '#ef4444'
+  },
+
+  // TARJETAS MÓVILES
+  mobileCardList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    width: '100%'
+  },
+  mobileCard: {
+    border: '1px solid var(--border)',
+    borderRadius: '14px',
+    padding: '14px 16px',
+    boxShadow: 'var(--shadow-sm)',
+    transition: 'all 0.15s ease'
+  },
+  mobileBeltRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    margin: '10px 0',
+    padding: '8px 12px',
+    background: 'var(--bg-primary)',
+    borderRadius: '10px',
+    border: '1px solid var(--border)'
+  },
+
+  // EMPTY STATE
+  emptyState: {
+    textAlign: 'center',
+    padding: '40px 20px',
+    color: 'var(--text-muted)',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px'
+  },
+
+  // MODAL
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.7)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1050
+  },
+  modal: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '20px',
+    padding: '24px 22px',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+    boxSizing: 'border-box'
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '18px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid var(--border)'
+  },
+  modalTitulo: {
+    fontSize: '18px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: 0
+  },
+  modalSub: {
+    fontSize: '12.5px',
+    color: 'var(--text-muted)',
+    margin: '3px 0 0'
+  },
+  btnCerrarCircular: {
+    width: '34px',
+    height: '34px',
+    minWidth: '34px',
+    minHeight: '34px',
+    borderRadius: '50%',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-muted)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    flexShrink: 0,
+    aspectRatio: '1 / 1',
+    padding: 0,
+    transition: 'all 0.15s ease'
+  },
+
+  campoGroup: {
+    marginBottom: '14px'
+  },
+  label: {
+    display: 'block',
+    fontSize: '12.5px',
+    fontWeight: '600',
+    color: 'var(--text-secondary)',
+    marginBottom: '6px',
+    fontFamily: 'Inter, sans-serif'
+  },
+  input: {
+    width: '100%',
+    height: '38px',
+    minHeight: '38px',
+    padding: '0 12px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    color: 'var(--text-primary)',
+    boxSizing: 'border-box',
+    outline: 'none',
+    fontSize: '13.5px',
+    fontFamily: 'Inter, sans-serif',
+    transition: 'border-color 0.15s ease'
+  },
+  select: {
+    width: '100%',
+    height: '38px',
+    minHeight: '38px',
+    padding: '0 12px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    color: 'var(--text-primary)',
+    boxSizing: 'border-box',
+    outline: 'none',
+    fontSize: '13.5px',
+    fontFamily: 'Inter, sans-serif',
+    cursor: 'pointer'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
+    marginBottom: '14px'
+  },
+
+  modalFooter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '18px',
+    paddingTop: '16px',
+    borderTop: '1px solid var(--border)'
+  },
+  btnPrimaryModal: {
+    background: 'var(--accent-blue)',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '9px 18px',
+    fontWeight: '700',
+    fontSize: '13px',
+    cursor: 'pointer',
+    boxShadow: 'var(--shadow-glow-blue)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    transition: 'all 0.15s ease',
+    fontFamily: 'Inter, sans-serif'
+  },
+  btnSecondary: {
+    background: 'var(--bg-tertiary)',
+    color: 'var(--text-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '9px 18px',
+    fontWeight: '600',
+    fontSize: '13px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    fontFamily: 'Inter, sans-serif'
+  },
+
+  dropdown: {
+    position: 'absolute',
+    top: 'calc(100% + 4px)',
+    left: 0,
     right: 0,
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border)',
     borderRadius: '12px',
-    padding: '8px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
     zIndex: 100,
-    minWidth: '150px',
-    boxShadow: 'var(--shadow-md)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
+    maxHeight: '220px',
+    overflowY: 'auto'
   },
-  btnExportExcel: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' },
-  btnExportPdf: { background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)' },
+  dropItem: {
+    padding: '12px 16px',
+    cursor: 'pointer',
+    borderBottom: '1px solid var(--border)',
+    transition: 'background 0.15s'
+  }
 }

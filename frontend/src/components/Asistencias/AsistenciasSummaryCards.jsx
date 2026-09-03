@@ -1,5 +1,5 @@
 import React from 'react'
-import { FiUsers, FiTrendingUp, FiAlertTriangle } from 'react-icons/fi'
+import { FiUsers, FiTrendingUp, FiAlertTriangle, FiCalendar } from 'react-icons/fi'
 
 /**
  * 3 tarjetas resumen de asistencias.
@@ -45,7 +45,7 @@ export default function AsistenciasSummaryCards({ tab, resumen, cargando }) {
     <div style={s.grid}>
       <Card
         cargando={cargando}
-        icon={<span style={{ fontSize: '22px' }}>📅</span>}
+        icon={<FiCalendar size={22} />}
         iconColor="#3b82f6"
         label="Clases en el Mes"
         value={resumen?.clases_en_mes ?? '—'}

@@ -36,6 +36,11 @@ class DefaultCintasService
     public static function asegurarCintasGlobales(): void
     {
         try {
+            $count = ConfiguracionCinta::whereNull('tenant_id')->count();
+            if ($count >= 15) {
+                return; // Ya están aseguradas, evitar 15 consultas repetitivas
+            }
+
             $cintas = self::getCintasDefecto();
 
             foreach ($cintas as $cinta) {

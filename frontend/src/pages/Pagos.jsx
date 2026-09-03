@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
 import { toast } from 'react-toastify'
@@ -10,6 +10,8 @@ import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagin
 import CustomDropdown from '../components/Common/CustomDropdown'
 import BotonExportar from '../components/Common/BotonExportar'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
+import { FiCalendar, FiUserPlus, FiTag, FiCheck, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
+import PagosSummaryCards from '../components/Pagos/PagosSummaryCards'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -258,18 +260,33 @@ export default function Pagos() {
     })
   }, [alumnos, pagosActivos, submodulo, filtroMes])
 
+  const inscripcionesStats = useMemo(() => {
+    const inscritosDelMes = alumnosConEstado.filter(a => {
+      const ingresoEnMes = a.fecha_ingreso && a.fecha_ingreso.startsWith(filtroMes)
+      const pagoEnMes = a.pagoActivo?.fecha_pago && a.pagoActivo.fecha_pago.startsWith(filtroMes)
+      return ingresoEnMes || pagoEnMes
+    })
+    const pagados = inscritosDelMes.filter(a => !!a.pagoActivo).length
+    const pendientes = inscritosDelMes.filter(a => !a.pagoActivo).length
+    return {
+      total: inscritosDelMes.length,
+      pagados,
+      pendientes
+    }
+  }, [alumnosConEstado, filtroMes])
+
   const alumnosFiltrados = useMemo(() => {
     return alumnosConEstado.filter(a => {
       // Búsqueda por nombre (necesaria procesarla antes para usarla en el bypass)
       const nombre = `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.toLowerCase()
       const matchBusqueda = nombre.includes(busqueda.toLowerCase())
 
-      // Si estamos en inscripciones, por defecto solo mostramos alumnos recientes (creados a partir del 11 de Mayo de 2026)
-      // Si el usuario busca por nombre o activa "Mostrar Todos", omitimos este filtro de fecha.
-      if (submodulo === 'inscripciones' && !mostrarTodosInscripciones && !busqueda && a.created_at) {
-        const fechaCreacion = new Date(a.created_at).getTime()
-        const fechaCorte = new Date('2026-05-11T00:00:00Z').getTime() // "a partir de ahora"
-        if (fechaCreacion < fechaCorte) {
+      // En inscripciones: solo mostramos alumnos que ingresaron o pagaron en el mes seleccionado
+      // Si el usuario busca por nombre o activa "Mostrar Todos", omitimos este filtro.
+      if (submodulo === 'inscripciones' && !mostrarTodosInscripciones && !busqueda) {
+        const ingresoEnMes = a.fecha_ingreso && a.fecha_ingreso.startsWith(filtroMes)
+        const pagoEnMes = a.pagoActivo?.fecha_pago && a.pagoActivo.fecha_pago.startsWith(filtroMes)
+        if (!ingresoEnMes && !pagoEnMes) {
           return false
         }
       }
@@ -332,7 +349,7 @@ export default function Pagos() {
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "Pagos")
       await guardarODescargarExcel(wb, `Reporte_Pagos_${new Date().toISOString().split('T')[0]}.xlsx`)
-      toast.success("Excel generado ✓")
+      toast.success("Excel generado")
     } catch { toast.error("Error al generar Excel") }
   }
 
@@ -385,7 +402,7 @@ export default function Pagos() {
       agregarPieDePagina(doc, user)
 
       await guardarODescargarPDF(doc, `Reporte_Pagos_${new Date().toISOString().split('T')[0]}.pdf`)
-      toast.success("PDF generado ✓")
+      toast.success("PDF generado")
     } catch { toast.error("Error al generar PDF") }
   }
 
@@ -477,7 +494,7 @@ export default function Pagos() {
       agregarPieDePagina(doc, user)
 
       await guardarODescargarPDF(doc, `Recibo_${escuelaInfo?.nombre || 'Pago'}_${alumno.nombre}_${pago.fecha_pago}.pdf`)
-      toast.success("Recibo generado ✓")
+      toast.success("Recibo generado")
     } catch (e) {
       console.error(e)
       toast.error("Error al generar recibo")
@@ -632,10 +649,10 @@ export default function Pagos() {
       let res
       if (pagoAEditar) {
         res = await api.put(`/pagos/${pagoAEditar.id}`, data)
-        toast.success('Pago actualizado ✓')
+        toast.success('Pago actualizado')
       } else {
         res = await api.post('/pagos', data)
-        toast.success('Pago registrado ✓')
+        toast.success('Pago registrado')
 
         // Ofrecer recibo
         Swal.fire({
@@ -644,8 +661,8 @@ export default function Pagos() {
           icon: 'success',
           showCancelButton: true,
           showDenyButton: true,
-          confirmButtonText: '📄 Descargar PDF',
-          denyButtonText: '📱 Enviar por WhatsApp',
+          confirmButtonText: 'Descargar PDF',
+          denyButtonText: 'Enviar por WhatsApp',
           cancelButtonText: 'Cerrar',
           confirmButtonColor: 'var(--accent-blue)',
           denyButtonColor: '#22c55e',
@@ -741,58 +758,40 @@ export default function Pagos() {
       {/* HEADER */}
       <div style={s.header}>
         <div>
-          <h2 style={s.titulo}>Control de Pagos</h2>
+          <h1 style={s.titulo}>Control de Pagos</h1>
           <p style={s.sub}>{submodulo === 'mensualidades' ? 'Administración de mensualidades y periodos activos' : 'Registro de inscripciones'}</p>
         </div>
-        {user?.role === 'owner' && (
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <div style={s.ingresosBadge}>
-              <span style={s.ingresosLabel}>Mensualidades · {filtroMes ? new Date(filtroMes + '-15').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Mes actual'}</span>
-              <span style={s.ingresosValor}>${ingresosDelMes.mensualidades.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-            <div style={{ ...s.ingresosBadge, background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.3)' }}>
-              <span style={s.ingresosLabel}>Inscripciones · {filtroMes ? new Date(filtroMes + '-15').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Mes actual'}</span>
-              <span style={s.ingresosValor}>${ingresosDelMes.inscripciones.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* SUBMODULOS NAVIGATION */}
       <div style={s.subnav}>
-        <button
-          style={submodulo === 'mensualidades' ? s.subnavBtnActive : s.subnavBtn}
+        <TabButton
+          active={submodulo === 'mensualidades'}
           onClick={() => setSubmodulo('mensualidades')}
-          onMouseOver={e => {
-            if (submodulo !== 'mensualidades') {
-              e.currentTarget.style.background = 'var(--bg-tertiary)';
-            }
-          }}
-          onMouseOut={e => {
-            if (submodulo !== 'mensualidades') {
-              e.currentTarget.style.background = 'none';
-            }
-          }}
-        >
-          Mensualidades
-        </button>
-        <button
-          style={submodulo === 'inscripciones' ? s.subnavBtnActive : s.subnavBtn}
+          icon={<FiCalendar size={14} />}
+          label="Mensualidades"
+        />
+        <TabButton
+          active={submodulo === 'inscripciones'}
           onClick={() => setSubmodulo('inscripciones')}
-          onMouseOver={e => {
-            if (submodulo !== 'inscripciones') {
-              e.currentTarget.style.background = 'var(--bg-tertiary)';
-            }
-          }}
-          onMouseOut={e => {
-            if (submodulo !== 'inscripciones') {
-              e.currentTarget.style.background = 'none';
-            }
-          }}
-        >
-          Inscripciones
-        </button>
+          icon={<FiUserPlus size={14} />}
+          label="Inscripciones"
+        />
       </div>
+
+      {/* 3 TARJETAS DE RESUMEN (ESTILO Y DIMENSIONES DE ASISTENCIAS) */}
+      <PagosSummaryCards
+        submodulo={submodulo}
+        recaudacion={submodulo === 'mensualidades' ? ingresosDelMes.mensualidades : ingresosDelMes.inscripciones}
+        mesLabel={filtroMes ? new Date(filtroMes + '-15').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Mes actual'}
+        cargando={cargando}
+        totalAlumnos={alumnos.length}
+        alumnosPagados={totalPagados}
+        alumnosPendientes={totalPendientes}
+        totalInscritosMes={inscripcionesStats.total}
+        inscripcionesPagadasMes={inscripcionesStats.pagados}
+        inscripcionesPendientesMes={inscripcionesStats.pendientes}
+      />
 
       <div style={s.barraAcciones}>
         <input
@@ -831,7 +830,7 @@ export default function Pagos() {
       </div>
 
       <div style={s.filtrosSecundarios}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: isMobile ? 'wrap' : 'nowrap', alignItems: 'center', flexShrink: 0 }}>
           <CustomDropdown
             label="Todas las cintas"
             options={[
@@ -840,7 +839,7 @@ export default function Pagos() {
             ]}
             value={filtroCinta}
             onChange={val => setFiltroCinta(val)}
-            minWidth="170px"
+            minWidth={isMobile ? '100%' : '180px'}
             isMobile={isMobile}
           />
 
@@ -852,34 +851,33 @@ export default function Pagos() {
             ]}
             value={filtroHorario}
             onChange={val => setFiltroHorario(val)}
-            minWidth="200px"
+            minWidth={isMobile ? '100%' : '185px'}
             isMobile={isMobile}
           />
 
-          {/* Filtro por mes */}
-          <input
-            type="month"
-            style={{ ...s.selectFiltro, paddingRight: 14, width: isMobile ? '100%' : '150px' }}
+          {/* Filtro por mes (editable a mano o clic en calendario) */}
+          <CampoFiltroMes
             value={filtroMes}
-            onChange={e => setFiltroMes(e.target.value)}
+            onChange={setFiltroMes}
+            isMobile={isMobile}
           />
 
-          <input
-            type="date"
-            style={{ ...s.selectFiltro, paddingRight: 14, width: isMobile ? '100%' : '150px' }}
+          {/* Filtro por fecha exacta de pago (editable a mano o clic en calendario) */}
+          <CampoFiltroFecha
             value={filtroFechaPago}
-            onChange={e => setFiltroFechaPago(e.target.value)}
+            onChange={setFiltroFechaPago}
+            isMobile={isMobile}
           />
 
           {submodulo === 'inscripciones' && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', padding: '6px 12px', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', width: isMobile ? '100%' : 'auto' }}>
+            <label style={{ ...s.checkboxLabel, flexShrink: 0 }}>
               <input
                 type="checkbox"
                 checked={mostrarTodosInscripciones}
                 onChange={e => setMostrarTodosInscripciones(e.target.checked)}
-                style={{ width: '16px', height: '16px', accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
+                style={{ width: '15px', height: '15px', accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
               />
-              <strong>Mostrar todo el histórico</strong>
+              <span>Histórico</span>
             </label>
           )}
         </div>
@@ -919,7 +917,19 @@ export default function Pagos() {
                       <span style={s.badgeDeuda} title="Debe periodos anteriores">DEUDA CRÍTICA</span>
                     )}
                   </div>
-                  <div style={s.periodo}>{submodulo === 'mensualidades' ? `📅 ${a.periodo.label}` : '🎟️ Inscripción Anual'}</div>
+                  <div style={s.periodo}>
+                    {submodulo === 'mensualidades' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <FiCalendar size={13} style={{ color: 'var(--text-muted)' }} />
+                        {a.periodo.label}
+                      </span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <FiTag size={13} style={{ color: 'var(--text-muted)' }} />
+                        Inscripción Anual
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Estado y acción */}
@@ -946,7 +956,10 @@ export default function Pagos() {
                     )}
                     {pagado && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={submodulo === 'mensualidades' ? s.badgePagado : s.badgeInscrito}>✓ {submodulo === 'mensualidades' ? 'PAGADO' : 'INSCRITO'}</span>
+                        <span style={submodulo === 'mensualidades' ? s.badgePagado : s.badgeInscrito}>
+                          <FiCheck size={13} style={{ marginRight: '4px' }} />
+                          {submodulo === 'mensualidades' ? 'PAGADO' : 'INSCRITO'}
+                        </span>
                         {user?.role === 'owner' && (
                           <button
                             style={{ ...s.btnIconTrash, transition: 'all 0.2s' }}
@@ -1069,7 +1082,7 @@ export default function Pagos() {
                 onMouseOut={e => {
                   e.currentTarget.style.color = 'var(--text-muted)';
                   e.currentTarget.style.transform = 'scale(1)';
-                }}>✕</button>
+                }}><FiX size={18} /></button>
             </div>
 
             <div style={s.grid2} className="mobile-grid-1">
@@ -1082,16 +1095,18 @@ export default function Pagos() {
                     value={formPago.mes_periodo}
                     onChange={e => setFormPago({ ...formPago, mes_periodo: e.target.value })}
                   />
-                  <div style={{ ...s.periodoBadge, marginTop: '8px', marginBottom: 0 }}>
-                    📅 {calcularPeriodo(modalPago.dia_pago || 1, new Date(formPago.mes_periodo + '-01T12:00:00')).label}
+                  <div style={{ ...s.periodoBadge, marginTop: '8px', marginBottom: 0, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <FiCalendar size={14} />
+                    {calcularPeriodo(modalPago.dia_pago || 1, new Date(formPago.mes_periodo + '-01T12:00:00')).label}
                   </div>
                 </div>
               )}
               
               {formPago.tipo === 'inscripcion' && (
                  <div style={{ gridColumn: '1/-1' }}>
-                    <div style={{ ...s.periodoBadge, marginBottom: '12px', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>
-                      🎟️ Concepto: Inscripción {user?.tenant?.nombre || 'Escuela'}
+                    <div style={{ ...s.periodoBadge, marginBottom: '12px', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <FiTag size={14} />
+                      Concepto: Inscripción {user?.tenant?.nombre || 'Escuela'}
                     </div>
                  </div>
               )}
@@ -1104,9 +1119,9 @@ export default function Pagos() {
                 <label style={s.label}>Método de pago</label>
                 <select style={s.select} value={formPago.metodo_pago}
                   onChange={e => setFormPago({ ...formPago, metodo_pago: e.target.value })}>
-                  <option value="efectivo">💵 Efectivo</option>
-                  <option value="transferencia">🏦 Transferencia</option>
-                  <option value="tarjeta">💳 Tarjeta</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="tarjeta">Tarjeta</option>
                 </select>
               </div>
               <div style={{ gridColumn: '1/-1' }}>
@@ -1128,7 +1143,7 @@ export default function Pagos() {
                   e.currentTarget.style.color = 'var(--text-secondary)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}>Cancelar</button>
-              <button style={{ ...s.btnConfirmar, transition: 'all 0.2s' }} onClick={confirmarPago}
+              <button style={{ ...s.btnConfirmar, transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} onClick={confirmarPago}
                 onMouseOver={e => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = '0 6px 15px rgba(16, 185, 129, 0.4)';
@@ -1137,7 +1152,8 @@ export default function Pagos() {
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}>
-                {pagoAEditar ? '✓ Guardar Cambios' : '✓ Confirmar Pago'}
+                <FiCheck size={16} />
+                {pagoAEditar ? 'Guardar Cambios' : 'Confirmar Pago'}
               </button>
             </div>
           </div>
@@ -1188,7 +1204,7 @@ export default function Pagos() {
                   onMouseOut={e => {
                     e.currentTarget.style.color = 'var(--text-muted)';
                     e.currentTarget.style.transform = 'scale(1)';
-                  }}>✕</button>
+                  }}><FiX size={18} /></button>
               </div>
 
               <div style={s.drawerContent}>
@@ -1272,7 +1288,9 @@ export default function Pagos() {
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span style={{ fontSize: 13, fontWeight: 700, color: esPagado ? 'var(--accent-green)' : esMesActual ? 'var(--accent-blue)' : 'var(--text-muted)' }}>{mes}</span>
-                              <span style={{ fontSize: 18, lineHeight: 1 }}>{esPagado ? '✅' : '❌'}</span>
+                              <span style={{ fontSize: 16, lineHeight: 1, display: 'inline-flex', alignItems: 'center' }}>
+                                {esPagado ? <FiCheckCircle size={16} color="var(--accent-green)" /> : <FiAlertCircle size={16} color="var(--text-muted)" />}
+                              </span>
                             </div>
                             {esPagado ? (
                               <>
@@ -1362,8 +1380,9 @@ export default function Pagos() {
                     {/* Sección de Inscripciones */}
                     {inscripciones.length > 0 && (
                       <div style={{ marginBottom: 16, marginTop: 4 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                          🎟️ Inscripciones ({inscripciones.length})
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                          <FiTag size={14} color="var(--accent-blue)" />
+                          Inscripciones ({inscripciones.length})
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {inscripciones.map(p => (
@@ -1448,27 +1467,299 @@ export default function Pagos() {
   )
 }
 
+function TabButton({ active, onClick, icon, label }) {
+  return (
+    <button
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 7,
+        padding: '9px 20px',
+        borderRadius: 10,
+        border: 'none',
+        background: active ? 'var(--accent-blue)' : 'transparent',
+        color: active ? '#fff' : 'var(--text-muted)',
+        fontSize: 13,
+        fontWeight: active ? 700 : 600,
+        cursor: 'pointer',
+        boxShadow: active ? 'var(--shadow-glow-blue)' : 'none',
+        transition: 'all 0.2s',
+        fontFamily: 'inherit',
+      }}
+      onClick={onClick}
+    >
+      {icon && <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>}
+      <span>{label}</span>
+    </button>
+  )
+}
+
+function CampoFiltroMes({ value, onChange, isMobile }) {
+  const inputRef = useRef(null)
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        width: isMobile ? '100%' : '210px',
+        minWidth: isMobile ? '100%' : '210px',
+        height: '38px',
+        flexShrink: 0,
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border)',
+        borderRadius: '10px',
+        boxSizing: 'border-box',
+        boxShadow: 'var(--shadow-sm)',
+        transition: 'border-color 0.2s',
+      }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-blue)'}
+      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+    >
+      <input
+        ref={inputRef}
+        type="month"
+        className="hide-native-picker"
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          height: '100%',
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          padding: '0 32px 0 12px',
+          color: 'var(--text-secondary)',
+          fontSize: '13px',
+          fontWeight: 600,
+          fontFamily: 'inherit',
+          colorScheme: 'dark',
+          cursor: 'text',
+          boxSizing: 'border-box',
+        }}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={(e) => {
+          e.preventDefault()
+          try {
+            inputRef.current?.showPicker?.()
+          } catch {
+            inputRef.current?.focus?.()
+          }
+        }}
+        title="Abrir calendario"
+        style={{
+          position: 'absolute',
+          right: '8px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          background: 'transparent',
+          border: 'none',
+          padding: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          color: 'var(--text-muted)',
+          borderRadius: '6px',
+          transition: 'color 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+      >
+        <FiCalendar size={15} />
+      </button>
+    </div>
+  )
+}
+
+function CampoFiltroFecha({ value, onChange, isMobile }) {
+  const inputRef = useRef(null)
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        width: isMobile ? '100%' : '160px',
+        minWidth: isMobile ? '100%' : '160px',
+        height: '38px',
+        flexShrink: 0,
+        background: 'var(--bg-secondary)',
+        border: '1px solid',
+        borderColor: value ? 'var(--accent-blue)' : 'var(--border)',
+        borderRadius: '10px',
+        boxSizing: 'border-box',
+        boxShadow: 'var(--shadow-sm)',
+        transition: 'border-color 0.2s',
+      }}
+      onMouseEnter={e => {
+        if (!value) e.currentTarget.style.borderColor = 'var(--accent-blue)'
+      }}
+      onMouseLeave={e => {
+        if (!value) e.currentTarget.style.borderColor = 'var(--border)'
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="date"
+        className="hide-native-picker"
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          height: '100%',
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          padding: value ? '0 52px 0 12px' : '0 32px 0 12px',
+          color: value ? 'var(--text-primary)' : 'var(--text-secondary)',
+          fontSize: '13px',
+          fontWeight: 600,
+          fontFamily: 'inherit',
+          colorScheme: 'dark',
+          cursor: 'text',
+          boxSizing: 'border-box',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          right: '8px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}
+      >
+        {value ? (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={(e) => {
+              e.preventDefault()
+              onChange('')
+            }}
+            title="Quitar filtro de fecha"
+            style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '18px',
+              height: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--accent-red)',
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: 0,
+            }}
+          >
+            <FiX size={11} strokeWidth={2.5} />
+          </button>
+        ) : null}
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={(e) => {
+            e.preventDefault()
+            try {
+              inputRef.current?.showPicker?.()
+            } catch {
+              inputRef.current?.focus?.()
+            }
+          }}
+          title="Abrir calendario"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: value ? 'var(--accent-blue)' : 'var(--text-muted)',
+            borderRadius: '6px',
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = value ? 'var(--accent-blue)' : 'var(--text-muted)'}
+        >
+          <FiCalendar size={15} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const s = {
-  page: { scrollbarGutter: 'stable', paddingBottom: '40px' },
+  page: { paddingBottom: '40px', minHeight: 'calc(100vh + 1px)' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' },
   titulo: { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
-  sub: { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px' },
-  barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '16px' },
-  search: { flex: 1, maxWidth: '395px', padding: '10px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '80px', color: 'var(--text-primary)', outline: 'none', transition: 'all 0.3s ease' },
-  tabs: { display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', flexShrink: 0 },
-  tab: { padding: '8px 16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
-  tabHover: { padding: '8px 16px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', minWidth: '120px', textAlign: 'center', transition: 'all 0.2s', borderRadius: '8px' },
-  tabActiveVerde: { padding: '8px 20px', background: 'var(--accent-green)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-green)', transition: 'all 0.2s' },
-  tabActiveRojo: { padding: '8px 20px', background: 'var(--accent-red)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-red)', transition: 'all 0.2s' },
-  tabActiveAzul: { padding: '8px 20px', background: 'var(--accent-blue)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: '700', fontSize: '13px', minWidth: '120px', textAlign: 'center', boxShadow: 'var(--shadow-glow-blue)', transition: 'all 0.2s' },
-  subnav: { display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' },
-  subnavBtn: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '15px', fontWeight: '600', padding: '8px 16px', cursor: 'pointer', borderRadius: '8px', transition: '0.2s' },
-  subnavBtnActive: { background: 'var(--bg-tertiary)', color: 'var(--accent-blue)', border: 'none', fontSize: '15px', fontWeight: '700', padding: '8px 16px', cursor: 'pointer', borderRadius: '8px', transition: '0.2s' },
-  ingresosBadge: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '12px 24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.3)', color: '#fff' },
-  ingresosLabel: { fontSize: '10px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  ingresosValor: { fontSize: '22px', fontWeight: '900', color: '#fff', lineHeight: 1.2 },
-  filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
-  selectFiltro: { padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '150px', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' },
+  sub: { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' },
+  barraAcciones: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '16px' },
+  search: { flex: 1, maxWidth: '380px', height: 38, boxSizing: 'border-box', padding: '0 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-primary)', outline: 'none', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.2s ease', boxShadow: 'var(--shadow-sm)' },
+  tabs: { display: 'flex', alignItems: 'center', background: 'var(--bg-secondary)', padding: '3px', borderRadius: 12, border: '1px solid var(--border)', flexShrink: 0, gap: '3px', boxShadow: 'var(--shadow-sm)', height: 38, boxSizing: 'border-box' },
+  tab: { padding: '0 16px', height: '30px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, textAlign: 'center', transition: 'all 0.2s', borderRadius: 8, fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' },
+  tabHover: { padding: '0 16px', height: '30px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, textAlign: 'center', transition: 'all 0.2s', borderRadius: 8, fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' },
+  tabActiveVerde: { padding: '0 16px', height: '30px', background: 'var(--accent-green)', border: 'none', color: '#fff', borderRadius: 8, fontWeight: 700, fontSize: '13px', textAlign: 'center', boxShadow: 'var(--shadow-glow-green)', transition: 'all 0.2s', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' },
+  tabActiveRojo: { padding: '0 16px', height: '30px', background: 'var(--accent-red)', border: 'none', color: '#fff', borderRadius: 8, fontWeight: 700, fontSize: '13px', textAlign: 'center', boxShadow: 'var(--shadow-glow-red)', transition: 'all 0.2s', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' },
+  tabActiveAzul: { padding: '0 16px', height: '30px', background: 'var(--accent-blue)', border: 'none', color: '#fff', borderRadius: 8, fontWeight: 700, fontSize: '13px', textAlign: 'center', boxShadow: 'var(--shadow-glow-blue)', transition: 'all 0.2s', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' },
+  subnav: {
+    display: 'flex',
+    gap: 4,
+    padding: '4px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: 14,
+    width: 'fit-content',
+    marginBottom: 24,
+    boxShadow: 'var(--shadow-sm)',
+  },
+  filtrosSecundarios: { display: 'flex', justifyContent: 'space-between', marginBottom: '24px', alignItems: 'center', flexWrap: 'nowrap', gap: '12px' },
+  selectFiltro: {
+    height: 38,
+    boxSizing: 'border-box',
+    padding: '0 12px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: 10,
+    color: 'var(--text-secondary)',
+    outline: 'none',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    colorScheme: 'dark',
+    transition: 'all 0.2s',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: 'var(--text-secondary)',
+    padding: '0 12px',
+    height: 38,
+    boxSizing: 'border-box',
+    background: 'var(--bg-secondary)',
+    borderRadius: 10,
+    border: '1px solid var(--border)',
+    boxShadow: 'var(--shadow-sm)',
+    whiteSpace: 'nowrap',
+    userSelect: 'none',
+    transition: 'all 0.2s',
+  },
   dateFilterContainer: { display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: '10px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' },
   dateInput: { background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '13px', fontWeight: '600', outline: 'none', cursor: 'pointer' },
   btnClearDate: { background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' },

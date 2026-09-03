@@ -25,6 +25,7 @@ class EventoAlumnoController extends Controller
             
         $examenes = collect();
         $torneos = collect();
+        $todasCintas = collect();
 
         if ($evento->tipo === 'examen') {
             $examenes = ExamenAlumno::with(['gradoActual', 'gradoSiguiente'])
@@ -32,6 +33,8 @@ class EventoAlumnoController extends Controller
                 ->whereIn('alumno_id', $inscritos->pluck('id'))
                 ->get()
                 ->keyBy('alumno_id');
+
+            $todasCintas = ConfiguracionCinta::orderBy('orden')->get();
         } elseif ($evento->tipo === 'torneo') {
             $torneos = TorneoAlumno::with(['modalidades'])
                 ->where('evento_id', $evento->id)
@@ -40,17 +43,34 @@ class EventoAlumnoController extends Controller
                 ->keyBy('alumno_id');
         }
 
-        $resultado = $inscritos->map(function ($alumno) use ($evento, $examenes, $torneos) {
+        $resultado = $inscritos->map(function ($alumno) use ($evento, $examenes, $torneos, $todasCintas) {
             $data = $alumno->toArray();
             $data['pivot_id']   = $alumno->pivot->id;
-            $data['pagado']     = $alumno->pivot->pagado;
+            $data['pagado']     = (bool) $alumno->pivot->pagado;
             $data['fecha_pago'] = $alumno->pivot->fecha_pago;
             $data['asistio']    = $alumno->pivot->asistio;
             $data['pago_inscripcion'] = $alumno->pivot->pago_inscripcion;
             $data['pivot_created_at'] = $alumno->pivot->created_at;
 
             if ($evento->tipo === 'examen') {
-                $data['examen_detalle'] = $examenes->get($alumno->id);
+                $ex = $examenes->get($alumno->id);
+                if ($ex) {
+                    if (!$ex->relationLoaded('gradoActual') || !$ex->gradoActual) {
+                        if ($alumno->cintaConfig) {
+                            $ex->setRelation('gradoActual', $alumno->cintaConfig);
+                        }
+                    }
+                    if ((!$ex->relationLoaded('gradoSiguiente') || !$ex->gradoSiguiente) && $ex->gradoActual) {
+                        $ordenActual = $ex->gradoActual->orden ?? 0;
+                        $sig = $todasCintas->first(function ($c) use ($ordenActual) {
+                            return ($c->orden ?? 0) > $ordenActual;
+                        });
+                        if ($sig) {
+                            $ex->setRelation('gradoSiguiente', $sig);
+                        }
+                    }
+                }
+                $data['examen_detalle'] = $ex;
             } elseif ($evento->tipo === 'torneo') {
                 $data['torneo_detalle'] = $torneos->get($alumno->id);
             }
@@ -147,7 +167,9 @@ class EventoAlumnoController extends Controller
         $validated = $request->validate([
             'alumnos'                      => 'required|array',
             'alumnos.*.alumno_id'          => 'required|exists:alumnos,id',
+            'alumnos.*.costo'              => 'nullable|numeric|min:0',
             'alumnos.*.costo_examen'       => 'nullable|numeric|min:0',
+            'alumnos.*.costo_torneo'       => 'nullable|numeric|min:0',
             'alumnos.*.grado_actual_id'    => 'nullable|exists:configuraciones_cintas,id',
             'alumnos.*.grado_siguiente_id' => 'nullable|exists:configuraciones_cintas,id',
             'alumnos.*.pagado'             => 'boolean',
@@ -171,10 +193,11 @@ class EventoAlumnoController extends Controller
         DB::transaction(function () use ($evento, $nuevos) {
             $pivotRecords = [];
             foreach ($nuevos as $item) {
+                $costoVal = $item['costo'] ?? $item['costo_examen'] ?? $item['costo_torneo'] ?? 0;
                 $pivotRecords[$item['alumno_id']] = [
                     'pagado' => $item['pagado'] ?? false,
                     'fecha_pago' => (!empty($item['pagado'])) ? now() : null,
-                    'pago_inscripcion' => $item['costo_examen'] ?? 0,
+                    'pago_inscripcion' => $costoVal,
                 ];
             }
             $evento->alumnos()->attach($pivotRecords);
@@ -189,19 +212,42 @@ class EventoAlumnoController extends Controller
                 $examenRecords = [];
                 foreach ($nuevos as $item) {
                     $pivotId = $nuevosPivot->get($item['alumno_id'])->id;
+                    $costoVal = $item['costo'] ?? $item['costo_examen'] ?? null;
                     $examenRecords[] = [
                         'evento_id' => $evento->id,
                         'alumno_id' => $item['alumno_id'],
                         'evento_alumno_id' => $pivotId,
                         'grado_actual_id' => $item['grado_actual_id'] ?? null,
                         'grado_siguiente_id' => $item['grado_siguiente_id'] ?? null,
-                        'costo_examen' => $item['costo_examen'] ?? null,
+                        'costo_examen' => $costoVal,
                         'resultado' => 'pendiente',
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
                 }
                 ExamenAlumno::insert($examenRecords);
+            } elseif ($evento->tipo === 'torneo') {
+                $nuevosPivot = DB::table('evento_alumno')
+                    ->where('evento_id', $evento->id)
+                    ->whereIn('alumno_id', $nuevos->pluck('alumno_id'))
+                    ->get()
+                    ->keyBy('alumno_id');
+
+                $torneoRecords = [];
+                foreach ($nuevos as $item) {
+                    $pivotId = $nuevosPivot->get($item['alumno_id'])->id;
+                    $costoVal = $item['costo'] ?? $item['costo_torneo'] ?? null;
+                    $torneoRecords[] = [
+                        'evento_id' => $evento->id,
+                        'alumno_id' => $item['alumno_id'],
+                        'evento_alumno_id' => $pivotId,
+                        'costo_torneo' => $costoVal,
+                        'resultado' => 'pendiente',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+                TorneoAlumno::insert($torneoRecords);
             }
         });
 
@@ -221,6 +267,7 @@ class EventoAlumnoController extends Controller
             'pagado'             => 'nullable|boolean',
             'fecha_pago'         => 'nullable|date',
             'asistio'            => 'nullable|boolean',
+            'costo'              => 'nullable|numeric|min:0',
             // Examen
             'resultado_examen'   => 'nullable|in:pendiente,aprobado,reprobado',
             'costo_examen'       => 'nullable|numeric|min:0',
@@ -240,6 +287,7 @@ class EventoAlumnoController extends Controller
             if (array_key_exists('asistio', $validated))    $pivotData['asistio']    = $validated['asistio'];
             
             // Sincronizar costo al pivot
+            if (isset($validated['costo']))                 $pivotData['pago_inscripcion'] = $validated['costo'];
             if (isset($validated['costo_examen']))          $pivotData['pago_inscripcion'] = $validated['costo_examen'];
             if (isset($validated['costo_torneo']))          $pivotData['pago_inscripcion'] = $validated['costo_torneo'];
 

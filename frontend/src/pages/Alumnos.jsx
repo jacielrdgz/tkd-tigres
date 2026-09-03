@@ -98,6 +98,7 @@ const VACIO = {
   configuracion_cinta_id: '',
   horario_id: '',
   estatus: 'activo',
+  fecha_ingreso: '',
 }
 
 export default function Alumnos() {
@@ -335,6 +336,7 @@ export default function Alumnos() {
       horario_id: alumno.horario_id || '',
       estatus: alumno.estatus || 'activo',
       dia_pago: alumno.dia_pago || 1,
+      fecha_ingreso: alumno.fecha_ingreso || '',
     });
 
     // 3. CORRECCIÓN DE FOTO:
@@ -1533,6 +1535,7 @@ export default function Alumnos() {
               <div style={s.cardInfo}>
                 <InfoItem label="ID" value={alumnoVer.id} />
                 <InfoItem label="F. Nac." value={alumnoVer.fecha_nacimiento} />
+                <InfoItem label="F. Ingreso" value={alumnoVer.fecha_ingreso || 'No registrada'} />
                 <InfoItem label="Edad" value={alumnoVer.edad + ' años'} />
                 <InfoItem label="Cinta" value={alumnoVer.cinta_config?.nombre_nivel || 'Sin cinta'} />
                 <InfoItem label="Tutor" value={limpiarDato(alumnoVer.nombre_tutor)} />
@@ -1765,7 +1768,7 @@ export default function Alumnos() {
               )}
             </div>
 
-            <div style={s.grid2}>
+            <div style={s.grid2} className="mobile-grid-1">
               <Campo label="Nombre(s)" value={form.nombre} error={errors.nombre?.[0]} required onChange={v => { setForm({ ...form, nombre: v }); if (errors.nombre) setErrors(prev => ({ ...prev, nombre: undefined })) }} />
               <Campo label="Apellido paterno" value={form.apellido_paterno} error={errors.apellido_paterno?.[0]} required onChange={v => { setForm({ ...form, apellido_paterno: v }); if (errors.apellido_paterno) setErrors(prev => ({ ...prev, apellido_paterno: undefined })) }} />
               <Campo label="Apellido materno" value={form.apellido_materno} error={errors.apellido_materno?.[0]} required onChange={v => { setForm({ ...form, apellido_materno: v }); if (errors.apellido_materno) setErrors(prev => ({ ...prev, apellido_materno: undefined })) }} />
@@ -1785,7 +1788,18 @@ export default function Alumnos() {
                   if (errors.telefono_tutor) setErrors(prev => ({ ...prev, telefono_tutor: undefined }))
                 }}
               />
-              <Campo label="Correo electrónico" value={form.email} error={errors.email?.[0]} onChange={v => { setForm({ ...form, email: v }); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })) }} type="email" full />
+              <CampoFecha label="Fecha de ingreso (Opcional)" value={form.fecha_ingreso} placeholder="dd/mm/aaaa" error={errors.fecha_ingreso?.[0]} onChange={v => { setForm({ ...form, fecha_ingreso: v }); if (errors.fecha_ingreso) setErrors(prev => ({ ...prev, fecha_ingreso: undefined })) }} />
+              <Campo
+                label="Correo electrónico"
+                value={form.email}
+                placeholder="ejemplo@correo.com"
+                error={errors.email?.[0]}
+                onChange={v => {
+                  setForm({ ...form, email: v })
+                  if (errors.email) setErrors(prev => ({ ...prev, email: undefined }))
+                }}
+                type="email"
+              />
 
               <FormDropdown
                 label="Horario Asignado"

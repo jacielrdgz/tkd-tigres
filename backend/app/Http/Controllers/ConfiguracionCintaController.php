@@ -7,6 +7,7 @@ use App\Models\Alumno;
 use App\Services\DefaultCintasService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class ConfiguracionCintaController extends Controller
 {
@@ -16,29 +17,42 @@ class ConfiguracionCintaController extends Controller
         return ($user && !$user->isSuperAdmin()) ? $user->tenant_id : null;
     }
 
+    private function clearCintasCache(?int $tenantId = null): void
+    {
+        $tId = $tenantId ?? $this->getTenantId();
+        Cache::forget("cintas_catalogo_tenant_" . ($tId ?? 'global'));
+        Cache::forget("cintas_catalogo_tenant_global");
+    }
+
     /**
      * Listar cintas del tenant (o las globales si usa el catálogo base).
      */
     public function index(Request $request)
     {
         try {
-            DefaultCintasService::asegurarCintasGlobales();
             $tenantId = $this->getTenantId();
+            $cacheKey = "cintas_catalogo_tenant_" . ($tenantId ?? 'global');
 
-            $cintas = ConfiguracionCinta::forTenant($tenantId)->get();
+            $cintas = Cache::remember($cacheKey, 3600, function () use ($tenantId) {
+                // Solo asegurar si la tabla global está vacía
+                DefaultCintasService::asegurarCintasGlobales();
 
-            // Si no devolvió nada con forTenant, verificar fallbacks
-            if ($cintas->isEmpty()) {
-                if ($tenantId) {
-                    $cintas = ConfiguracionCinta::where('tenant_id', $tenantId)->orderBy('orden')->get();
+                $list = ConfiguracionCinta::forTenant($tenantId)->orderBy('orden')->get();
+
+                if ($list->isEmpty()) {
+                    if ($tenantId) {
+                        $list = ConfiguracionCinta::where('tenant_id', $tenantId)->orderBy('orden')->get();
+                    }
+                    if ($list->isEmpty()) {
+                        $list = ConfiguracionCinta::whereNull('tenant_id')->orderBy('orden')->get();
+                    }
+                    if ($list->isEmpty()) {
+                        $list = ConfiguracionCinta::orderBy('orden')->get();
+                    }
                 }
-                if ($cintas->isEmpty()) {
-                    $cintas = ConfiguracionCinta::whereNull('tenant_id')->orderBy('orden')->get();
-                }
-                if ($cintas->isEmpty()) {
-                    $cintas = ConfiguracionCinta::orderBy('orden')->get();
-                }
-            }
+
+                return $list;
+            });
 
             return response()->json($cintas);
         } catch (\Throwable $e) {
@@ -86,6 +100,7 @@ class ConfiguracionCintaController extends Controller
 
             $validated['tenant_id'] = $tenantId;
             $cinta = ConfiguracionCinta::create($validated);
+            $this->clearCintasCache($tenantId);
 
             return response()->json($cinta, 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -135,6 +150,7 @@ class ConfiguracionCintaController extends Controller
             ]);
 
             $targetCinta->update($validated);
+            $this->clearCintasCache($tenantId);
             return response()->json($targetCinta);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
@@ -179,6 +195,7 @@ class ConfiguracionCintaController extends Controller
                     ->update(['orden' => $index + 1]);
             }
 
+            $this->clearCintasCache($tenantId);
             return response()->json(['message' => 'Orden actualizado correctamente']);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
@@ -213,6 +230,7 @@ class ConfiguracionCintaController extends Controller
                 $cinta->delete();
             }
 
+            $this->clearCintasCache($tenantId);
             return response()->json(['message' => 'Cinta eliminada correctamente']);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al eliminar: ' . $e->getMessage()], 500);
@@ -273,6 +291,7 @@ class ConfiguracionCintaController extends Controller
                     ->update(['configuracion_cinta_id' => $primeraGlobal->id]);
             }
 
+            $this->clearCintasCache($tenantId);
             $cintas = ConfiguracionCinta::forTenant($tenantId)->get();
             return response()->json([
                 'message' => 'Cintas restablecidas a los valores por defecto exitosamente.',

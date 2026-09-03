@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { FiX, FiCalendar, FiCheck } from 'react-icons/fi'
 import api from '../../api/axios'
+import BotonExportar from '../Common/BotonExportar'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { toast } from 'react-toastify'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, guardarODescargarPDF } from '../../utils/pdfHelper'
 
 function Avatar({ alumno, size = 36 }) {
   const [imgError, setImgError] = useState(false)
@@ -64,9 +70,99 @@ export default function ModalDia({ fecha, onCerrar }) {
   const faltaron = alumnos.filter(a => !a.asistio)
   const listaMostrada = tab === 'todos' ? alumnos : tab === 'asistieron' ? asistieron : faltaron
 
+  const exportarExcel = () => {
+    if (!alumnos || alumnos.length === 0) return toast.info('No hay datos para exportar')
+
+    const data = listaMostrada.map((a, i) => ({
+      '#': i + 1,
+      'Alumno': `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
+      'Cinta / Grado': a.cinta_config?.nombre_nivel || 'Sin cinta',
+      'Estado': a.asistio ? 'ASISTIÓ' : 'FALTÓ',
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Asistencia")
+    XLSX.writeFile(wb, `Asistencia_${fecha}.xlsx`)
+    toast.success('Excel descargado con éxito')
+  }
+
+  const exportarPDF = async () => {
+    if (!alumnos || alumnos.length === 0) return toast.info('No hay datos para exportar')
+
+    try {
+      const doc = new jsPDF()
+      const escuelaInfo = await obtenerInfoEscuelaParaPDF()
+
+      const startY = dibujarEncabezadoMembrete(doc, {
+        escuelaInfo,
+        tipoReporte: 'REPORTE DE ASISTENCIA DIARIA',
+        subtituloEtiqueta: 'Fecha:',
+        subtituloValor: fechaFormateada.toUpperCase(),
+      })
+
+      // Estadísticas
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 41, 59)
+      doc.text(
+        `Total: ${stats.total}   |   Asistieron: ${stats.asistieron}   |   Faltaron: ${stats.faltaron}   |   % Asistencia: ${stats.pct}%`,
+        14,
+        startY + 4
+      )
+
+      const rows = listaMostrada.map((a, i) => [
+        i + 1,
+        `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
+        a.cinta_config?.nombre_nivel || 'Sin cinta',
+        a.asistio ? 'ASISTIÓ' : 'FALTÓ',
+      ])
+
+      autoTable(doc, {
+        startY: startY + 8,
+        head: [['#', 'Alumno', 'Cinta / Grado', 'Estado']],
+        body: rows,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [37, 99, 235],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 9,
+        },
+        bodyStyles: {
+          fontSize: 8.5,
+          textColor: [30, 41, 59],
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        didParseCell: (data) => {
+          if (data.section === 'body' && data.column.index === 3) {
+            const val = data.cell.raw
+            if (val === 'ASISTIÓ') {
+              data.cell.styles.textColor = [16, 185, 129]
+              data.cell.styles.fontStyle = 'bold'
+            } else {
+              data.cell.styles.textColor = [239, 68, 68]
+              data.cell.styles.fontStyle = 'bold'
+            }
+          }
+        },
+        margin: { top: 10, bottom: 20 },
+      })
+
+      agregarPieDePagina(doc)
+      await guardarODescargarPDF(doc, `Asistencia_${fecha}.pdf`)
+      toast.success('PDF descargado con éxito')
+    } catch (err) {
+      console.error(err)
+      toast.error('Error al generar PDF')
+    }
+  }
+
   return (
-    <div style={s.overlay} onClick={onCerrar}>
-      <div style={s.modal} onClick={e => e.stopPropagation()}>
+    <div style={s.overlay} className="mobile-fullscreen-overlay" onClick={onCerrar}>
+      <div style={s.modal} className="mobile-fullscreen-modal" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={s.header}>
           <div style={s.iconBox}>
@@ -101,26 +197,36 @@ export default function ModalDia({ fecha, onCerrar }) {
           ))}
         </div>
 
-        {/* Tabs filtro */}
-        <div style={s.tabsWrap}>
-          {[
-            { key: 'todos', label: `Todos (${alumnos.length})` },
-            { key: 'asistieron', label: `Asistieron (${asistieron.length})` },
-            { key: 'faltaron', label: `Faltaron (${faltaron.length})` },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              style={{
-                ...s.tabBtn,
-                background: tab === key ? 'var(--accent-blue)' : 'transparent',
-                color: tab === key ? '#fff' : 'var(--text-muted)',
-                fontWeight: tab === key ? 700 : 500,
-              }}
-              onClick={() => setTab(key)}
-            >
-              {label}
-            </button>
-          ))}
+        {/* Tabs filtro y Botón Exportar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 22px 14px', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {[
+              { key: 'todos', label: `Todos (${alumnos.length})` },
+              { key: 'asistieron', label: `Asistieron (${asistieron.length})` },
+              { key: 'faltaron', label: `Faltaron (${faltaron.length})` },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                style={{
+                  ...s.tabBtn,
+                  background: tab === key ? 'var(--accent-blue)' : 'transparent',
+                  color: tab === key ? '#fff' : 'var(--text-muted)',
+                  fontWeight: tab === key ? 700 : 500,
+                }}
+                onClick={() => setTab(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <BotonExportar
+            onExportarExcel={exportarExcel}
+            onExportarPDF={exportarPDF}
+            disabled={cargando || alumnos.length === 0}
+            align="right"
+            className=""
+          />
         </div>
 
         {/* Lista */}

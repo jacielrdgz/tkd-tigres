@@ -24,6 +24,7 @@ class Alumno extends Model
         'horario_id',
         'estatus',
         'dia_pago',
+        'fecha_ingreso',
     ];
 
     protected $appends = ['edad', 'foto_url'];

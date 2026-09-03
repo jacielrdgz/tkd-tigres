@@ -141,12 +141,14 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
           boxShadow: mobileOpen ? '4px 0 30px rgba(0,0,0,0.5)' : 'none',
           height: '100dvh',
           maxHeight: '100dvh',
-          overflowY: 'auto',
+          overflowY: 'hidden',   // el aside NO scrollea — solo el nav internamente
+          display: 'flex',
+          flexDirection: 'column',
         } : {}),
       }}>
         {/* Logo & tenant info */}
         <div
-          style={{ ...styles.logoSection, cursor: logoUrlFinal ? 'pointer' : 'default' }}
+          style={{ ...styles.logoSection, cursor: logoUrlFinal ? 'pointer' : 'default', flexShrink: 0 }}
           title={logoUrlFinal ? "Ver logo de la escuela" : tenantName}
           onClick={() => {
             if (logoUrlFinal) {
@@ -183,7 +185,8 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
           ...styles.nav,
           ...(isMobile ? {
             padding: '12px 12px',
-            flex: '1 1 auto',
+            flex: '1 1 0',
+            minHeight: 0,
             overflowY: 'auto',
           } : {}),
         }}>
@@ -204,10 +207,10 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
         {/* User info + logout */}
         <div style={{
           ...styles.footer,
+          flexShrink: 0,
           ...(isMobile ? {
             padding: '12px 16px',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)',
-            marginBottom: '8px',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
           } : {}),
         }}>
           {/*Ajustes link*/}

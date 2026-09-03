@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { FiX, FiChevronLeft, FiChevronRight, FiCheck } from 'react-icons/fi'
+import { FiX, FiChevronLeft, FiChevronRight, FiCheck, FiClock } from 'react-icons/fi'
 import api from '../../api/axios'
 
 const formatHora = (hora) => {
@@ -121,9 +121,14 @@ export default function ModalAlumno({ alumno, onCerrar }) {
               {aluData.nombre} {aluData.apellido_paterno} {aluData.apellido_materno || ''}
             </h2>
             <div style={s.subinfo}>
-              {aluData.horario_config
-                ? `🕒 ${aluData.horario_config.nombre} (${formatHora(aluData.horario_config.hora_inicio)} - ${formatHora(aluData.horario_config.hora_fin)}) · ${aluData.horario_config.dias || ''}`
-                : 'Sin horario'}
+              {aluData.horario_config ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <FiClock size={12} style={{ color: 'var(--text-muted)' }} />
+                  {`${aluData.horario_config.nombre} (${formatHora(aluData.horario_config.hora_inicio)} - ${formatHora(aluData.horario_config.hora_fin)}) · ${aluData.horario_config.dias || ''}`}
+                </span>
+              ) : (
+                'Sin horario'
+              )}
             </div>
             {aluData.cinta_config && (
               <span style={{
@@ -180,7 +185,7 @@ export default function ModalAlumno({ alumno, onCerrar }) {
                   <div key={i} style={s.celda(c.estado, c.esHoy)} title={c.fecha}>
                     <span style={s.numDia}>{c.d}</span>
                     {c.estado === 'asistio' && <FiCheck size={10} strokeWidth={3} />}
-                    {c.estado === 'falto' && <span style={{ fontSize: 10, lineHeight: 1 }}>✕</span>}
+                    {c.estado === 'falto' && <FiX size={10} strokeWidth={3} />}
                   </div>
                 )
               })

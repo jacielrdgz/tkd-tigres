@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { FiX, FiCalendar, FiCheck, FiSearch } from 'react-icons/fi'
+import { FiX, FiCalendar, FiCheck, FiSearch, FiSave } from 'react-icons/fi'
 import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
@@ -280,8 +280,12 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
             />
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            <span style={{ fontSize: 12.5, color: 'var(--accent-green)', fontWeight: 700, whiteSpace: 'nowrap' }}>✓ {presentes} presentes</span>
-            <span style={{ fontSize: 12.5, color: 'var(--accent-red)', fontWeight: 700, whiteSpace: 'nowrap' }}>✗ {ausentes} ausentes</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--accent-green)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+              <FiCheck size={14} strokeWidth={2.5} /> {presentes} presentes
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--accent-red)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+              <FiX size={14} strokeWidth={2.5} /> {ausentes} ausentes
+            </span>
             <button
               style={s.btnMarcarTodos}
               onClick={marcarTodos}
@@ -375,7 +379,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
 
         {/* Footer */}
         <div style={s.footer}>
-          <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} />
+          <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} dropUp={true} align="left" />
           <div style={{ display: 'flex', gap: 10 }}>
             <button style={s.btnCancelar} onClick={onCerrar}>Cancelar</button>
             <button
@@ -383,7 +387,8 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
               onClick={guardar}
               disabled={guardando}
             >
-              {guardando ? 'Guardando…' : '💾 Guardar Asistencias'}
+              <FiSave size={15} />
+              <span>{guardando ? 'Guardando…' : 'Guardar Asistencias'}</span>
             </button>
           </div>
         </div>
@@ -489,6 +494,7 @@ const s = {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
     padding: '14px 22px',
     borderTop: '1px solid var(--border)', flexShrink: 0,
+    position: 'relative',
   },
   btnExportExcel: {
     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -518,6 +524,7 @@ const s = {
     color: '#fff', fontSize: 13, fontWeight: 700,
     cursor: 'pointer', fontFamily: 'inherit',
     boxShadow: 'var(--shadow-glow-blue)',
+    display: 'flex', alignItems: 'center', gap: 8,
   },
 }
 

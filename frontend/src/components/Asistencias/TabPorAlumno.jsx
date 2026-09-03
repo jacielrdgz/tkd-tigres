@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FiSearch, FiEye, FiChevronDown } from 'react-icons/fi'
+import { FiSearch, FiEye, FiChevronDown, FiAlertTriangle, FiClock } from 'react-icons/fi'
 import { toast } from 'react-toastify'
 import CustomDropdown from '../Common/CustomDropdown'
 
@@ -182,7 +182,7 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
 
         <input
           type="month"
-          style={{ ...s.select, paddingRight: 14 }}
+          style={s.selectMonth}
           value={mes}
           onChange={e => onCambiarMes(e.target.value)}
         />
@@ -196,25 +196,29 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
             borderColor: filtroRiesgo ? 'var(--accent-red)' : 'var(--border)'
           }}
         >
-          ⚠️ En riesgo
+          <FiAlertTriangle size={13} style={{ color: filtroRiesgo ? '#fff' : 'var(--accent-yellow)' }} />
+          <span>En riesgo</span>
         </button>
-
-        <span style={s.conteo}>
-          {cargando ? '…' : `${filtrados.length} alumnos`}
-        </span>
       </div>
 
       {/* Tabla */}
       <div style={s.tabla}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680, tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '34%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '24%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '10%' }} />
+            </colgroup>
             <thead>
               <tr>
-                <th style={s.th}>Alumno</th>
+                <th style={{ ...s.th, textAlign: 'left' }}>Alumno</th>
                 <th style={{ ...s.th, textAlign: 'center' }}>Cinta</th>
                 <th style={{ ...s.th, textAlign: 'center' }}>% Asistencia</th>
                 <th style={{ ...s.th, textAlign: 'center' }}>Clases</th>
-                <th style={{ ...s.th, textAlign: 'center', width: 80 }}></th>
+                <th style={{ ...s.th, textAlign: 'center' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -251,17 +255,22 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                               <div style={s.horario}>
-                                {a.horario_config
-                                  ? `🕒 ${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
-                                  : 'Sin horario'}
+                                {a.horario_config ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <FiClock size={11} style={{ color: 'var(--text-muted)' }} />
+                                    {`${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`}
+                                  </span>
+                                ) : (
+                                  'Sin horario'
+                                )}
                               </div>
                               {a.racha_faltas >= 3 && (
                                 <button
                                   onClick={(e) => abrirWhatsApp(a, e)}
                                   title={`Contactar Tutor por WhatsApp (${a.racha_faltas} faltas seguidas)`}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: 0, filter: 'drop-shadow(0 0 5px rgba(239, 68, 68, 0.6))', transform: 'scale(1.1)' }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, filter: 'drop-shadow(0 0 5px rgba(239, 68, 68, 0.6))', display: 'flex', alignItems: 'center' }}
                                 >
-                                  ⚠️
+                                  <FiAlertTriangle size={15} color="#ef4444" />
                                 </button>
                               )}
                             </div>
@@ -276,12 +285,27 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
                             ...s.badge,
                             background: a.cinta_config.color_hex || 'var(--bg-tertiary)',
                             color: a.cinta_config.color_texto || 'var(--text-primary)',
-                            display: 'inline-block', minWidth: 100, textAlign: 'center', fontSize: 13
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 96,
+                            textAlign: 'center',
+                            fontSize: 12.5
                           }}>
                             {a.cinta_config.nombre_nivel}
                           </span>
                         ) : (
-                          <span style={{ ...s.badge, background: 'var(--bg-tertiary)', color: 'var(--text-muted)', display: 'inline-block', minWidth: 100, textAlign: 'center', fontSize: 13 }}>
+                          <span style={{
+                            ...s.badge,
+                            background: 'var(--bg-tertiary)',
+                            color: 'var(--text-muted)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 96,
+                            textAlign: 'center',
+                            fontSize: 12.5
+                          }}>
                             Sin cinta
                           </span>
                         )}
@@ -373,33 +397,21 @@ const s = {
     fontFamily: 'inherit',
     transition: 'border-color 0.15s',
   },
-  select: {
-    appearance: 'none',
-    padding: '8px 30px 8px 12px',
+  selectMonth: {
+    height: 38,
+    boxSizing: 'border-box',
+    padding: '0 14px',
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border)',
     borderRadius: 10,
-    color: 'var(--text-primary)',
+    color: 'var(--text-secondary)',
     fontSize: 13,
+    fontWeight: 600,
     outline: 'none',
     cursor: 'pointer',
     fontFamily: 'inherit',
-    minWidth: 150,
-    maxWidth: 170,
-  },
-  selectIcon: {
-    position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: 'var(--text-dim)',
-    pointerEvents: 'none',
-  },
-  conteo: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: 'var(--text-muted)',
-    whiteSpace: 'nowrap',
+    colorScheme: 'dark',
+    transition: 'border-color 0.15s',
   },
   tabla: {
     background: 'var(--bg-secondary)',

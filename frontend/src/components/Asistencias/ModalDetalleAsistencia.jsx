@@ -380,7 +380,7 @@ const ModalDetalleAsistencia = ({ estaAbierto, alCerrar, alumno, historial = [] 
                   <>
                     <span style={s.numDia}>{dia.dia}</span>
                     {dia.estatus === 'presente' && <FiCheck style={s.iconoEstatus} />}
-                    {dia.estatus === 'falta' && <span style={s.iconoEstatus}>✕</span>}
+                    {dia.estatus === 'falta' && <FiX style={s.iconoEstatus} />}
                   </>
                 )}
               </div>

@@ -2,35 +2,65 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
+import { toast } from 'react-toastify'
+import {
+  FiAward,
+  FiCalendar,
+  FiMapPin,
+  FiDollarSign,
+  FiPlus,
+  FiSearch,
+  FiUsers,
+  FiClock,
+  FiCheckCircle,
+  FiChevronRight,
+  FiActivity,
+  FiBookOpen
+} from 'react-icons/fi'
 import CustomDropdown from '../components/Common/CustomDropdown'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 const VACIO = { nombre: '', tipo: 'torneo', fecha: '', lugar: '', descripcion: '', costo: '' }
 
 const COLOR_TIPO = {
-  torneo:       { bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: 'rgba(16, 185, 129, 0.3)' },
-  demostracion: { bg: 'rgba(249, 115, 22, 0.15)', color: '#f97316', border: 'rgba(249, 115, 22, 0.3)' },
-  seminario:    { bg: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: 'rgba(168, 85, 247, 0.3)' },
+  torneo:       { bg: 'rgba(16, 185, 129, 0.12)', color: '#10b981', border: 'rgba(16, 185, 129, 0.3)' },
+  seminario:    { bg: 'rgba(168, 85, 247, 0.12)', color: '#a855f7', border: 'rgba(168, 85, 247, 0.3)' },
+  fogueo:       { bg: 'rgba(249, 115, 22, 0.12)', color: '#f97316', border: 'rgba(249, 115, 22, 0.3)' },
+  demostracion: { bg: 'rgba(249, 115, 22, 0.12)', color: '#f97316', border: 'rgba(249, 115, 22, 0.3)' },
+  otro:         { bg: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: 'rgba(59, 130, 246, 0.3)' },
 }
 
 const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 export default function Eventos() {
   const navigate = useNavigate()
-  const [eventos, setEventos]   = useState([])
-  const [submodulo, setSubmodulo] = useState('todos') 
+  const [eventos, setEventos] = useState([])
+  const [submodulo, setSubmodulo] = useState('todos') // 'todos' | 'torneos' | 'seminarios' | 'fogueos'
   const [cargando, setCargando] = useState(true)
 
-  // Filtros
+  // Filtros (por defecto en 'todos')
   const [busqueda, setBusqueda] = useState('')
   const [filtroMes, setFiltroMes] = useState('')
-  const [filtroEstado, setFiltroEstado] = useState('proximos') // todos, proximos, pasados
+  const [filtroEstado, setFiltroEstado] = useState('todos') // todos, proximos, pasados
 
+  // Modal
   const [modalEvento, setModalEvento] = useState(false)
-  const [formEvento, setFormEvento]   = useState(VACIO)
-  const [editando, setEditando]       = useState(null)
+  const [formEvento, setFormEvento] = useState(VACIO)
+  const [editando, setEditando] = useState(null)
+  const [guardando, setGuardando] = useState(false)
 
-  useEffect(() => { cargarDatosBasicos() }, [])
+  // Responsividad
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 640)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    cargarEventos()
+  }, [])
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -40,7 +70,7 @@ export default function Eventos() {
     return () => window.removeEventListener('keydown', handleEsc)
   }, [])
 
-  const cargarDatosBasicos = async (force = false) => {
+  const cargarEventos = async (force = false) => {
     if (!force) {
       const cached = getCache('eventos_lista')
       if (cached && cached.data) {
@@ -54,96 +84,135 @@ export default function Eventos() {
     }
 
     try {
-      const resE = await api.get('/eventos')
-      // Excluir exámenes ya que tienen su propio módulo independiente
-      const evs = resE.data
-        .filter(e => e.tipo !== 'examen')
+      const res = await api.get('/eventos?excluir=examen')
+      // Ordenar: exámenes ya excluidos desde el servidor
+      const evs = (res.data || [])
         .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
       setEventos(evs)
       setCache('eventos_lista', evs)
     } catch (e) {
       const cached = getCache('eventos_lista')
       if (!cached || !cached.data) {
-        console.error(e)
+        console.error('Error al cargar eventos:', e)
       }
     } finally {
       setCargando(false)
     }
   }
 
-
   // --- CRUD EVENTOS ---
-  const abrirCrear = () => { 
-    setFormEvento({ ...VACIO, tipo: submodulo === 'otros' ? 'seminario' : 'torneo' })
+  const abrirCrear = () => {
+    let tipoDefault = 'torneo'
+    if (submodulo === 'seminarios') tipoDefault = 'seminario'
+    else if (submodulo === 'fogueos') tipoDefault = 'fogueo'
+
+    setFormEvento({ ...VACIO, tipo: tipoDefault })
     setEditando(null)
-    setModalEvento(true) 
+    setModalEvento(true)
   }
-  
+
   const abrirEditar = (e, ev) => {
     ev.stopPropagation()
+    const tipoNormalizado = e.tipo === 'demostracion' ? 'fogueo' : (e.tipo || 'torneo')
     setFormEvento({
-      nombre: e.nombre, tipo: e.tipo, fecha: e.fecha,
-      lugar: e.lugar || '', descripcion: e.descripcion || '', costo: e.costo || ''
+      nombre: e.nombre || '',
+      tipo: tipoNormalizado,
+      fecha: e.fecha || '',
+      lugar: e.lugar || '',
+      descripcion: e.descripcion || '',
+      costo: e.costo !== null && e.costo !== undefined ? String(e.costo) : ''
     })
     setEditando(e.id)
     setModalEvento(true)
   }
 
   const guardarEvento = async () => {
+    if (!formEvento.nombre.trim()) {
+      return toast.warning('Ingresa el nombre del evento')
+    }
+    if (!formEvento.fecha) {
+      return toast.warning('Selecciona la fecha del evento')
+    }
+
+    setGuardando(true)
     try {
-      if (editando) await api.put(`/eventos/${editando}`, formEvento)
-      else await api.post('/eventos', formEvento)
+      const payload = {
+        ...formEvento,
+        costo: formEvento.costo !== '' ? parseFloat(formEvento.costo) : null
+      }
+
+      if (editando) {
+        await api.put(`/eventos/${editando}`, payload)
+        toast.success('Evento actualizado exitosamente')
+      } else {
+        await api.post('/eventos', payload)
+        toast.success('Evento creado exitosamente')
+      }
+
       setModalEvento(false)
       invalidateCache('eventos')
-      cargarDatosBasicos(true)
-    } catch (err) { alert('Error al guardar.') }
+      invalidateCache('eventos_lista')
+      cargarEventos(true)
+    } catch (err) {
+      console.error(err)
+      const msg = err.response?.data?.message || 'Error al guardar el evento'
+      toast.error(msg)
+    } finally {
+      setGuardando(false)
+    }
   }
+
   const eliminarEvento = async (id, ev) => {
     ev.stopPropagation()
-    Swal.fire({
-      title: '¿Confirmar borrado?',
-      text: 'El evento se eliminará permanentemente.',
+    const result = await Swal.fire({
+      title: '¿Eliminar evento?',
+      text: 'Se eliminará permanentemente la convocatoria y sus registros asociados.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Sí, borrar',
-      confirmButtonColor: 'var(--accent-red)',
-      background: 'var(--bg-secondary)', color: 'var(--text-primary)'
-    }).then(async r => {
-      if (r.isConfirmed) {
-        try {
-          await api.delete(`/eventos/${id}`)
-          invalidateCache('eventos')
-          cargarDatosBasicos(true)
-        } catch (err) {
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudo eliminar el evento.',
-            icon: 'error',
-            confirmButtonColor: 'var(--accent-blue)',
-            background: 'var(--bg-secondary)', color: 'var(--text-primary)'
-          })
-        }
-      }
+      confirmButtonText: 'Sí, eliminar',
+      confirmButtonColor: '#ef4444',
+      cancelButtonText: 'Cancelar',
+      background: 'var(--bg-secondary)',
+      color: 'var(--text-primary)'
     })
+
+    if (!result.isConfirmed) return
+
+    try {
+      await api.delete(`/eventos/${id}`)
+      toast.success('Evento eliminado correctamente')
+      invalidateCache('eventos')
+      invalidateCache('eventos_lista')
+      cargarEventos(true)
+    } catch (err) {
+      toast.error('No se pudo eliminar el evento')
+    }
   }
 
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
   const hoyIso = hoy.toISOString().split('T')[0]
 
+  // --- FILTRADO DE EVENTOS ---
   const eventosFiltrados = useMemo(() => {
     return eventos.filter(e => {
-      // 1. Tipo
+      // 1. Tipo / Submódulo
       if (submodulo === 'torneos' && e.tipo !== 'torneo') return false
-      if (submodulo === 'otros' && e.tipo === 'torneo') return false
+      if (submodulo === 'seminarios' && e.tipo !== 'seminario') return false
+      if (submodulo === 'fogueos' && e.tipo !== 'fogueo' && e.tipo !== 'demostracion') return false
 
-      // 2. Busqueda
-      if (busqueda && !e.nombre.toLowerCase().includes(busqueda.toLowerCase()) && !(e.lugar || '').toLowerCase().includes(busqueda.toLowerCase())) return false
+      // 2. Búsqueda por texto (nombre o lugar)
+      if (busqueda) {
+        const q = busqueda.toLowerCase()
+        const nombreMatch = (e.nombre || '').toLowerCase().includes(q)
+        const lugarMatch = (e.lugar || '').toLowerCase().includes(q)
+        if (!nombreMatch && !lugarMatch) return false
+      }
 
-      // 3. Mes
-      if (filtroMes && !e.fecha.startsWith(filtroMes)) return false
+      // 3. Filtro de mes (YYYY-MM)
+      if (filtroMes && !e.fecha?.startsWith(filtroMes)) return false
 
-      // 4. Estado
+      // 4. Filtro de estado
       if (filtroEstado === 'proximos' && e.fecha < hoyIso) return false
       if (filtroEstado === 'pasados' && e.fecha >= hoyIso) return false
 
@@ -151,11 +220,62 @@ export default function Eventos() {
     })
   }, [eventos, submodulo, busqueda, filtroMes, filtroEstado, hoyIso])
 
-  // --- ESTADISTICAS ---
+  // --- AGRUPACIÓN POR CATEGORÍAS PARA LA VISTA "TODOS" ---
+  const categorias = useMemo(() => {
+    const torneos = eventosFiltrados.filter(e => e.tipo === 'torneo')
+    const seminarios = eventosFiltrados.filter(e => e.tipo === 'seminario')
+    const fogueos = eventosFiltrados.filter(e => e.tipo === 'fogueo' || e.tipo === 'demostracion')
+    const otros = eventosFiltrados.filter(e => e.tipo !== 'torneo' && e.tipo !== 'seminario' && e.tipo !== 'fogueo' && e.tipo !== 'demostracion')
+
+    const lista = []
+    if (torneos.length > 0) {
+      lista.push({
+        id: 'torneos',
+        titulo: 'Torneos',
+        icono: <FiAward size={16} />,
+        color: '#10b981',
+        bgIcon: 'rgba(16, 185, 129, 0.12)',
+        items: torneos
+      })
+    }
+    if (seminarios.length > 0) {
+      lista.push({
+        id: 'seminarios',
+        titulo: 'Seminarios',
+        icono: <FiBookOpen size={16} />,
+        color: '#a855f7',
+        bgIcon: 'rgba(168, 85, 247, 0.12)',
+        items: seminarios
+      })
+    }
+    if (fogueos.length > 0) {
+      lista.push({
+        id: 'fogueos',
+        titulo: 'Fogueos',
+        icono: <FiActivity size={16} />,
+        color: '#f97316',
+        bgIcon: 'rgba(249, 115, 22, 0.12)',
+        items: fogueos
+      })
+    }
+    if (otros.length > 0) {
+      lista.push({
+        id: 'otros',
+        titulo: 'Otros Eventos',
+        icono: <FiCalendar size={16} />,
+        color: '#3b82f6',
+        bgIcon: 'rgba(59, 130, 246, 0.12)',
+        items: otros
+      })
+    }
+    return lista
+  }, [eventosFiltrados])
+
+  // --- ESTADÍSTICAS DEL MÓDULO ---
   const stats = useMemo(() => {
     const proximos = eventos.filter(e => e.fecha >= hoyIso)
-    const delMes = eventos.filter(e => e.fecha.startsWith(hoyIso.substring(0, 7)))
-    
+    const delMes = eventos.filter(e => e.fecha?.startsWith(hoyIso.substring(0, 7)))
+
     let proxMasCercano = null
     let diasFaltan = null
     if (proximos.length > 0) {
@@ -164,41 +284,236 @@ export default function Eventos() {
       diasFaltan = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     }
 
-    return { totalProximos: proximos.length, delMes: delMes.length, proxMasCercano, diasFaltan }
-  }, [eventos, hoyIso])
+    return {
+      totalProximos: proximos.length,
+      delMes: delMes.length,
+      proxMasCercano,
+      diasFaltan,
+      totalHistorico: eventos.length
+    }
+  }, [eventos, hoyIso, hoy])
 
   const formatFechaBloque = (fechaStr) => {
     if (!fechaStr) return { d: '-', m: '-' }
     const d = new Date(fechaStr + 'T12:00:00')
     return {
       d: String(d.getDate()).padStart(2, '0'),
-      m: MESES_CORTO[d.getMonth()].toUpperCase()
+      m: MESES_CORTO[d.getMonth()] || '-'
     }
+  }
+
+  // Renderizar tarjeta individual de evento
+  const renderCard = (e) => {
+    const f = formatFechaBloque(e.fecha)
+    const esPasado = e.fecha < hoyIso
+    const c = COLOR_TIPO[e.tipo] || COLOR_TIPO.otro
+    const costoNum = parseFloat(e.costo) || 0
+    const labelTipo = (e.tipo === 'demostracion' || e.tipo === 'fogueo') ? 'FOGUEO' : e.tipo.toUpperCase()
+
+    return (
+      <div
+        key={e.id}
+        style={{
+          ...s.card,
+          opacity: esPasado ? 0.8 : 1
+        }}
+        onClick={() => navigate(`/eventos/${e.id}`)}
+        onMouseEnter={ev => {
+          ev.currentTarget.style.transform = 'translateY(-3px)'
+          ev.currentTarget.style.boxShadow = 'var(--shadow-lg)'
+          ev.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)'
+        }}
+        onMouseLeave={ev => {
+          ev.currentTarget.style.transform = 'none'
+          ev.currentTarget.style.boxShadow = 'var(--shadow-sm)'
+          ev.currentTarget.style.borderColor = 'var(--border)'
+        }}
+      >
+        <div style={s.cardBody}>
+          {/* Bloque de fecha tipo calendario */}
+          <div style={{ ...s.dateBlock, borderColor: c.border }}>
+            <div style={{ ...s.dateMonth, background: c.color }}>{f.m}</div>
+            <div style={{ ...s.dateDay, color: c.color }}>{f.d}</div>
+          </div>
+
+          {/* Info principal */}
+          <div style={s.cardInfo}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+              <span style={{ ...s.tipoBadge, background: c.bg, color: c.color, border: `1px solid ${c.border}` }}>
+                {labelTipo}
+              </span>
+              {esPasado ? (
+                <span style={s.badgeConcluido}>
+                  <FiCheckCircle size={10} style={{ marginRight: '3px' }} />
+                  CONCLUIDO
+                </span>
+              ) : (
+                <span style={s.badgeProximo}>
+                  <FiClock size={10} style={{ marginRight: '3px' }} />
+                  PRÓXIMO
+                </span>
+              )}
+            </div>
+
+            <h3 style={s.cardNombre} title={e.nombre}>{e.nombre}</h3>
+
+            <div style={s.cardDetalles}>
+              {e.lugar && (
+                <span style={s.cardDetailItem} title={e.lugar}>
+                  <FiMapPin size={12} style={{ marginRight: '5px', flexShrink: 0, color: 'var(--text-muted)' }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.lugar}</span>
+                </span>
+              )}
+              <span style={s.cardDetailItem}>
+                <FiDollarSign size={12} style={{ marginRight: '5px', flexShrink: 0, color: 'var(--accent-green)' }} />
+                {costoNum > 0 ? (
+                  <span>Costo general: <strong>${costoNum.toFixed(2)}</strong></span>
+                ) : (
+                  <span style={{ color: 'var(--accent-green)', fontWeight: '600' }}>Sin costo / Gratuito</span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer de tarjeta */}
+        <div style={s.cardFooter}>
+          <span style={s.footerLink}>
+            <span>Ver inscritos y detalles</span>
+            <FiChevronRight size={14} />
+          </span>
+
+          <div style={{ display: 'flex', gap: '6px' }} onClick={ev => ev.stopPropagation()}>
+            <button
+              style={s.btnActionEdit}
+              onClick={(ev) => abrirEditar(e, ev)}
+              title="Editar Evento"
+              onMouseOver={ev => {
+                ev.currentTarget.style.background = '#3b82f6'
+                ev.currentTarget.style.color = 'white'
+                ev.currentTarget.style.transform = 'scale(1.1)'
+              }}
+              onMouseOut={ev => {
+                ev.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'
+                ev.currentTarget.style.color = '#3b82f6'
+                ev.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+            </button>
+
+            <button
+              style={s.btnActionDelete}
+              onClick={(ev) => eliminarEvento(e.id, ev)}
+              title="Eliminar Evento"
+              onMouseOver={ev => {
+                ev.currentTarget.style.background = '#ef4444'
+                ev.currentTarget.style.color = 'white'
+                ev.currentTarget.style.transform = 'scale(1.1)'
+              }}
+              onMouseOut={ev => {
+                ev.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                ev.currentTarget.style.color = '#ef4444'
+                ev.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div style={s.page}>
+      {/* HEADER PRINCIPAL */}
       <div style={s.header}>
         <div>
           <h2 style={s.titulo}>Eventos</h2>
-          <p style={s.sub}>Gestión de actividades y evaluaciones</p>
+          <p style={s.sub}>Gestión de torneos, seminarios y actividades del dojo</p>
         </div>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <div style={s.statBadge}>
-            <span style={s.statLabel}>Próximo evento</span>
-            <span style={s.statValor}>{stats.proxMasCercano ? stats.proxMasCercano.nombre : 'Ninguno'}</span>
-            <span style={s.statSub}>
-              {stats.diasFaltan !== null ? (stats.diasFaltan === 0 ? '¡Es Hoy!' : `En ${stats.diasFaltan} días`) : '-'}
+
+        <button
+          style={s.btnNuevo}
+          onClick={abrirCrear}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
+          }}
+        >
+          <FiPlus size={16} />
+          <span>Nuevo evento</span>
+        </button>
+      </div>
+
+      {/* SUMMARY CARDS */}
+      <div style={{ ...s.statsGrid, gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)' }}>
+        {/* Card 1: Próximo Evento */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-blue)' }}>
+            <FiCalendar size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Próximo Evento</span>
+            <div style={s.statValor} title={stats.proxMasCercano?.nombre || ''}>
+              {cargando ? '—' : (stats.proxMasCercano ? stats.proxMasCercano.nombre : 'Sin programar')}
+            </div>
+            <span style={s.statSublabel}>
+              {stats.proxMasCercano ? (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  color: stats.diasFaltan === 0 ? 'var(--accent-green)' : 'var(--accent-blue)',
+                  fontWeight: '700'
+                }}>
+                  <FiClock size={11} />
+                  {stats.diasFaltan === 0 ? '¡Es Hoy!' : `En ${stats.diasFaltan} día${stats.diasFaltan !== 1 ? 's' : ''}`}
+                </span>
+              ) : 'No hay eventos agendados'}
             </span>
           </div>
-          <div style={{ ...s.statBadge, background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.3)' }}>
-            <span style={s.statLabel}>Total próximos</span>
-            <span style={s.statValor}>{stats.totalProximos}</span>
-            <span style={s.statSub}>Eventos programados</span>
+        </div>
+
+        {/* Card 2: Convocatorias Activas */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(16, 185, 129, 0.12)', color: 'var(--accent-green)' }}>
+            <FiClock size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Eventos Activos</span>
+            <div style={{ ...s.statValor, color: 'var(--accent-green)' }}>
+              {cargando ? '—' : stats.totalProximos}
+            </div>
+            <span style={s.statSublabel}>
+              {stats.delMes > 0 ? `${stats.delMes} agendado${stats.delMes !== 1 ? 's' : ''} este mes` : 'Próximas actividades'}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Total Histórico */}
+        <div style={s.statCard}>
+          <div style={{ ...s.statIconBox, background: 'rgba(139, 92, 246, 0.12)', color: 'var(--accent-purple)' }}>
+            <FiUsers size={22} />
+          </div>
+          <div style={s.statContent}>
+            <span style={s.statLabel}>Total Convocatorias</span>
+            <div style={{ ...s.statValor, color: 'var(--accent-purple)' }}>
+              {cargando ? '—' : stats.totalHistorico}
+            </div>
+            <span style={s.statSublabel}>Historial acumulado</span>
           </div>
         </div>
       </div>
 
+      {/* SUBNAV TIPO PILL PARA CATEGORÍAS */}
       <div style={s.subnav}>
         <button
           style={submodulo === 'todos' ? s.subnavBtnActive : s.subnavBtn}
@@ -213,158 +528,122 @@ export default function Eventos() {
           Torneos
         </button>
         <button
-          style={submodulo === 'otros' ? s.subnavBtnActive : s.subnavBtn}
-          onClick={() => setSubmodulo('otros')}
+          style={submodulo === 'seminarios' ? s.subnavBtnActive : s.subnavBtn}
+          onClick={() => setSubmodulo('seminarios')}
         >
-          Seminarios y Otros
+          Seminarios
+        </button>
+        <button
+          style={submodulo === 'fogueos' ? s.subnavBtnActive : s.subnavBtn}
+          onClick={() => setSubmodulo('fogueos')}
+        >
+          Fogueos
         </button>
       </div>
 
+      {/* BARRA DE ACCIONES Y FILTROS */}
       <div style={s.barraAcciones}>
         <div style={s.searchWrapper}>
-          <svg style={s.searchIcon} width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <FiSearch style={s.searchIcon} size={16} />
           <input
             style={s.search}
-            placeholder="Buscar por nombre o lugar..."
+            placeholder="Buscar por nombre o sede..."
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
+            onFocus={e => {
+              e.currentTarget.style.borderColor = 'var(--accent-blue)'
+              e.currentTarget.style.background = 'var(--bg-tertiary)'
+              e.currentTarget.style.boxShadow = '0 0 12px rgba(59, 130, 246, 0.3)'
+            }}
+            onBlur={e => {
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.background = 'var(--bg-secondary)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
           />
         </div>
 
         <div style={s.filtrosSecundarios}>
           <CustomDropdown
             label="Todos los estados"
+            icon={<FiAward size={13} />}
             options={[
               { value: 'todos', label: 'Todos los estados' },
-              { value: 'proximos', label: 'Próximos (Por venir)' },
-              { value: 'pasados', label: 'Eventos Pasados' }
+              { value: 'proximos', label: 'Próximos a realizar' },
+              { value: 'pasados', label: 'Eventos Concluidos' }
             ]}
             value={filtroEstado}
             onChange={val => setFiltroEstado(val)}
-            minWidth="175px"
+            minWidth="205px"
           />
 
           <input
             type="month"
-            style={{ ...s.selectFiltro, paddingRight: 14 }}
+            style={s.selectMonth}
             value={filtroMes}
             onChange={e => setFiltroMes(e.target.value)}
+            title="Filtrar por mes del evento"
           />
-          {filtroMes && (
-            <button style={{ background:'none', border:'none', color:'var(--accent-red)', cursor:'pointer', padding:'0 4px' }} onClick={() => setFiltroMes('')}>✕</button>
-          )}
-
-          <button
-            style={{ ...s.btnNuevo, transition: 'all 0.2s' }}
-            onClick={abrirCrear}
-            onMouseOver={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-            }}
-          >
-            + Nuevo Evento
-          </button>
         </div>
       </div>
 
-      <div style={s.grid}>
-        {eventosFiltrados.map(e => {
-          const c = COLOR_TIPO[e.tipo] || { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: 'var(--border)' }
-          const f = formatFechaBloque(e.fecha)
-          const esPasado = e.fecha < hoyIso
-          
-          return (
-            <div 
-              key={e.id} 
-              style={{ ...s.card, opacity: esPasado ? 0.75 : 1 }} 
-              onClick={() => navigate(`/eventos/${e.id}`)}
-              onMouseEnter={ev => { ev.currentTarget.style.transform = 'translateY(-4px)'; ev.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)' }}
-              onMouseLeave={ev => { ev.currentTarget.style.transform = 'none'; ev.currentTarget.style.boxShadow = 'var(--shadow-sm)' }}
-            >
-              <div style={s.cardBody}>
-                <div style={{ ...s.dateBlock, borderColor: c.border }}>
-                  <div style={{ ...s.dateMonth, background: c.color }}>{f.m}</div>
-                  <div style={{ ...s.dateDay, color: c.color }}>{f.d}</div>
-                </div>
-
-                <div style={s.cardInfo}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{ ...s.tipoBadge, background: c.bg, color: c.color, border: `1px solid ${c.border}` }}>
-                      {e.tipo.toUpperCase()}
-                    </span>
-                    {esPasado ? (
-                      <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px' }}>FINALIZADO</span>
-                    ) : (
-                      <span style={{ fontSize: '10px', fontWeight: '800', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>PRÓXIMO</span>
-                    )}
-                  </div>
-                  <h3 style={s.cardNombre}>{e.nombre}</h3>
-                  <div style={s.cardDetalles}>
-                    {e.lugar && <span style={s.cardDetailItem}>📍 {e.lugar}</span>}
-                    {e.costo > 0 ? (
-                      <span style={s.cardDetailItem}>💰 ${parseFloat(e.costo).toFixed(2)}</span>
-                    ) : (
-                      <span style={{ ...s.cardDetailItem, color: '#10b981', fontWeight: '700' }}>💰 GRATIS</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div style={s.cardFooter}>
-                <span style={s.footerLink}>Ver detalles e inscritos →</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    style={{ ...s.btnIconEdit, transition: 'all 0.2s' }}
-                    onClick={(ev) => abrirEditar(e, ev)}
-                    onMouseOver={ev => {
-                      ev.currentTarget.style.background = 'var(--accent-blue)';
-                      ev.currentTarget.style.color = '#ffffff';
-                      ev.currentTarget.style.transform = 'translateY(-2px)';
-                      ev.currentTarget.style.boxShadow = '0 4px 10px rgba(59, 130, 246, 0.3)';
-                    }}
-                    onMouseOut={ev => {
-                      ev.currentTarget.style.background = 'rgba(96, 165, 250, 0.1)';
-                      ev.currentTarget.style.color = 'var(--accent-blue)';
-                      ev.currentTarget.style.transform = 'translateY(0)';
-                      ev.currentTarget.style.boxShadow = 'none';
-                    }}
-                    title="Editar"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                  </button>
-                  <button
-                    style={{ ...s.btnIconTrash, transition: 'all 0.2s' }}
-                    onClick={(ev) => eliminarEvento(e.id, ev)}
-                    onMouseOver={ev => {
-                      ev.currentTarget.style.background = 'var(--accent-red)';
-                      ev.currentTarget.style.color = '#ffffff';
-                      ev.currentTarget.style.transform = 'translateY(-2px)';
-                      ev.currentTarget.style.boxShadow = '0 4px 10px rgba(239, 68, 68, 0.3)';
-                    }}
-                    onMouseOut={ev => {
-                      ev.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                      ev.currentTarget.style.color = 'var(--accent-red)';
-                      ev.currentTarget.style.transform = 'translateY(0)';
-                      ev.currentTarget.style.boxShadow = 'none';
-                    }}
-                    title="Eliminar"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                  </button>
-                </div>
-              </div>
+      {/* CONTENIDO PRINCIPAL: AGRUPADO POR CATEGORÍAS EN 'TODOS' O DIRECTO EN SUBMÓDULO */}
+      <div style={{ minHeight: '400px' }}>
+        {cargando ? (
+          <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '15px', fontWeight: '600' }}>Cargando eventos...</div>
+          </div>
+        ) : eventosFiltrados.length === 0 ? (
+          <div style={s.emptyState}>
+            <div style={s.emptyIconCircle}>
+              <FiCalendar size={32} color="var(--accent-blue)" />
             </div>
-          )
-        })}
-        {eventosFiltrados.length === 0 && (
-          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📅</div>
-            <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)' }}>No se encontraron eventos</h3>
-            <p style={{ margin: 0 }}>Intenta ajustar los filtros o crea un nuevo evento.</p>
+            <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: '18px', fontWeight: '700' }}>
+              No se encontraron eventos
+            </h3>
+            <p style={{ margin: '0 0 20px', color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px' }}>
+              {busqueda || filtroMes || filtroEstado !== 'todos' || submodulo !== 'todos'
+                ? 'No hay eventos que coincidan con los filtros aplicados. Intenta restablecer los filtros.'
+                : 'Aún no has registrado ningún evento. Crea uno para comenzar a registrar participantes.'}
+            </p>
+            {(busqueda || filtroMes || filtroEstado !== 'todos' || submodulo !== 'todos') ? (
+              <button
+                style={s.btnResetFiltros}
+                onClick={() => { setBusqueda(''); setFiltroMes(''); setFiltroEstado('todos'); setSubmodulo('todos'); }}
+              >
+                Restablecer filtros
+              </button>
+            ) : (
+              <button style={s.btnNuevo} onClick={abrirCrear}>
+                <FiPlus size={16} />
+                <span>Crear Primer Evento</span>
+              </button>
+            )}
+          </div>
+        ) : submodulo === 'todos' ? (
+          /* MODO 'TODOS': DIVIDIDO POR CATEGORÍAS (SI INCLUYE) */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {categorias.map(cat => (
+              <div key={cat.id}>
+                <div style={s.categoriaHeader}>
+                  <div style={{ ...s.catIconBox, background: cat.bgIcon, color: cat.color }}>
+                    {cat.icono}
+                  </div>
+                  <h3 style={s.catTitulo}>{cat.titulo}</h3>
+                  <span style={{ ...s.catBadge, color: cat.color, background: cat.bgIcon }}>
+                    {cat.items.length} {cat.items.length === 1 ? 'evento' : 'eventos'}
+                  </span>
+                </div>
+                <div style={s.grid}>
+                  {cat.items.map(renderCard)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* MODO PESTAÑA INDIVIDUAL (TORNEOS, SEMINARIOS O FOGUEOS) */
+          <div style={s.grid}>
+            {eventosFiltrados.map(renderCard)}
           </div>
         )}
       </div>
@@ -372,49 +651,112 @@ export default function Eventos() {
       {/* MODAL CREAR / EDITAR EVENTO */}
       {modalEvento && (
         <div style={s.overlay}>
-          <div style={s.modal}>
+          <div style={s.modal} className="mobile-fullscreen-modal">
             <div style={s.modalHeader}>
-              <div>
-                <h3 style={s.modalTitulo}>{editando ? 'Editar Evento' : 'Crear Nuevo Evento'}</h3>
-                <p style={s.modalSub}>Completa los detalles para tu actividad</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ ...s.statIconBox, width: '38px', height: '38px', background: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-blue)' }}>
+                  <FiCalendar size={18} />
+                </div>
+                <div>
+                  <h3 style={s.modalTitulo}>{editando ? 'Editar Evento' : 'Crear Nuevo Evento'}</h3>
+                  <p style={s.modalSub}>Completa los datos de la convocatoria para tu actividad</p>
+                </div>
               </div>
-              <button style={s.btnCerrar} onClick={() => setModalEvento(false)}>✕</button>
+              <button
+                className="btn-cerrar-circular"
+                style={s.btnCerrarCircular}
+                onClick={() => setModalEvento(false)}
+                title="Cerrar modal"
+              >
+                <span style={{ fontSize: '18px', lineHeight: 1 }}>✕</span>
+              </button>
             </div>
-            
-            <div style={s.campoGroup}>
-              <label style={s.label}>Nombre del Evento</label>
-              <input style={s.input} placeholder="Ej. Torneo Estatal 2026" value={formEvento.nombre} onChange={e=>setFormEvento({...formEvento, nombre: e.target.value})} />
-            </div>
-            
-            <div style={s.grid2}>
-              <div>
-                <label style={s.label}>Tipo de Evento</label>
-                <select style={s.select} value={formEvento.tipo} onChange={e=>setFormEvento({...formEvento, tipo: e.target.value})}>
-                  <option value="torneo">Torneo / Competencia</option>
-                  <option value="seminario">Seminario / Curso</option>
-                  <option value="demostracion">Demostración</option>
-                </select>
+
+            <div style={s.modalContent}>
+              <div style={s.campoGroup}>
+                <label style={s.label}>Nombre del Evento *</label>
+                <input
+                  style={s.input}
+                  placeholder="Ej. Torneo Abierto TKD Tigres 2026"
+                  value={formEvento.nombre}
+                  onChange={e => setFormEvento({ ...formEvento, nombre: e.target.value })}
+                  autoFocus
+                />
               </div>
-              <div>
-                <label style={s.label}>Fecha</label>
-                <input style={s.input} type="date" value={formEvento.fecha} onChange={e=>setFormEvento({...formEvento, fecha: e.target.value})} />
+
+              <div style={s.grid2} className="mobile-grid-1">
+                <div style={s.campoGroup}>
+                  <label style={s.label}>Tipo de Evento *</label>
+                  <select
+                    style={s.select}
+                    value={formEvento.tipo}
+                    onChange={e => setFormEvento({ ...formEvento, tipo: e.target.value })}
+                  >
+                    <option value="torneo">Torneo / Competencia</option>
+                    <option value="seminario">Seminario / Curso</option>
+                    <option value="fogueo">Fogueo / Intercambio</option>
+                    <option value="otro">Otro Evento / Convivencia</option>
+                  </select>
+                </div>
+
+                <div style={s.campoGroup}>
+                  <label style={s.label}>Fecha del Evento *</label>
+                  <input
+                    style={{ ...s.input, colorScheme: 'dark' }}
+                    type="date"
+                    value={formEvento.fecha}
+                    onChange={e => setFormEvento({ ...formEvento, fecha: e.target.value })}
+                  />
+                </div>
               </div>
-            </div>
-            
-            <div style={s.grid2}>
-              <div>
-                <label style={s.label}>Ubicación / Lugar</label>
-                <input style={s.input} placeholder="Ej. Gimnasio Municipal" value={formEvento.lugar} onChange={e=>setFormEvento({...formEvento, lugar: e.target.value})} />
+
+              <div style={s.grid2} className="mobile-grid-1">
+                <div style={s.campoGroup}>
+                  <label style={s.label}>Ubicación / Sede</label>
+                  <input
+                    style={s.input}
+                    placeholder="Ej. Gimnasio Municipal o Dojo Central"
+                    value={formEvento.lugar}
+                    onChange={e => setFormEvento({ ...formEvento, lugar: e.target.value })}
+                  />
+                </div>
+
+                <div style={s.campoGroup}>
+                  <label style={s.label}>Costo General de Inscripción ($)</label>
+                  <input
+                    style={s.input}
+                    type="number"
+                    min="0"
+                    step="10"
+                    placeholder="0.00 (dejar vacío si es gratis)"
+                    value={formEvento.costo}
+                    onChange={e => setFormEvento({ ...formEvento, costo: e.target.value })}
+                  />
+                </div>
               </div>
-              <div>
-                <label style={s.label}>Costo General ($)</label>
-                <input style={s.input} type="number" placeholder="Ej. 500" value={formEvento.costo} onChange={e=>setFormEvento({...formEvento, costo: e.target.value})} />
+
+              <div style={s.campoGroup}>
+                <label style={s.label}>Descripción / Observaciones</label>
+                <textarea
+                  style={{ ...s.input, minHeight: '75px', resize: 'vertical' }}
+                  placeholder="Detalles sobre categorías, reglamento, horario o requisitos especiales..."
+                  value={formEvento.descripcion}
+                  onChange={e => setFormEvento({ ...formEvento, descripcion: e.target.value })}
+                />
               </div>
             </div>
 
             <div style={s.modalFooter}>
-              <button style={s.btnSecondary} onClick={() => setModalEvento(false)}>Cancelar</button>
-              <button style={s.btnPrimaryModal} onClick={guardarEvento}>{editando ? 'Guardar Cambios' : 'Crear Evento'}</button>
+              <button style={s.btnSecondary} onClick={() => setModalEvento(false)}>
+                Cancelar
+              </button>
+              <button
+                style={s.btnPrimaryModal}
+                onClick={guardarEvento}
+                disabled={guardando}
+              >
+                {guardando ? 'Guardando...' : (editando ? 'Guardar Cambios' : 'Crear Evento')}
+              </button>
             </div>
           </div>
         </div>
@@ -424,62 +766,558 @@ export default function Eventos() {
 }
 
 const s = {
-  page:            { scrollbarGutter: 'stable', paddingBottom: '40px' },
-  header:          { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' },
-  titulo:          { fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
-  sub:             { fontSize: '15px', color: 'var(--text-muted)', marginTop: '2px' },
-  
-  statBadge: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '12px 24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.3)', color: '#fff', minWidth: '160px' },
-  statLabel: { fontSize: '11px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  statValor: { fontSize: '20px', fontWeight: '900', color: '#fff', lineHeight: 1.2, marginTop: '2px', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  statSub: { fontSize: '11px', color: 'rgba(255,255,255,0.9)', marginTop: '2px', fontWeight: '600' },
+  page: {
+    paddingBottom: '40px'
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '24px',
+    flexWrap: 'wrap',
+    gap: '16px'
+  },
+  titulo: {
+    fontSize: '24px',
+    fontWeight: '700',
+    color: 'var(--text-primary)',
+    margin: 0
+  },
+  sub: {
+    fontSize: '15px',
+    color: 'var(--text-muted)',
+    marginTop: '2px',
+    margin: 0
+  },
+  btnNuevo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 18px',
+    fontSize: '13.5px',
+    fontWeight: '700',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
+  },
 
-  subnav:          { display: 'flex', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '12px', marginBottom: '20px' },
-  subnavBtn:       { background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '14px', fontWeight: '600', padding: '8px 16px', cursor: 'pointer', borderRadius: '8px', transition: '0.2s' },
-  subnavBtnActive: { background: 'var(--bg-tertiary)', color: 'var(--accent-blue)', fontSize: '14px', fontWeight: '700', padding: '8px 16px', borderRadius: '8px', transition: '0.2s' },
-  
-  barraAcciones:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' },
-  searchWrapper:   { position: 'relative', flex: 1, maxWidth: '350px' },
-  searchIcon:      { position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' },
-  search:          { width: '100%', padding: '10px 16px 10px 40px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '80px', color: 'var(--text-primary)', outline: 'none', transition: 'all 0.3s ease', fontSize: '14px', boxSizing: 'border-box' },
-  
-  filtrosSecundarios: { display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' },
-  selectFiltro:    { padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer', minWidth: '150px', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' },
-  btnNuevo:        { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s' },
+  // SUMMARY CARDS
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '16px',
+    marginBottom: '24px'
+  },
+  statCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '18px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    boxShadow: 'var(--shadow-sm)',
+    minHeight: '94px',
+    boxSizing: 'border-box',
+    transition: 'all 0.15s ease',
+    overflow: 'hidden'
+  },
+  statIconBox: {
+    width: '46px',
+    height: '46px',
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
+  statContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+    flex: 1
+  },
+  statLabel: {
+    fontSize: '12px',
+    color: 'var(--text-muted)',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em'
+  },
+  statValor: {
+    fontSize: '22px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    lineHeight: 1.25,
+    marginTop: '2px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  statSublabel: {
+    fontSize: '11.5px',
+    color: 'var(--text-muted)',
+    marginTop: '3px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
 
-  grid:            { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' },
-  card:            { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-sm)', transition: 'all 0.3s ease', cursor: 'pointer', overflow: 'hidden' },
-  cardBody:        { padding: '20px', display: 'flex', gap: '16px', flex: 1 },
-  
-  dateBlock:       { width: '60px', height: '65px', borderRadius: '12px', border: '1px solid', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-primary)' },
-  dateMonth:       { color: '#fff', fontSize: '11px', fontWeight: '800', textAlign: 'center', padding: '4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  dateDay:         { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '900', background: 'var(--bg-primary)' },
+  // SUBNAV TIPO PILL
+  subnav: {
+    display: 'flex',
+    gap: '8px',
+    borderBottom: '1px solid var(--border)',
+    paddingBottom: '12px',
+    marginBottom: '20px',
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch'
+  },
+  subnavBtn: {
+    background: 'transparent',
+    border: '1px solid transparent',
+    color: 'var(--text-muted)',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    padding: '8px 16px',
+    cursor: 'pointer',
+    borderRadius: '10px',
+    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
+    boxSizing: 'border-box'
+  },
+  subnavBtnActive: {
+    background: 'var(--bg-tertiary)',
+    color: 'var(--accent-blue)',
+    border: '1px solid var(--border)',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    padding: '8px 16px',
+    cursor: 'pointer',
+    borderRadius: '10px',
+    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
+    boxSizing: 'border-box'
+  },
 
-  cardInfo:        { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' },
-  tipoBadge:       { padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', letterSpacing: '0.5px' },
-  cardNombre:      { fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  cardDetalles:    { display: 'flex', flexDirection: 'column', gap: '4px' },
-  cardDetailItem:  { fontSize: '12px', color: 'var(--text-muted)' },
+  // TOOLBAR
+  barraAcciones: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '14px',
+    marginBottom: '24px'
+  },
+  searchWrapper: {
+    position: 'relative',
+    flex: 1,
+    minWidth: '240px',
+    maxWidth: '380px'
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: '14px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: 'var(--text-muted)'
+  },
+  search: {
+    width: '100%',
+    height: '38px',
+    padding: '0 14px 0 38px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    fontSize: '13.5px',
+    boxSizing: 'border-box'
+  },
+  filtrosSecundarios: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap'
+  },
+  selectMonth: {
+    height: '38px',
+    boxSizing: 'border-box',
+    padding: '0 14px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-secondary)',
+    fontSize: '13px',
+    fontWeight: 600,
+    outline: 'none',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    colorScheme: 'dark',
+    transition: 'border-color 0.15s ease',
+    boxShadow: 'var(--shadow-sm)'
+  },
 
-  cardFooter:      { borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)' },
-  footerLink:      { fontSize: '12px', fontWeight: '700', color: 'var(--accent-blue)' },
-  btnIconEdit:     { background: 'rgba(96, 165, 250, 0.1)', color: 'var(--accent-blue)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', padding: 0 },
-  btnIconTrash:    { background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', padding: 0 },
+  // SECCIONES DE CATEGORÍA
+  categoriaHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '14px',
+    paddingBottom: '8px',
+    borderBottom: '1px solid var(--border)'
+  },
+  catIconBox: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  catTitulo: {
+    fontSize: '16px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: 0,
+    letterSpacing: '-0.01em'
+  },
+  catBadge: {
+    fontSize: '11px',
+    fontWeight: '700',
+    padding: '2px 8px',
+    borderRadius: '6px',
+    letterSpacing: '0.02em'
+  },
 
-  overlay:         { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal:           { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '20px', padding: '32px', width: '520px', maxWidth: '90vw', boxShadow: 'var(--shadow-lg)' },
-  modalHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  modalTitulo:     { fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
-  modalSub:        { fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' },
-  btnCerrar:       { background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' },
-  
-  campoGroup:      { marginBottom: '16px' },
-  label:           { display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' },
-  input:           { width: '100%', padding: '12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none', fontSize: '14px', transition: 'border-color 0.2s' },
-  select:          { width: '100%', padding: '12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none', fontSize: '14px' },
-  grid2:           { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' },
-  
-  modalFooter:     { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid var(--border)' },
-  btnPrimaryModal: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-glow-blue)' },
-  btnSecondary:    { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 20px', fontWeight: '600', cursor: 'pointer' },
+  // GRID Y CARDS
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+    gap: '18px'
+  },
+  card: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    boxShadow: 'var(--shadow-sm)',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease'
+  },
+  cardBody: {
+    padding: '16px',
+    display: 'flex',
+    gap: '14px',
+    flex: 1
+  },
+  dateBlock: {
+    width: '56px',
+    height: '62px',
+    borderRadius: '12px',
+    border: '1px solid',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    flexShrink: 0,
+    background: 'var(--bg-primary)',
+    textAlign: 'center'
+  },
+  dateMonth: {
+    fontSize: '10px',
+    fontWeight: '800',
+    color: '#ffffff',
+    textTransform: 'uppercase',
+    padding: '2px 0',
+    letterSpacing: '0.05em'
+  },
+  dateDay: {
+    fontSize: '22px',
+    fontWeight: '900',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    lineHeight: 1
+  },
+  cardInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    minWidth: 0,
+    flex: 1
+  },
+  tipoBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 8px',
+    borderRadius: '6px',
+    fontSize: '10px',
+    fontWeight: '800',
+    letterSpacing: '0.04em'
+  },
+  badgeProximo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    fontSize: '10px',
+    fontWeight: '800',
+    color: '#10b981',
+    background: 'rgba(16, 185, 129, 0.12)',
+    padding: '2px 7px',
+    borderRadius: '6px'
+  },
+  badgeConcluido: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    fontSize: '10px',
+    fontWeight: '800',
+    color: 'var(--text-muted)',
+    background: 'var(--bg-tertiary)',
+    padding: '2px 7px',
+    borderRadius: '6px'
+  },
+  cardNombre: {
+    margin: '2px 0 0',
+    fontSize: '15px',
+    fontWeight: '700',
+    color: 'var(--text-primary)',
+    lineHeight: 1.3,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  cardDetalles: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    marginTop: '4px',
+    fontSize: '12px',
+    color: 'var(--text-secondary)'
+  },
+  cardDetailItem: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  cardFooter: {
+    borderTop: '1px solid var(--border)',
+    padding: '10px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    background: 'var(--bg-primary)',
+    fontSize: '12px'
+  },
+  footerLink: {
+    color: 'var(--accent-blue)',
+    fontWeight: '600',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px'
+  },
+  btnActionEdit: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    border: 'none',
+    background: 'rgba(59, 130, 246, 0.1)',
+    color: '#3b82f6',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease'
+  },
+  btnActionDelete: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    border: 'none',
+    background: 'rgba(239, 68, 68, 0.1)',
+    color: '#ef4444',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease'
+  },
+
+  // EMPTY STATE
+  emptyState: {
+    textAlign: 'center',
+    padding: '60px 20px',
+    background: 'var(--bg-secondary)',
+    borderRadius: '20px',
+    border: '1px solid var(--border)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center'
+  },
+  emptyIconCircle: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '20px',
+    background: 'rgba(59, 130, 246, 0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '16px'
+  },
+  btnResetFiltros: {
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-primary)',
+    borderRadius: '10px',
+    padding: '8px 16px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
+
+  // MODAL
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.75)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '16px'
+  },
+  modal: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '20px',
+    width: '100%',
+    maxWidth: '560px',
+    boxShadow: 'var(--shadow-2xl)',
+    display: 'flex',
+    flexDirection: 'column',
+    maxHeight: '90vh',
+    overflow: 'hidden'
+  },
+  modalHeader: {
+    padding: '18px 24px',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  modalTitulo: {
+    fontSize: '17px',
+    fontWeight: '800',
+    color: 'var(--text-primary)',
+    margin: 0
+  },
+  modalSub: {
+    fontSize: '12.5px',
+    color: 'var(--text-muted)',
+    marginTop: '2px',
+    margin: 0
+  },
+  btnCerrarCircular: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-muted)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease'
+  },
+  modalContent: {
+    padding: '20px 24px',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
+  },
+  campoGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '14px'
+  },
+  label: {
+    fontSize: '12px',
+    fontWeight: '700',
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em'
+  },
+  input: {
+    height: '40px',
+    padding: '0 14px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-primary)',
+    fontSize: '13.5px',
+    outline: 'none',
+    boxSizing: 'border-box'
+  },
+  select: {
+    height: '40px',
+    padding: '0 14px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    color: 'var(--text-primary)',
+    fontSize: '13.5px',
+    outline: 'none',
+    cursor: 'pointer',
+    boxSizing: 'border-box'
+  },
+  modalFooter: {
+    padding: '16px 24px',
+    borderTop: '1px solid var(--border)',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    background: 'var(--bg-primary)'
+  },
+  btnSecondary: {
+    padding: '9px 16px',
+    borderRadius: '10px',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-secondary)',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
+  btnPrimaryModal: {
+    padding: '9px 20px',
+    borderRadius: '10px',
+    background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)',
+    border: 'none',
+    color: '#ffffff',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: 'var(--shadow-glow-blue)'
+  }
 }

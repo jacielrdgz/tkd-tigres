@@ -33,6 +33,7 @@ class StoreAlumnoRequest extends FormRequest
             'estatus'          => ['sometimes', Rule::in(['activo', 'inactivo'])],
             'horario_id'       => ['required', 'integer', 'exists:horarios,id'],
             'dia_pago'         => ['nullable', 'integer', 'min:1', 'max:31'],
+            'fecha_ingreso'    => ['nullable', 'date'],
         ];
     }
 
@@ -47,6 +48,11 @@ class StoreAlumnoRequest extends FormRequest
             $email = $this->input('email');
             $this->merge([
                 'email' => $email === '' ? null : $email,
+            ]);
+        }
+        if ($this->has('fecha_ingreso') && empty($this->input('fecha_ingreso'))) {
+            $this->merge([
+                'fecha_ingreso' => null,
             ]);
         }
     }

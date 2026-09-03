@@ -47,6 +47,27 @@ class AlumnoController extends Controller
     {
         Gate::authorize('viewAny', Alumno::class);
 
+        if ($request->boolean('simple') || $request->boolean('para_inscripcion')) {
+            $query = Alumno::with(['cintaConfig']);
+            if ($request->filled('estatus')) {
+                $query->where('estatus', $request->estatus);
+            }
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('nombre', 'like', "%$search%")
+                      ->orWhere('apellido_paterno', 'like', "%$search%")
+                      ->orWhere('apellido_materno', 'like', "%$search%");
+                });
+            }
+            $alumnos = $query->select([
+                'id', 'tenant_id', 'nombre', 'apellido_paterno', 'apellido_materno',
+                'foto', 'configuracion_cinta_id', 'horario_id', 'estatus', 'dia_pago', 'fecha_nacimiento'
+            ])->orderBy('nombre')->get();
+
+            return response()->json($alumnos);
+        }
+
         $query = Alumno::with(['cintaConfig', 'ultimoPago', 'horarioConfig']);
 
         if ($request->filled('search')) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { FiDownload, FiChevronDown } from 'react-icons/fi'
 
-export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled = false }) {
+export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled = false, dropUp = false, align = 'right', className = 'mobile-hide' }) {
   const [exportOpen, setExportOpen] = useState(false)
   const exportRef = useRef(null)
 
@@ -16,7 +16,7 @@ export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled
   }, [])
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }} ref={exportRef} className="mobile-hide">
+    <div style={{ position: 'relative', display: 'inline-block' }} ref={exportRef} className={className}>
       <button
         type="button"
         disabled={disabled}
@@ -61,7 +61,9 @@ export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled
         <FiChevronDown
           size={13}
           style={{
-            transform: exportOpen ? 'rotate(180deg)' : 'none',
+            transform: dropUp
+              ? (exportOpen ? 'none' : 'rotate(180deg)')
+              : (exportOpen ? 'rotate(180deg)' : 'none'),
             transition: '0.2s ease',
             color: exportOpen ? 'var(--accent-blue)' : 'var(--text-muted)',
           }}
@@ -72,13 +74,13 @@ export default function BotonExportar({ onExportarExcel, onExportarPDF, disabled
         <div
           style={{
             position: 'absolute',
-            top: 'calc(100% + 8px)',
-            right: 0,
+            ...(dropUp ? { bottom: 'calc(100% + 8px)' } : { top: 'calc(100% + 8px)' }),
+            ...(align === 'left' ? { left: 0 } : { right: 0 }),
             background: 'var(--bg-secondary)',
             border: '1px solid var(--border)',
             borderRadius: '12px',
             padding: '8px',
-            zIndex: 100,
+            zIndex: 1000,
             minWidth: '150px',
             boxShadow: 'var(--shadow-md)',
             display: 'flex',

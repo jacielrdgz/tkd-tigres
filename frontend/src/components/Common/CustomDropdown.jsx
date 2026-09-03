@@ -37,6 +37,7 @@ export default function CustomDropdown({
         width: isMobile ? '100%' : (minWidth || '175px'),
         minWidth: isMobile ? '0' : (minWidth || '175px'),
         maxWidth: isMobile ? '100%' : (minWidth || '175px'),
+        flexShrink: 0,
         ...customStyle
       }}
       ref={dropdownRef}
@@ -47,10 +48,10 @@ export default function CustomDropdown({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: isMobile ? '5px' : '7px',
+          gap: isMobile ? '4px' : '6px',
           width: '100%',
           height: isMobile ? '36px' : 'auto',
-          padding: isMobile ? '0 10px' : '9px 14px',
+          padding: isMobile ? '0 8px' : '9px 12px',
           background: open ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
           border: '1px solid',
           borderColor: open ? 'var(--accent-blue)' : 'var(--border)',

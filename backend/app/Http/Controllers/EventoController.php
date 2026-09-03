@@ -19,6 +19,10 @@ class EventoController extends Controller
             $query->where('tipo', $request->tipo);
         }
 
+        if ($request->has('excluir') && $request->excluir) {
+            $query->where('tipo', '!=', $request->excluir);
+        }
+
         return response()->json($query->get());
     }
 
