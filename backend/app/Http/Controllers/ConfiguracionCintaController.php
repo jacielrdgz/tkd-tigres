@@ -21,20 +21,44 @@ class ConfiguracionCintaController extends Controller
      */
     public function index(Request $request)
     {
-        $tenant = auth()->user()?->tenant;
-        if ($tenant) {
-            $config = $tenant->configuracion ?? [];
-            if (empty($config['setup_confirmado']['cintas'])) {
-                $config['setup_confirmado']['cintas'] = true;
-                $tenant->update(['configuracion' => $config]);
+        try {
+            $tenant = auth()->user()?->tenant;
+            if ($tenant) {
+                $config = $tenant->configuracion ?? [];
+                if (empty($config['setup_confirmado']['cintas'])) {
+                    $config['setup_confirmado']['cintas'] = true;
+                    $tenant->update(['configuracion' => $config]);
+                }
+            }
+
+            DefaultCintasService::asegurarCintasGlobales();
+            $tenantId = $this->getTenantId();
+
+            $cintas = ConfiguracionCinta::forTenant($tenantId)->get();
+
+            // Si no devolvió nada con forTenant, verificar fallbacks
+            if ($cintas->isEmpty()) {
+                if ($tenantId) {
+                    $cintas = ConfiguracionCinta::where('tenant_id', $tenantId)->orderBy('orden')->get();
+                }
+                if ($cintas->isEmpty()) {
+                    $cintas = ConfiguracionCinta::whereNull('tenant_id')->orderBy('orden')->get();
+                }
+                if ($cintas->isEmpty()) {
+                    $cintas = ConfiguracionCinta::orderBy('orden')->get();
+                }
+            }
+
+            return response()->json($cintas);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error en ConfiguracionCintaController@index: ' . $e->getMessage());
+            try {
+                $cintas = ConfiguracionCinta::orderBy('orden')->get();
+                return response()->json($cintas);
+            } catch (\Throwable $e2) {
+                return response()->json([], 200);
             }
         }
-
-        DefaultCintasService::asegurarCintasGlobales();
-        $tenantId = $this->getTenantId();
-
-        $cintas = ConfiguracionCinta::forTenant($tenantId)->get();
-        return response()->json($cintas);
     }
 
     /**
