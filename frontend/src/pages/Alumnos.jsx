@@ -242,12 +242,14 @@ export default function Alumnos() {
   const cargarCintas = () => {
     const cached = getCache('cintas_config')
     if (cached && cached.data) {
-      setCintasConfig(cached.data)
+      const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
+      setCintasConfig(cachedList)
     }
     api.get('/configuraciones-cintas')
       .then(res => {
-        setCintasConfig(res.data)
-        setCache('cintas_config', res.data)
+        const list = Array.isArray(res.data) ? res.data : (res.data?.data || Object.values(res.data || {}))
+        setCintasConfig(list)
+        setCache('cintas_config', list)
       })
       .catch(err => console.error("Error cargando cintas", err))
   }

@@ -53,7 +53,7 @@ export function precargarTodosLosModulos(user) {
         horarios: resHorarios.data,
         escuela: resEscuela.data
       })
-      setCache('cintas_config', resCintas.data)
+      setCache('cintas_config', Array.isArray(resCintas.data) ? resCintas.data : (resCintas.data?.data || []))
       setCache('horarios_lista', resHorarios.data)
       setCache('configuracion_escuela', resEscuela.data)
     })

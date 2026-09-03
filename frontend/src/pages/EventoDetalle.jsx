@@ -83,7 +83,10 @@ export default function EventoDetalle() {
   const [evento, setEvento] = useState(() => initialCached?.data?.evento || null)
   const [inscritos, setInscritos] = useState(() => initialCached?.data?.inscritos || [])
   const [alumnosDojo, setAlumnosDojo] = useState(() => getCache('alumnos_simple_activos')?.data || [])
-  const [cintasConfig, setCintasConfig] = useState(() => getCache('cintas_config')?.data || [])
+  const [cintasConfig, setCintasConfig] = useState(() => {
+    const cached = getCache('cintas_config')?.data
+    return Array.isArray(cached) ? cached : []
+  })
   const [cargando, setCargando] = useState(() => !initialCached?.data?.evento)
 
   // Filtros
