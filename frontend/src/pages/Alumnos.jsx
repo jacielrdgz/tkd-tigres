@@ -1764,7 +1764,7 @@ export default function Alumnos() {
               <Campo label="Nombre(s)" value={form.nombre} error={errors.nombre?.[0]} required onChange={v => { setForm({ ...form, nombre: v }); if (errors.nombre) setErrors(prev => ({ ...prev, nombre: undefined })) }} />
               <Campo label="Apellido paterno" value={form.apellido_paterno} error={errors.apellido_paterno?.[0]} required onChange={v => { setForm({ ...form, apellido_paterno: v }); if (errors.apellido_paterno) setErrors(prev => ({ ...prev, apellido_paterno: undefined })) }} />
               <Campo label="Apellido materno" value={form.apellido_materno} error={errors.apellido_materno?.[0]} required onChange={v => { setForm({ ...form, apellido_materno: v }); if (errors.apellido_materno) setErrors(prev => ({ ...prev, apellido_materno: undefined })) }} />
-              <Campo label="Fecha de nacimiento" value={form.fecha_nacimiento} placeholder="dd/mm/aaaa" error={errors.fecha_nacimiento?.[0]} required onChange={v => { setForm({ ...form, fecha_nacimiento: v }); if (errors.fecha_nacimiento) setErrors(prev => ({ ...prev, fecha_nacimiento: undefined })) }} type="date" />
+              <CampoFecha label="Fecha de nacimiento" value={form.fecha_nacimiento} placeholder="dd/mm/aaaa" error={errors.fecha_nacimiento?.[0]} required onChange={v => { setForm({ ...form, fecha_nacimiento: v }); if (errors.fecha_nacimiento) setErrors(prev => ({ ...prev, fecha_nacimiento: undefined })) }} />
               <Campo label="Nombre del tutor" value={form.nombre_tutor} error={errors.nombre_tutor?.[0]} required onChange={v => { setForm({ ...form, nombre_tutor: v }); if (errors.nombre_tutor) setErrors(prev => ({ ...prev, nombre_tutor: undefined })) }} />
               <Campo
                 label="Teléfono del tutor"
@@ -1930,6 +1930,128 @@ function Campo({ label, value, onChange, type = 'text', full, error, required, p
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
       />
+      {error ? <div style={s.inputError}>{error}</div> : null}
+    </div>
+  )
+}
+
+function CampoFecha({ label, value, onChange, error, required, placeholder = 'dd/mm/aaaa' }) {
+  const hiddenDateRef = useRef(null)
+
+  const formatDisplay = (val) => {
+    if (!val) return ''
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const [y, m, d] = val.split('-')
+      return `${d}/${m}/${y}`
+    }
+    return val
+  }
+
+  const [textVal, setTextVal] = useState(formatDisplay(value))
+
+  useEffect(() => {
+    setTextVal(formatDisplay(value))
+  }, [value])
+
+  const handleTextChange = (e) => {
+    let raw = e.target.value.replace(/[^0-9/]/g, '')
+    let digits = raw.replace(/\D/g, '').slice(0, 8)
+    let formatted = ''
+    if (digits.length <= 2) formatted = digits
+    else if (digits.length <= 4) formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`
+    else formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`
+
+    setTextVal(formatted)
+
+    if (formatted.length === 10) {
+      const [d, m, y] = formatted.split('/')
+      if (parseInt(m, 10) >= 1 && parseInt(m, 10) <= 12 && parseInt(d, 10) >= 1 && parseInt(d, 10) <= 31 && parseInt(y, 10) >= 1900) {
+        onChange(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`)
+      }
+    } else if (formatted.length === 0) {
+      onChange('')
+    }
+  }
+
+  const openPicker = () => {
+    if (hiddenDateRef.current) {
+      if (typeof hiddenDateRef.current.showPicker === 'function') {
+        hiddenDateRef.current.showPicker()
+      } else {
+        hiddenDateRef.current.focus()
+        hiddenDateRef.current.click()
+      }
+    }
+  }
+
+  return (
+    <div style={{ minWidth: 0, width: '100%', position: 'relative' }}>
+      <label style={s.label}>
+        {label} {required ? <span style={{ color: '#ef4444', marginLeft: '3px' }}>*</span> : null}
+      </label>
+      <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+        <input
+          style={{
+            ...s.input,
+            paddingRight: '34px',
+            border: error ? '1px solid #ef4444' : s.input.border,
+            boxShadow: error ? '0 0 0 3px rgba(239,68,68,.12)' : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            lineHeight: '38px',
+          }}
+          type="text"
+          inputMode="numeric"
+          placeholder={placeholder}
+          value={textVal}
+          onChange={handleTextChange}
+          onClick={openPicker}
+        />
+        <button
+          type="button"
+          onClick={openPicker}
+          style={{
+            position: 'absolute',
+            right: '8px',
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4px',
+            height: '26px',
+            width: '26px',
+          }}
+          aria-label="Seleccionar fecha"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </button>
+        <input
+          ref={hiddenDateRef}
+          type="date"
+          tabIndex={-1}
+          style={{
+            position: 'absolute',
+            opacity: 0,
+            pointerEvents: 'none',
+            width: '1px',
+            height: '1px',
+            bottom: 0,
+            left: 0,
+          }}
+          value={value || ''}
+          onChange={(e) => {
+            onChange(e.target.value)
+          }}
+        />
+      </div>
       {error ? <div style={s.inputError}>{error}</div> : null}
     </div>
   )
