@@ -26,7 +26,7 @@ import {
   FiCamera,
 } from 'react-icons/fi'
 import CustomDropdown from '../components/Common/CustomDropdown'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, guardarODescargarPDF } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, guardarODescargarPDF, guardarODescargarExcel } from '../utils/pdfHelper'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
 const limpiarDato = (val) => {
@@ -613,7 +613,7 @@ export default function Alumnos() {
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "Alumnos")
-      XLSX.writeFile(wb, `Lista_Alumnos_${new Date().toISOString().split('T')[0]}.xlsx`)
+      await guardarODescargarExcel(wb, `Lista_Alumnos_${new Date().toISOString().split('T')[0]}.xlsx`)
       toastSuccess("Archivo Excel generado 📊")
     } catch (err) {
       toastError("Error al generar Excel")

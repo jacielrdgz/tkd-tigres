@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useAuth } from '../context/AuthContext'
-import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes, formatearFechaNaturalPDF, guardarODescargarPDF } from '../utils/pdfHelper'
+import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes, formatearFechaNaturalPDF, guardarODescargarPDF, guardarODescargarExcel } from '../utils/pdfHelper'
 import CustomDropdown from '../components/Common/CustomDropdown'
 import BotonExportar from '../components/Common/BotonExportar'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
@@ -331,7 +331,7 @@ export default function Pagos() {
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "Pagos")
-      XLSX.writeFile(wb, `Reporte_Pagos_${new Date().toISOString().split('T')[0]}.xlsx`)
+      await guardarODescargarExcel(wb, `Reporte_Pagos_${new Date().toISOString().split('T')[0]}.xlsx`)
       toast.success("Excel generado ✓")
     } catch { toast.error("Error al generar Excel") }
   }

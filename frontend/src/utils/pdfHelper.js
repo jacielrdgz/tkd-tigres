@@ -1,5 +1,6 @@
 import api from '../api/axios'
 import { getCache, setCache } from './cacheManager'
+import * as XLSX from 'xlsx'
 
 const NOMBRES_MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -361,6 +362,56 @@ export async function guardarODescargarPDF(doc, filename) {
   } catch (e) {
     // Fallback estándar
     doc.save(filename)
+    return true
+  }
+}
+
+/**
+ * Guarda o descarga el libro Excel (.xlsx) de forma segura en dispositivos móviles y web
+ * sin recargar la página ni perder filtros/estado.
+ */
+export async function guardarODescargarExcel(wb, filename) {
+  try {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+
+    // Si es móvil y tiene soporte nativo para compartir (iOS / Android)
+    if (isMobile && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: filename,
+          })
+          return true
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') {
+            return true // Cancelado por el usuario
+          }
+        }
+      }
+    }
+
+    // Descarga limpia vía Blob URL sin recargar la página
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.target = '_self'
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+
+    setTimeout(() => {
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }, 1500)
+
+    return true
+  } catch (e) {
+    XLSX.writeFile(wb, filename)
     return true
   }
 }
