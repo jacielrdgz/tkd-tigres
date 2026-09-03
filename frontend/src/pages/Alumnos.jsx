@@ -588,7 +588,7 @@ export default function Alumnos() {
 
   const hayFiltrosActivos = cintaFiltro || edadFiltro || horarioFiltro || orden !== 'id'
 
-  const exportarExcel = () => {
+  const exportarExcel = async () => {
     if (alumnosMostrados.length === 0) {
       return Swal.fire({
         title: 'Reporte Vacío',

@@ -309,7 +309,7 @@ export default function Pagos() {
     })
   }, [alumnosConEstado, busqueda, filtro, filtroCinta, filtroHorario, filtroFechaPago, submodulo, pagosActivos])
 
-  const exportarExcel = () => {
+  const exportarExcel = async () => {
     if (alumnosFiltrados.length === 0) return toast.info('No hay datos para exportar')
 
     try {
