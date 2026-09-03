@@ -259,7 +259,7 @@ class ConfiguracionCintaController extends Controller
 
             $cintas = ConfiguracionCinta::forTenant($tenantId)->get();
             return response()->json([
-                'message' => 'Cintas restablecidas al catálogo oficial exitosamente.',
+                'message' => 'Cintas restablecidas a los valores por defecto exitosamente.',
                 'cintas'  => $cintas
             ]);
         } catch (\Exception $e) {

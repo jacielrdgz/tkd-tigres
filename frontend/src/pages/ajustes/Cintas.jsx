@@ -3,7 +3,16 @@ import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
 import { useNavigate } from 'react-router-dom'
-import { FiAward } from 'react-icons/fi'
+import {
+  FiAward,
+  FiLayers,
+  FiRotateCcw,
+  FiCheck,
+  FiEdit2,
+  FiTrash2,
+  FiChevronUp,
+  FiChevronDown
+} from 'react-icons/fi'
 
 const SUGGESTED_COLORS = [
   { bg: '#ffffff', tx: '#000000', label: 'Blanca' },
@@ -44,6 +53,7 @@ export default function Cintas({ isEmbedded = false }) {
   }
 
   const handleSave = async () => {
+    if (saving) return
     if (!form.nombre.trim()) return toast.error('Falta el nombre')
     setSaving(true)
     try {
@@ -90,8 +100,8 @@ export default function Cintas({ isEmbedded = false }) {
 
   const handleResetToDefault = () => {
     Swal.fire({
-      title: '¿Restablecer al Catálogo Oficial?',
-      text: 'Se eliminarán las personalizaciones de tu escuela y volverás a heredar los 15 grados oficiales estándar de Taekwondo.',
+      title: '¿Restablecer al Catálogo por Defecto?',
+      text: 'Se eliminarán las personalizaciones de tu escuela y volverás a heredar los 15 grados por defecto.',
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Sí, restablecer',
@@ -103,7 +113,7 @@ export default function Cintas({ isEmbedded = false }) {
       if (r.isConfirmed) {
         try {
           const { data } = await api.post('/configuraciones-cintas/reset-default')
-          toast.success(data.message || 'Restablecido correctamente')
+          toast.success(data.message || 'Cintas restablecidas a los valores por defecto exitosamente.')
           setCintas(data.cintas || [])
           setEditId(null)
           setForm({ nombre: '', bg: '#3b82f6', tx: '#ffffff' })
@@ -224,14 +234,14 @@ export default function Cintas({ isEmbedded = false }) {
             <FiAward size={16} style={{ marginRight: '6px' }} />
             {editId ? 'Editando Grado' : 'Nuevo Grado'}
           </h4>
-          
+
           <div style={s.inputContainer}>
             <label style={s.fieldLabel}>Nombre de la Cinta</label>
-            <input 
-              style={s.toolInput} 
-              placeholder="Ej. Amarilla Avanzada..." 
-              value={form.nombre} 
-              onChange={e => setForm({...form, nombre: e.target.value})} 
+            <input
+              style={s.toolInput}
+              placeholder="Ej. Amarilla Avanzada..."
+              value={form.nombre}
+              onChange={e => setForm({ ...form, nombre: e.target.value })}
             />
           </div>
 
@@ -254,19 +264,19 @@ export default function Cintas({ isEmbedded = false }) {
               </button>
             ))}
           </div>
-          
+
           <div style={s.toolPickerRow}>
             <div style={s.pickerCell}>
               <label style={s.pickerLabel}>Fondo Manual</label>
               <div style={s.colorInputWrapper}>
-                <input type="color" value={form.bg} onChange={e => { setForm({...form, bg: e.target.value, tx: autoText(e.target.value)}) }} style={s.colorPick} />
+                <input type="color" value={form.bg} onChange={e => { setForm({ ...form, bg: e.target.value, tx: autoText(e.target.value) }) }} style={s.colorPick} />
                 <span style={s.colorHexVal}>{form.bg.toUpperCase()}</span>
               </div>
             </div>
             <div style={s.pickerCell}>
               <label style={s.pickerLabel}>Texto Manual</label>
               <div style={s.colorInputWrapper}>
-                <input type="color" value={form.tx} onChange={e => setForm({...form, tx: e.target.value})} style={s.colorPick} />
+                <input type="color" value={form.tx} onChange={e => setForm({ ...form, tx: e.target.value })} style={s.colorPick} />
                 <span style={s.colorHexVal}>{form.tx.toUpperCase()}</span>
               </div>
             </div>
@@ -277,7 +287,11 @@ export default function Cintas({ isEmbedded = false }) {
 
           <div style={s.btnGroup}>
             <button
-              style={s.btnSave}
+              style={{
+                ...s.btnSave,
+                opacity: saving ? 0.65 : 1,
+                cursor: saving ? 'not-allowed' : 'pointer',
+              }}
               onClick={handleSave}
               disabled={saving}
               onMouseEnter={e => {
@@ -293,12 +307,30 @@ export default function Cintas({ isEmbedded = false }) {
                 e.currentTarget.style.filter = 'none'
               }}
             >
-              {saving ? '...' : (editId ? 'Guardar Cambios' : 'Crear Grado')}
+              {saving ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '14px',
+                    height: '14px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#ffffff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                  }} />
+                  <span>Guardando...</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <FiCheck size={16} />
+                  <span>{editId ? 'Guardar Cambios' : 'Crear Grado'}</span>
+                </div>
+              )}
             </button>
             {editId && (
-              <button 
-                style={s.btnCancel} 
-                onClick={() => {setEditId(null); setForm({nombre:'', bg:'#3b82f6', tx:'#ffffff'})}}
+              <button
+                style={s.btnCancel}
+                onClick={() => { setEditId(null); setForm({ nombre: '', bg: '#3b82f6', tx: '#ffffff' }) }}
+                disabled={saving}
                 onMouseEnter={e => {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
                   e.currentTarget.style.color = '#ffffff'
@@ -331,11 +363,11 @@ export default function Cintas({ isEmbedded = false }) {
               flexWrap: 'wrap',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '14px' }}>{cintas.some(c => c.tenant_id !== null) ? '⚙️' : '🥋'}</span>
-                <span style={{ fontSize: '12.5px', color: 'var(--text-primary)', fontWeight: '500' }}>
+                <FiLayers size={16} color={cintas.some(c => c.tenant_id !== null) ? 'var(--accent-blue)' : '#10b981'} />
+                <span style={{ fontSize: '12.5px', color: 'var(--text-primary)', fontWeight: '600' }}>
                   {cintas.some(c => c.tenant_id !== null)
                     ? 'Catálogo personalizado activo para tu escuela'
-                    : 'Usando Catálogo Oficial Estándar de Taekwondo (15 Grados)'}
+                    : 'Usando Catálogo por Defecto (15 Grados)'}
                 </span>
               </div>
               {cintas.some(c => c.tenant_id !== null) && (
@@ -346,12 +378,15 @@ export default function Cintas({ isEmbedded = false }) {
                     background: 'var(--bg-secondary)',
                     border: '1px solid var(--border)',
                     borderRadius: '6px',
-                    padding: '4px 10px',
+                    padding: '5px 12px',
                     fontSize: '11.5px',
                     fontWeight: '600',
                     color: 'var(--accent-blue)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = 'var(--accent-blue)';
@@ -362,7 +397,8 @@ export default function Cintas({ isEmbedded = false }) {
                     e.currentTarget.style.background = 'var(--bg-secondary)';
                   }}
                 >
-                  Restablecer a Oficial
+                  <FiRotateCcw size={12} />
+                  <span>Restablecer por Defecto</span>
                 </button>
               )}
             </div>
@@ -393,19 +429,19 @@ export default function Cintas({ isEmbedded = false }) {
                   onMouseLeave={() => setHoveredRowId(null)}
                   style={{
                     ...s.toolRow,
-                    borderColor: editId === c.id 
-                      ? 'var(--accent-blue)' 
-                      : dragOverIdx === i 
-                      ? 'var(--accent-purple)' 
-                      : 'var(--border)',
+                    borderColor: editId === c.id
+                      ? 'var(--accent-blue)'
+                      : dragOverIdx === i
+                        ? 'var(--accent-purple)'
+                        : 'var(--border)',
                     opacity: dragIdx === i ? 0.5 : 1,
-                    transform: dragOverIdx === i 
-                      ? 'translateY(-2px) scale(1.01)' 
-                      : hoveredRowId === c.id 
-                      ? 'translateY(-1px)' 
-                      : 'none',
-                    boxShadow: hoveredRowId === c.id 
-                      ? '0 6px 16px rgba(0, 0, 0, 0.2)' 
+                    transform: dragOverIdx === i
+                      ? 'translateY(-2px) scale(1.01)'
+                      : hoveredRowId === c.id
+                        ? 'translateY(-1px)'
+                        : 'none',
+                    boxShadow: hoveredRowId === c.id
+                      ? '0 6px 16px rgba(0, 0, 0, 0.2)'
                       : '0 2px 4px rgba(0, 0, 0, 0.05)',
                     background: hoveredRowId === c.id ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
                   }}
@@ -486,15 +522,15 @@ const s = {
   toolHeaderRow: { marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   titleTool: { fontSize: '28px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 },
   toolLayout: { display: 'flex', gap: '32px', alignItems: 'flex-start', flexWrap: 'wrap' },
-  
+
   // Card styling
-  toolFormCard: { 
-    width: '360px', 
-    background: 'linear-gradient(145deg, var(--bg-secondary) 0%, rgba(30, 41, 59, 0.4) 100%)', 
-    borderRadius: '24px', 
-    border: '1px solid rgba(255, 255, 255, 0.08)', 
-    padding: '28px', 
-    position: 'sticky', 
+  toolFormCard: {
+    width: '360px',
+    background: 'linear-gradient(145deg, var(--bg-secondary) 0%, rgba(30, 41, 59, 0.4) 100%)',
+    borderRadius: '24px',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    padding: '28px',
+    position: 'sticky',
     top: '24px',
     boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
     overflow: 'hidden',
@@ -511,12 +547,12 @@ const s = {
     background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-purple))',
   },
   toolLabel: { fontSize: '14px', color: '#fff', fontWeight: '900', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' },
-  
+
   // Fields styling
   inputContainer: { display: 'flex', flexDirection: 'column', gap: '6px' },
   fieldLabel: { fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
   toolInput: { width: '100%', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 14px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', transition: 'border-color 0.2s', ':focus': { borderColor: 'var(--accent-blue)' } },
-  
+
   // Suggested colors
   suggestedGrid: {
     display: 'grid',
@@ -618,19 +654,19 @@ const s = {
   btnGroup: { display: 'flex', gap: '10px' },
   btnSave: { flex: 1, background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37,99,235,0.2)', transition: 'all 0.2s' },
   btnCancel: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', cursor: 'pointer', fontWeight: '700' },
-  
+
   // List styling
   listHeader: { display: 'flex', justifyContent: 'space-between', padding: '10px 20px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' },
   toolList: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  
+
   // Belt rows
-  toolRow: { 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    padding: '12px 20px', 
-    background: 'var(--bg-secondary)', 
-    border: '1px solid var(--border)', 
+  toolRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 20px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
     borderRadius: '20px',
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
   },
@@ -652,14 +688,14 @@ const s = {
     minWidth: '150px',
   },
   toolHex: { fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', opacity: 0.8 },
-  
+
   // Action buttons inside rows
   toolActions: { display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' },
   btnIcon: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', },
   btnEdit: { background: 'rgba(59,130,246,0.1)', color: 'var(--accent-blue)', borderColor: 'rgba(59,130,246,0.2)', ':hover': { background: 'var(--accent-blue)', color: '#fff' } },
   btnDel: { background: 'rgba(239,68,68,0.1)', color: 'var(--accent-red)', borderColor: 'rgba(239,68,68,0.2)', ':hover': { background: 'var(--accent-red)', color: '#fff' } },
   btnMove: { background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)', borderColor: 'var(--border)', ':hover': { background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }, ':disabled': { opacity: 0.3, cursor: 'not-allowed', ':hover': { background: 'transparent', color: 'var(--text-muted)' } } },
-  
+
   toolEmpty: { textAlign: 'center', padding: '60px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', border: '1px dashed var(--border)', borderRadius: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' },
   spinner: { width: '28px', height: '28px', border: '3px solid var(--border)', borderTopColor: 'var(--accent-blue)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }
 }
