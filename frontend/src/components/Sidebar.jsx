@@ -112,7 +112,7 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
   };
 
   const tenantName = user?.tenant?.nombre || (isSuperAdmin ? 'Administrador Global' : 'Mi Escuela');
-  const planLabel = isSuperAdmin ? 'SUPERADMIN' : (user?.tenant?.plan?.toUpperCase() || 'FREE');
+  const planLabel = isSuperAdmin ? 'SUPERADMIN ADMIN' : (user?.tenant?.plan?.toUpperCase() || 'FREE');
 
   const fechaHoy = new Date().toLocaleDateString('es-MX', {
     day: 'numeric', month: 'short', year: 'numeric'
@@ -172,7 +172,7 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
             <div style={styles.logoTitle}>{tenantName}</div>
             <div style={styles.logoSub}>{fechaHoy}</div>
           </div>
-          <span style={styles.planBadge}>{planLabel}</span>
+          {!isSuperAdmin && <span style={styles.planBadge}>{planLabel}</span>}
         </div>
 
         {/* Navigation */}

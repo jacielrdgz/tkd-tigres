@@ -17,18 +17,18 @@ import CustomDropdown from '../../components/Common/CustomDropdown';
 import { getCache, setCache, invalidateCache } from '../../utils/cacheManager';
 
 export default function AdminSuscripciones() {
-  const cacheKey = `admin_suscripciones_${filterEstado}_${filterMes}`;
-  const [suscripciones, setSuscripciones] = useState(() => {
-    const cached = getCache('admin_suscripciones_all');
-    return cached?.data || [];
-  });
-  const [loading, setLoading] = useState(() => {
-    const cached = getCache('admin_suscripciones_all');
-    return !cached?.data;
-  });
   const [filterEstado, setFilterEstado] = useState('');
   const [filterMes, setFilterMes] = useState('');
   const [search, setSearch] = useState('');
+
+  const [suscripciones, setSuscripciones] = useState(() => {
+    const cached = getCache('admin_suscripciones_all');
+    return Array.isArray(cached?.data) ? cached.data : (Array.isArray(cached) ? cached : []);
+  });
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('admin_suscripciones_all');
+    return !cached?.data && !Array.isArray(cached);
+  });
 
   // Modales
   const [selectedAcademia, setSelectedAcademia] = useState(null);
@@ -176,12 +176,7 @@ export default function AdminSuscripciones() {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={styles.headerIconBadge}>
-              <FiCreditCard size={22} color="var(--accent-blue)" />
-            </div>
-            <h1 style={styles.title}>Control de Suscripciones</h1>
-          </div>
+          <h1 style={styles.title}>Control de Suscripciones</h1>
           <p style={styles.subtitle}>Supervisa fechas de vigencia, pagos de licencias y planes activos</p>
         </div>
       </div>
@@ -525,7 +520,8 @@ export default function AdminSuscripciones() {
 
 const styles = {
   container: {
-    padding: '32px 24px',
+    padding: 0,
+    paddingBottom: '40px',
     maxWidth: '1280px',
     margin: '0 auto',
     color: 'var(--text-primary)',
@@ -565,15 +561,14 @@ const styles = {
     flexShrink: 0,
   },
   title: {
-    fontSize: '26px',
-    fontWeight: '800',
+    fontSize: '24px',
+    fontWeight: '700',
     color: 'var(--text-primary)',
     margin: 0,
-    letterSpacing: '-0.3px',
   },
   subtitle: {
     color: 'var(--text-muted)',
-    fontSize: '14px',
+    fontSize: '13.5px',
     marginTop: '4px',
   },
   filterBar: {

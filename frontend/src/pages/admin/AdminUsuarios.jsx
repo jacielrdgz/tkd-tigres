@@ -22,15 +22,15 @@ import { getCache, setCache, invalidateCache } from '../../utils/cacheManager';
 export default function AdminUsuarios() {
   const [usuarios, setUsuarios] = useState(() => {
     const cached = getCache('admin_usuarios_all');
-    return cached || [];
+    return Array.isArray(cached?.data) ? cached.data : (Array.isArray(cached) ? cached : []);
   });
   const [academias, setAcademias] = useState(() => {
     const cached = getCache('admin_academias_lista');
-    return cached || [];
+    return Array.isArray(cached?.data) ? cached.data : (Array.isArray(cached) ? cached : []);
   });
   const [loading, setLoading] = useState(() => {
     const cached = getCache('admin_usuarios_all');
-    return !cached;
+    return !cached?.data && !Array.isArray(cached);
   });
   const [search, setSearch] = useState('');
 
@@ -71,8 +71,9 @@ export default function AdminUsuarios() {
   const fetchAcademias = async () => {
     try {
       const res = await api.get('/admin/academias');
-      setAcademias(res.data);
-      setCache('admin_academias_lista', res.data);
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setAcademias(data);
+      setCache('admin_academias_lista', data);
     } catch (err) {
       console.error('Error al cargar academias para filtro:', err);
     }
@@ -90,14 +91,15 @@ export default function AdminUsuarios() {
       if (statusFilter) params.estado = statusFilter;
 
       const res = await api.get('/admin/usuarios', { params });
-      setUsuarios(res.data);
-      setCache(currentKey, res.data);
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setUsuarios(data);
+      setCache(currentKey, data);
       if (!roleFilter && !tenantFilter && !statusFilter) {
-        setCache('admin_usuarios_all', res.data);
+        setCache('admin_usuarios_all', data);
       }
     } catch (err) {
       const cached = getCache(currentKey);
-      if (!cached?.data) {
+      if (!cached?.data && !Array.isArray(cached)) {
         toast.error('Error al cargar la lista de usuarios');
       }
     } finally {
@@ -238,12 +240,7 @@ export default function AdminUsuarios() {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={styles.headerIconBadge}>
-              <FiUsers size={22} color="var(--accent-blue)" />
-            </div>
-            <h1 style={styles.title}>Gestión de Usuarios Globales</h1>
-          </div>
+          <h1 style={styles.title}>Gestión de Usuarios Globales</h1>
           <p style={styles.subtitle}>Supervisa accesos, contraseñas, roles y vinculaciones de escuelas</p>
         </div>
       </div>
@@ -610,7 +607,8 @@ export default function AdminUsuarios() {
 
 const styles = {
   container: {
-    padding: '32px 24px',
+    padding: 0,
+    paddingBottom: '40px',
     maxWidth: '1280px',
     margin: '0 auto',
     color: 'var(--text-primary)',
@@ -650,15 +648,14 @@ const styles = {
     flexShrink: 0,
   },
   title: {
-    fontSize: '26px',
-    fontWeight: '800',
+    fontSize: '24px',
+    fontWeight: '700',
     color: 'var(--text-primary)',
     margin: 0,
-    letterSpacing: '-0.3px',
   },
   subtitle: {
     color: 'var(--text-muted)',
-    fontSize: '14px',
+    fontSize: '13.5px',
     marginTop: '4px',
   },
   filterBar: {

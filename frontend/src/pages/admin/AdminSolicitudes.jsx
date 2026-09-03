@@ -163,12 +163,7 @@ export default function AdminSolicitudes() {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={styles.headerIconBadge}>
-              <FiFileText size={22} color="var(--accent-blue)" />
-            </div>
-            <h1 style={styles.title}>Solicitudes de Registro</h1>
-          </div>
+          <h1 style={styles.title}>Solicitudes de Registro</h1>
           <p style={styles.subtitle}>Valida y aprueba nuevas academias o cuentas pendientes de verificación</p>
         </div>
       </div>
@@ -460,7 +455,8 @@ export default function AdminSolicitudes() {
 
 const styles = {
   container: {
-    padding: '32px 24px',
+    padding: 0,
+    paddingBottom: '40px',
     maxWidth: '1280px',
     margin: '0 auto',
     color: 'var(--text-primary)',
@@ -500,15 +496,14 @@ const styles = {
     flexShrink: 0,
   },
   title: {
-    fontSize: '26px',
-    fontWeight: '800',
+    fontSize: '24px',
+    fontWeight: '700',
     color: 'var(--text-primary)',
     margin: 0,
-    letterSpacing: '-0.3px',
   },
   subtitle: {
     color: 'var(--text-muted)',
-    fontSize: '14px',
+    fontSize: '13.5px',
     marginTop: '4px',
   },
   filterBar: {

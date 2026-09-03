@@ -42,7 +42,7 @@ export default function Topbar({ onToggleSidebar }) {
     title = user?.tenant?.nombre || 'Mi Escuela';
   }
 
-  const planLabel = isSuperAdmin ? 'ADMIN' : (user?.tenant?.plan?.toUpperCase() || 'PRO');
+  const planLabel = isSuperAdmin ? 'SUPERADMIN ADMIN' : (user?.tenant?.plan?.toUpperCase() || 'PRO');
 
   const logoUrlFinal = user?.tenant?.logo
     ? ((user.tenant.logo.startsWith('data:') || user.tenant.logo.startsWith('http')) 
@@ -58,19 +58,21 @@ export default function Topbar({ onToggleSidebar }) {
         </button>
 
         {/* Logo / Avatar de la academia */}
-        <div style={styles.logoBadge}>
-          {logoUrlFinal ? (
-            <img src={logoUrlFinal} alt="logo" style={styles.logoImg} />
-          ) : (
-            <span style={styles.logoIcon}>🥋</span>
-          )}
-        </div>
+        {!isSuperAdmin && (
+          <div style={styles.logoBadge}>
+            {logoUrlFinal ? (
+              <img src={logoUrlFinal} alt="logo" style={styles.logoImg} />
+            ) : (
+              <span style={styles.logoIcon}>🥋</span>
+            )}
+          </div>
+        )}
 
-        {/* Nombre de la escuela */}
+        {/* Nombre de la escuela / modulo */}
         <span style={styles.title}>{title}</span>
 
         {/* Badge de Plan */}
-        <span style={styles.planBadge}>{planLabel}</span>
+        {!isSuperAdmin && <span style={styles.planBadge}>{planLabel}</span>}
       </div>
 
       <div style={styles.right}>

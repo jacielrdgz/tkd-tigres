@@ -367,7 +367,8 @@ export default function AdminAcademiaDetalle() {
 
 const styles = {
   container: {
-    padding: '32px 24px',
+    padding: 0,
+    paddingBottom: '40px',
     maxWidth: '1280px',
     margin: '0 auto',
     color: 'var(--text-primary)',

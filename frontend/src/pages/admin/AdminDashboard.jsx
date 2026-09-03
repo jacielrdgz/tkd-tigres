@@ -174,13 +174,8 @@ export default function AdminDashboard() {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={styles.headerIconBadge}>
-              <FiActivity size={22} color="var(--accent-blue)" />
-            </div>
-            <h1 style={styles.title}>Panel de Control Global</h1>
-          </div>
-          <p style={styles.subtitle}>Supervisión de todo el ecosistema TKD Tigres</p>
+          <h1 style={styles.title}>Panel de Control Global</h1>
+          <p style={styles.subtitle}>Supervisión global de academias y usuarios</p>
         </div>
         <button
           style={styles.btnRefresh}
@@ -198,13 +193,12 @@ export default function AdminDashboard() {
           }}
         >
           <FiRefreshCw
-            size={14}
+            size={16}
             style={{
               animation: refreshing ? 'spin 1s linear infinite' : 'none',
-              color: 'var(--accent-blue)',
             }}
           />
-          <span>{refreshing ? 'Actualizando...' : 'Actualizar'}</span>
+          <span>Actualizar datos</span>
         </button>
       </div>
 
@@ -217,13 +211,13 @@ export default function AdminDashboard() {
             style={styles.card}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-3px)';
-              e.currentTarget.style.borderColor = kpi.borderGlow;
-              e.currentTarget.style.boxShadow = `0 8px 24px ${kpi.bgGlow}`;
+              e.currentTarget.style.borderColor = kpi.color;
+              e.currentTarget.style.boxShadow = `0 12px 30px ${kpi.color}18`;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'none';
               e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+              e.currentTarget.style.boxShadow = 'none';
             }}
           >
             <div
@@ -249,7 +243,6 @@ export default function AdminDashboard() {
       <div style={styles.sectionCard}>
         <div style={styles.sectionHeader}>
           <h3 style={styles.sectionTitle}>Acciones de Administración Rápida</h3>
-          <span style={styles.sectionBadge}>SuperAdmin Tools</span>
         </div>
         <div style={styles.actionsGrid}>
           {quickActions.map((act, i) => (
@@ -302,7 +295,8 @@ export default function AdminDashboard() {
 
 const styles = {
   container: {
-    padding: '32px 24px',
+    padding: 0,
+    paddingBottom: '40px',
     maxWidth: '1280px',
     margin: '0 auto',
     color: 'var(--text-primary)',
@@ -342,15 +336,14 @@ const styles = {
     flexShrink: 0,
   },
   title: {
-    fontSize: '26px',
-    fontWeight: '800',
+    fontSize: '24px',
+    fontWeight: '700',
     color: 'var(--text-primary)',
     margin: 0,
-    letterSpacing: '-0.3px',
   },
   subtitle: {
     color: 'var(--text-muted)',
-    fontSize: '14px',
+    fontSize: '13.5px',
     marginTop: '4px',
   },
   btnRefresh: {
