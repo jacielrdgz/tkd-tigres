@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import api from '../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
@@ -407,6 +408,7 @@ export default function Alumnos() {
     if (!form.nombre_tutor?.trim()) e.nombre_tutor = ['El nombre del tutor es obligatorio.']
     if (!form.telefono_tutor?.trim()) e.telefono_tutor = ['El teléfono del tutor es obligatorio.']
     if (!form.fecha_nacimiento) e.fecha_nacimiento = ['La fecha de nacimiento es obligatoria.']
+    if (!form.configuracion_cinta_id) e.configuracion_cinta_id = ['Debes seleccionar una cinta para el alumno.']
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = ['Correo inválido.']
     return e
   }
@@ -1689,10 +1691,38 @@ export default function Alumnos() {
 
       {modal && (
         <div style={s.overlay} className="mobile-fullscreen-overlay">
-          <div style={s.modal} className="mobile-fullscreen-modal">
+          <div
+            style={s.modal}
+            className="mobile-fullscreen-modal"
+            onKeyDown={e => {
+              if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault()
+                guardar()
+              }
+            }}
+          >
             <div style={s.modalHeader}>
               <h3 style={s.modalTitulo}>{editando ? 'Editar alumno' : 'Nuevo alumno'}</h3>
-              <button style={s.btnCerrarCircular} onClick={cerrar} aria-label="Cerrar modal"><FiX size={16} /></button>
+              <button
+                type="button"
+                style={s.btnCerrarCircular}
+                onClick={cerrar}
+                aria-label="Cerrar modal"
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                  e.currentTarget.style.color = 'var(--accent-red)'
+                  e.currentTarget.style.transform = 'rotate(90deg)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-muted)'
+                  e.currentTarget.style.transform = 'none'
+                }}
+              >
+                <FiX size={17} />
+              </button>
             </div>
 
             <div style={s.fotoUploadArea}>
@@ -1705,9 +1735,9 @@ export default function Alumnos() {
                   <img src={fotoPreview} alt="preview" style={s.fotoPreviewImg} />
                 ) : (
                   <div style={s.fotoPlaceholder}>
-                    <span style={{ fontSize: '22px', color: 'var(--accent-blue)', fontWeight: '700', lineHeight: 1 }}>+</span>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '600' }}>
-                      Foto
+                    <FiCamera size={26} color="var(--accent-blue)" style={{ marginBottom: '4px' }} />
+                    <span style={{ fontSize: '11px', color: '#60a5fa', fontWeight: '600' }}>
+                      {form.nombre ? 'Cambiar foto' : 'Subir foto'}
                     </span>
                   </div>
                 )}
@@ -1739,39 +1769,48 @@ export default function Alumnos() {
               <Campo label="Teléfono del tutor" value={form.telefono_tutor} error={errors.telefono_tutor?.[0]} required onChange={v => { setForm({ ...form, telefono_tutor: v }); if (errors.telefono_tutor) setErrors(prev => ({ ...prev, telefono_tutor: undefined })) }} />
               <Campo label="Correo electrónico" value={form.email} error={errors.email?.[0]} onChange={v => { setForm({ ...form, email: v }); if (errors.email) setErrors(prev => ({ ...prev, email: undefined })) }} type="email" full />
 
-              <div style={s.campoGroup}>
-                <label style={s.label}>Horario Asignado</label>
-                <select
-                  style={s.select}
-                  value={form.horario_id}
-                  onChange={e => setForm({ ...form, horario_id: e.target.value })}
-                >
-                  <option value="">Seleccionar horario...</option>
-                  {horarios.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.nombre} ({formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FormDropdown
+                label="Horario Asignado"
+                placeholder="Seleccionar horario..."
+                options={[
+                  { value: '', label: 'Seleccionar horario...' },
+                  ...horarios.map(h => ({
+                    value: String(h.id),
+                    label: `${h.nombre} (${formatHora(h.hora_inicio)} - ${formatHora(h.hora_fin)})`
+                  }))
+                ]}
+                value={form.horario_id}
+                onChange={val => setForm({ ...form, horario_id: val })}
+              />
 
-              <div style={s.campoGroup}>
-                <label style={s.label}>Cinta</label>
-                <select style={s.select} value={form.configuracion_cinta_id} onChange={e => setForm({ ...form, configuracion_cinta_id: e.target.value })}>
-                  <option value="">Seleccionar cinta...</option>
-                  {cintasConfig.map(c => (
-                    <option key={c.id} value={c.id}>{c.nombre_nivel}</option>
-                  ))}
-                </select>
-              </div>
+              <FormDropdown
+                label="Cinta"
+                required
+                placeholder="Seleccionar cinta..."
+                options={[
+                  { value: '', label: 'Seleccionar cinta...' },
+                  ...cintasConfig.map(c => ({
+                    value: String(c.id),
+                    label: c.nombre_nivel
+                  }))
+                ]}
+                value={form.configuracion_cinta_id}
+                error={errors.configuracion_cinta_id?.[0]}
+                onChange={val => {
+                  setForm({ ...form, configuracion_cinta_id: val })
+                  if (errors.configuracion_cinta_id) setErrors(prev => ({ ...prev, configuracion_cinta_id: undefined }))
+                }}
+              />
 
-              <div style={s.campoGroup}>
-                <label style={s.label}>Estatus</label>
-                <select style={s.select} value={form.estatus} onChange={e => setForm({ ...form, estatus: e.target.value })}>
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Inactivo</option>
-                </select>
-              </div>
+              <FormDropdown
+                label="Estatus"
+                options={[
+                  { value: 'activo', label: 'Activo' },
+                  { value: 'inactivo', label: 'Inactivo' }
+                ]}
+                value={form.estatus}
+                onChange={val => setForm({ ...form, estatus: val })}
+              />
 
               <div style={s.campoGroup}>
                 <label style={s.label}>Día de pago mensual (1-31)</label>
@@ -1793,12 +1832,47 @@ export default function Alumnos() {
             </div>
 
             <div style={s.modalFooter}>
-              <button type="button" style={s.btnSecondary} onClick={cerrar} disabled={guardando}>Cancelar</button>
               <button
                 type="button"
-                style={{ ...s.btnPrimary, opacity: guardando ? 0.75 : 1, cursor: guardando ? 'not-allowed' : 'pointer' }}
+                style={s.btnSecondary}
+                onClick={cerrar}
+                disabled={guardando}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'var(--bg-secondary)'
+                  e.currentTarget.style.borderColor = 'var(--border-hover)'
+                  e.currentTarget.style.color = 'var(--text-primary)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                  e.currentTarget.style.transform = 'none'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                style={{
+                  ...s.btnPrimary,
+                  opacity: guardando ? 0.75 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer'
+                }}
                 onClick={guardar}
                 disabled={guardando}
+                onMouseEnter={e => {
+                  if (!guardando) {
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.45)'
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!guardando) {
+                    e.currentTarget.style.transform = 'none'
+                    e.currentTarget.style.boxShadow = 'var(--shadow-glow-blue)'
+                  }
+                }}
               >
                 {guardando ? 'Guardando...' : (editando ? 'Guardar cambios' : 'Crear alumno')}
               </button>
@@ -1823,7 +1897,7 @@ function Campo({ label, value, onChange, type = 'text', full, error, required })
   return (
     <div style={full ? { gridColumn: '1 / -1' } : {}}>
       <label style={s.label}>
-        {label} {required ? <span style={{ color: '#f87171' }}>*</span> : null}
+        {label} {required ? <span style={{ color: '#ef4444', marginLeft: '3px' }}>*</span> : null}
       </label>
       <input
         style={{
@@ -1832,9 +1906,198 @@ function Campo({ label, value, onChange, type = 'text', full, error, required })
           boxShadow: error ? '0 0 0 3px rgba(239,68,68,.12)' : 'none',
         }}
         type={type}
-        value={value}
+        value={value ?? ''}
         onChange={e => onChange(e.target.value)}
       />
+      {error ? <div style={s.inputError}>{error}</div> : null}
+    </div>
+  )
+}
+
+function FormDropdown({ label, required, options = [], value, onChange, placeholder = 'Seleccionar...', error }) {
+  const [open, setOpen] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0, openUp: false })
+  const buttonRef = useRef(null)
+  const menuRef = useRef(null)
+
+  const updatePosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const openUp = spaceBelow < 210 && rect.top > 210
+      setDropdownPos({
+        top: openUp ? (rect.top - 6) : (rect.bottom + 6),
+        left: rect.left,
+        width: rect.width,
+        openUp,
+      })
+    }
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        buttonRef.current && !buttonRef.current.contains(e.target) &&
+        menuRef.current && !menuRef.current.contains(e.target)
+      ) {
+        setOpen(false)
+      }
+    }
+
+    const handleScrollOrResize = () => {
+      if (open) updatePosition()
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    window.addEventListener('resize', handleScrollOrResize)
+    window.addEventListener('scroll', handleScrollOrResize, true)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('resize', handleScrollOrResize)
+      window.removeEventListener('scroll', handleScrollOrResize, true)
+    }
+  }, [open])
+
+  const toggleOpen = () => {
+    if (!open) {
+      updatePosition()
+    }
+    setOpen((v) => !v)
+  }
+
+  const selectedOption = options.find((o) => String(o.value) === String(value))
+  const displayLabel = selectedOption ? selectedOption.label : placeholder
+
+  return (
+    <div style={s.campoGroup}>
+      <label style={s.label}>
+        {label} {required ? <span style={{ color: '#ef4444', marginLeft: '3px' }}>*</span> : null}
+      </label>
+      <div style={{ position: 'relative', width: '100%' }}>
+        <button
+          ref={buttonRef}
+          type="button"
+          style={{
+            ...s.input,
+            width: '100%',
+            maxWidth: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '6px',
+            padding: '0 10px 0 12px',
+            color: (selectedOption && selectedOption.value !== '') ? '#ffffff' : 'var(--text-muted)',
+            cursor: 'pointer',
+            border: error ? '1px solid #ef4444' : (open ? '1px solid var(--accent-blue)' : '1px solid var(--border)'),
+            boxShadow: error ? '0 0 0 3px rgba(239,68,68,.12)' : (open ? '0 0 10px rgba(59, 130, 246, 0.25)' : 'none'),
+            textAlign: 'left',
+            boxSizing: 'border-box',
+          }}
+          onClick={toggleOpen}
+        >
+          <span
+            style={{
+              flex: 1,
+              minWidth: 0,
+              width: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: 'block',
+            }}
+            title={displayLabel}
+          >
+            {displayLabel}
+          </span>
+          <FiChevronDown
+            size={13}
+            style={{
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s ease',
+              color: open ? 'var(--accent-blue)' : '#ffffff',
+              flexShrink: 0,
+            }}
+          />
+        </button>
+
+        {open && createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: 'fixed',
+              top: dropdownPos.openUp ? 'auto' : `${dropdownPos.top}px`,
+              bottom: dropdownPos.openUp ? `${window.innerHeight - dropdownPos.top}px` : 'auto',
+              left: `${dropdownPos.left}px`,
+              width: `${dropdownPos.width}px`,
+              maxHeight: '220px',
+              overflowY: 'auto',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              padding: '4px',
+              zIndex: 99999,
+              boxShadow: '0 15px 35px rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0px',
+              boxSizing: 'border-box',
+            }}
+          >
+            {options.map((opt) => {
+              const isSelected = String(opt.value) === String(value)
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  style={{
+                    flexShrink: 1,
+                    minHeight: '30px',
+                    width: '100%',
+                    background: isSelected ? 'var(--accent-blue-bg)' : 'transparent',
+                    color: isSelected ? 'var(--accent-blue)' : 'var(--text-primary)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '8px 12px',
+                    fontSize: '13px',
+                    lineHeight: '1.4',
+                    fontWeight: isSelected ? '700' : '500',
+                    fontFamily: 'Inter, sans-serif',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: 'flex',
+                    alignItems: 'center',
+                    boxSizing: 'border-box',
+                  }}
+                  onClick={() => {
+                    onChange(opt.value)
+                    setOpen(false)
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = 'rgba(59, 130, 246, 0.12)'
+                      e.currentTarget.style.color = '#ffffff'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.color = 'var(--text-primary)'
+                    }
+                  }}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>,
+          document.body
+        )}
+      </div>
       {error ? <div style={s.inputError}>{error}</div> : null}
     </div>
   )
@@ -2069,33 +2332,38 @@ const s = {
   btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '8px 30px', borderRadius: '5px', fontWeight: '600', cursor: 'pointer' },
   btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center' },
   modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px 20px', width: '520px', maxWidth: '94vw', maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' },
   modalTitulo: { color: 'var(--text-primary)', fontSize: '18px', fontWeight: '700', margin: 0 },
   btnCerrarCircular: {
-    width: '30px',
-    height: '30px',
+    width: '34px',
+    height: '34px',
+    minWidth: '34px',
+    minHeight: '34px',
     borderRadius: '50%',
     background: 'var(--bg-tertiary)',
     border: '1px solid var(--border)',
-    color: 'var(--text-secondary)',
+    color: 'var(--text-muted)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
+    flexShrink: 0,
+    aspectRatio: '1 / 1',
+    padding: 0,
     transition: 'all 0.15s ease',
   },
-  fotoUploadArea: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px', gap: '6px' },
-  fotoPreviewBox: { width: '80px', height: '80px', borderRadius: '50%', border: '1.5px dashed rgba(59, 130, 246, 0.4)', cursor: 'pointer', overflow: 'hidden', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
+  fotoUploadArea: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '12px', gap: '5px' },
+  fotoPreviewBox: { width: '84px', height: '84px', borderRadius: '50%', border: '1.5px solid rgba(59, 130, 246, 0.25)', cursor: 'pointer', overflow: 'hidden', background: 'rgba(59, 130, 246, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
   fotoPreviewImg: { width: '100%', height: '100%', objectFit: 'cover' },
   fotoPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
   btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '11px', cursor: 'pointer', fontWeight: '600' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 10px' },
-  campoGroup: { marginTop: '1px' },
-  label: { display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '5px', fontWeight: '600' },
-  input: { width: '100%', fontSize: '13.5px', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', transition: 'all 0.15s ease' },
-  inputError: { marginTop: '5px', fontSize: '11.5px', color: 'var(--accent-red)', lineHeight: 1.2 },
-  select: { width: '100%', fontSize: '13.5px', padding: '9px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', cursor: 'pointer', transition: 'all 0.15s ease' },
-  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' },
+  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 10px', alignItems: 'start' },
+  campoGroup: { display: 'flex', flexDirection: 'column' },
+  label: { display: 'flex', alignItems: 'center', minHeight: '24px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: '600', lineHeight: 1.2, fontFamily: 'Inter, sans-serif' },
+  input: { width: '100%', fontSize: '13.5px', height: '38px', padding: '0 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: '#ffffff', outline: 'none', boxSizing: 'border-box', transition: 'all 0.15s ease', colorScheme: 'dark', fontFamily: 'Inter, sans-serif' },
+  inputError: { marginTop: '3px', fontSize: '11px', color: 'var(--accent-red)', lineHeight: 1.2 },
+  select: { width: '100%', fontSize: '13.5px', height: '38px', padding: '0 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: '#ffffff', outline: 'none', boxSizing: 'border-box', cursor: 'pointer', transition: 'all 0.15s ease', fontFamily: 'Inter, sans-serif' },
+  modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '14px' },
   btnIcon: {
     padding: '8px',
     borderRadius: '10px',

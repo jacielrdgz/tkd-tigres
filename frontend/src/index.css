@@ -548,6 +548,13 @@ body {
   transform: scale(0.93);
 }
 
+/* Date picker calendar icon styling (white icon in dark mode) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.5);
+  opacity: 0.85;
+  cursor: pointer;
+}
+
 @media (max-width: 640px) {
   /* Prevenir zoom automático en inputs en iOS */
   input, select, textarea, .input, .select, .textarea {
