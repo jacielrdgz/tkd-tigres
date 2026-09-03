@@ -1772,6 +1772,9 @@ export default function Alumnos() {
                 placeholder="10 dígitos"
                 error={errors.telefono_tutor?.[0]}
                 required
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 onChange={v => {
                   const limpio = v.replace(/[^0-9]/g, '')
                   setForm({ ...form, telefono_tutor: limpio })
@@ -1830,6 +1833,8 @@ export default function Alumnos() {
                 <input
                   style={s.input}
                   type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   min="1"
                   max="31"
                   value={form.dia_pago || ''}
@@ -1906,9 +1911,9 @@ function InfoItem({ label, value }) {
   )
 }
 
-function Campo({ label, value, onChange, type = 'text', full, error, required, placeholder }) {
+function Campo({ label, value, onChange, type = 'text', full, error, required, placeholder, inputMode, pattern }) {
   return (
-    <div style={full ? { gridColumn: '1 / -1' } : {}}>
+    <div style={full ? { gridColumn: '1 / -1', minWidth: 0, width: '100%' } : { minWidth: 0, width: '100%' }}>
       <label style={s.label}>
         {label} {required ? <span style={{ color: '#ef4444', marginLeft: '3px' }}>*</span> : null}
       </label>
@@ -1919,6 +1924,8 @@ function Campo({ label, value, onChange, type = 'text', full, error, required, p
           boxShadow: error ? '0 0 0 3px rgba(239,68,68,.12)' : 'none',
         }}
         type={type}
+        inputMode={inputMode}
+        pattern={pattern}
         placeholder={placeholder || ''}
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
@@ -2433,10 +2440,10 @@ const s = {
   fotoPreviewImg: { width: '100%', height: '100%', objectFit: 'cover' },
   fotoPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
   btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '11px', cursor: 'pointer', fontWeight: '600' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 10px', alignItems: 'start' },
-  campoGroup: { display: 'flex', flexDirection: 'column' },
+  grid2: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '8px 10px', alignItems: 'start', width: '100%', boxSizing: 'border-box' },
+  campoGroup: { display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', boxSizing: 'border-box' },
   label: { display: 'flex', alignItems: 'center', minHeight: '24px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: '600', lineHeight: 1.2, fontFamily: 'Inter, sans-serif' },
-  input: { width: '100%', fontSize: '13.5px', height: '38px', padding: '0 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: '#ffffff', outline: 'none', boxSizing: 'border-box', transition: 'all 0.15s ease', colorScheme: 'dark', fontFamily: 'Inter, sans-serif' },
+  input: { width: '100%', maxWidth: '100%', minWidth: 0, fontSize: '13.5px', height: '38px', minHeight: '38px', padding: '0 10px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: '#ffffff', outline: 'none', boxSizing: 'border-box', transition: 'all 0.15s ease', colorScheme: 'dark', fontFamily: 'Inter, sans-serif' },
   inputError: { marginTop: '3px', fontSize: '11px', color: 'var(--accent-red)', lineHeight: 1.2 },
   select: { width: '100%', fontSize: '13.5px', height: '38px', padding: '0 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: '#ffffff', outline: 'none', boxSizing: 'border-box', cursor: 'pointer', transition: 'all 0.15s ease', fontFamily: 'Inter, sans-serif' },
   modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '14px' },

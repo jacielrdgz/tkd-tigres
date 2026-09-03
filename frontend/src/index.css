@@ -584,6 +584,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     box-sizing: border-box !important;
   }
 
+  .mobile-fullscreen-modal input::placeholder {
+    font-size: 11px !important;
+  }
+  
+  .mobile-fullscreen-modal input[type="date"] {
+    max-width: 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    padding: 0 6px !important;
+    font-size: 12px !important;
+  }
+
   .mobile-fullscreen-overlay {
     background: rgba(0, 0, 0, 0.7) !important;
     backdrop-filter: blur(4px) !important;
