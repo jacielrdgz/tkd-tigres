@@ -260,8 +260,7 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
           flexShrink: 0,
           ...(isMobile ? {
             padding: '16px',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 85px)',
-            marginBottom: '10px',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 55px)',
           } : {}),
         }}>
           {/*Ajustes link*/}
