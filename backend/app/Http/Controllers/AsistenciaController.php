@@ -220,24 +220,27 @@ class AsistenciaController extends Controller
     {
         $mes = $request->get('mes', Carbon::now()->format('Y-m'));
 
+        $alumnos = Alumno::where('estatus', 'activo')->pluck('id');
+        if ($alumnos->isEmpty()) {
+            return response()->json([]);
+        }
+
         $carbonMes = Carbon::parse($mes . '-01');
         $inicioMes = $carbonMes->copy()->startOfMonth()->toDateString();
         $finMes    = $carbonMes->copy()->endOfMonth()->toDateString();
 
-        $registros = Asistencia::selectRaw("
-                fecha,
-                COUNT(*) as total,
-                SUM(CASE WHEN presente = 1 THEN 1 ELSE 0 END) as asistieron
-            ")
+        $registros = Asistencia::whereIn('alumno_id', $alumnos)
             ->whereBetween('fecha', [$inicioMes, $finMes])
-            ->groupBy('fecha')
+            ->select('id', 'fecha', 'presente')
             ->get();
 
+        $agrupadas = $registros->groupBy('fecha');
+
         $porFecha = [];
-        foreach ($registros as $r) {
-            $total = (int) $r->total;
-            $asistieron = (int) $r->asistieron;
-            $porFecha[$r->fecha] = [
+        foreach ($agrupadas as $fecha => $asists) {
+            $total = $asists->count();
+            $asistieron = $asists->filter(fn($r) => (bool)$r->presente)->count();
+            $porFecha[$fecha] = [
                 'asistieron' => $asistieron,
                 'total'      => $total,
                 'pct'        => $total > 0 ? (int) round(($asistieron / $total) * 100) : 0,

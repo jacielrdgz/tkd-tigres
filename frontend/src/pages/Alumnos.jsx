@@ -254,13 +254,24 @@ export default function Alumnos() {
     const cached = getCache('cintas_config')
     if (cached && cached.data) {
       const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
-      setCintasConfig(cachedList)
+      if (cachedList.length > 0) {
+        setCintasConfig(cachedList)
+      }
     }
     api.get('/configuraciones-cintas')
       .then(res => {
-        const list = Array.isArray(res.data) ? res.data : (res.data?.data || Object.values(res.data || {}))
-        setCintasConfig(list)
-        setCache('cintas_config', list)
+        let list = []
+        if (Array.isArray(res.data)) {
+          list = res.data
+        } else if (Array.isArray(res.data?.data)) {
+          list = res.data.data
+        } else if (res.data && typeof res.data === 'object') {
+          list = Object.values(res.data)
+        }
+        if (list.length > 0) {
+          setCintasConfig(list)
+          setCache('cintas_config', list)
+        }
       })
       .catch(err => console.error("Error cargando cintas", err))
   }
@@ -325,6 +336,9 @@ export default function Alumnos() {
   }, [editId, todosLosAlumnos])
 
   const abrirCrear = () => {
+    if (!cintasConfig || cintasConfig.length === 0) {
+      cargarCintas()
+    }
     setForm(VACIO)
     setErrors({})
     setFotoFile(null)
@@ -335,6 +349,9 @@ export default function Alumnos() {
   }
 
   const abrirEditar = (alumno) => {
+    if (!cintasConfig || cintasConfig.length === 0) {
+      cargarCintas()
+    }
     setErrors({})
     setForm({
       ...alumno, // Trae todos los datos base
@@ -1784,7 +1801,7 @@ export default function Alumnos() {
               )}
             </div>
 
-            <div style={s.grid2} className="mobile-grid-1">
+            <div style={s.grid2}>
               <Campo label="Nombre(s)" value={form.nombre} error={errors.nombre?.[0]} required onChange={v => { setForm({ ...form, nombre: v }); if (errors.nombre) setErrors(prev => ({ ...prev, nombre: undefined })) }} />
               <Campo label="Apellido paterno" value={form.apellido_paterno} error={errors.apellido_paterno?.[0]} required onChange={v => { setForm({ ...form, apellido_paterno: v }); if (errors.apellido_paterno) setErrors(prev => ({ ...prev, apellido_paterno: undefined })) }} />
               <Campo label="Apellido materno" value={form.apellido_materno} error={errors.apellido_materno?.[0]} required onChange={v => { setForm({ ...form, apellido_materno: v }); if (errors.apellido_materno) setErrors(prev => ({ ...prev, apellido_materno: undefined })) }} />
