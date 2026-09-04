@@ -12,23 +12,23 @@ const formatFechaNatural = (fecha) => {
 
 const modalCredencialStyles = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
-  modalCard: { background: 'var(--bg-secondary)', borderRadius: '16px', width: '580px', maxWidth: '95vw', border: '1px solid var(--border)' },
-  cardHeader: { background: 'var(--bg-tertiary)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
-  cardTitle: { fontSize: '18px', fontWeight: '600', textTransform: 'uppercase', color: 'var(--text-primary)', margin: 0 },
+  modalCard: { background: 'var(--bg-secondary)', borderRadius: '16px', width: '580px', maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto', border: '1px solid var(--border)', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)', boxSizing: 'border-box' },
+  cardHeader: { background: 'var(--bg-tertiary)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
+  cardTitle: { fontSize: '16px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-primary)', margin: 0, paddingRight: '8px', lineHeight: 1.3 },
   btnCerrarWhite: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
-  cardBody: { padding: '30px', display: 'flex', gap: '18px', alignItems: 'flex-start', textAlign: 'left' },
-  avatarBox: { width: '180px', height: '220px', flexShrink: 0, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: '8px' },
+  cardBody: { padding: '24px 28px', display: 'flex', gap: '20px', alignItems: 'flex-start', textAlign: 'left' },
+  avatarBox: { width: '170px', height: '210px', flexShrink: 0, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: '12px' },
   avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
   avatarInicialesBox: { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  avatarIniciales: { fontSize: '56px', fontWeight: '700', color: 'var(--accent-blue)' },
-  cardInfo: { flex: 1, display: 'flex', flexDirection: 'column', gap: '15px' },
-  infoItem: { display: 'flex', borderBottom: '1px solid var(--border)', paddingBottom: '6px' },
-  infoLabel: { width: '100px', fontWeight: '700', color: 'var(--text-muted)', fontSize: '15px', textAlign: 'right', marginRight: '20px' },
-  infoValue: { color: 'var(--text-primary)', fontSize: '14.5px', fontWeight: '500' },
-  cardFooter: { padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '15px', background: 'var(--bg-tertiary)' },
-  btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '8px 30px', borderRadius: '5px', fontWeight: '600', cursor: 'pointer' },
-  btnImprimir: { background: 'var(--accent-blue)', color: '#fff', border: 'none', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', cursor: 'pointer' },
-  btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '8px 30px', borderRadius: '5px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center' },
+  avatarIniciales: { fontSize: '48px', fontWeight: '700', color: 'var(--accent-blue)' },
+  cardInfo: { flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 },
+  infoItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '6px' },
+  infoLabel: { fontWeight: '700', color: 'var(--text-muted)', fontSize: '13.5px', textAlign: 'left', minWidth: '85px', flexShrink: 0 },
+  infoValue: { color: 'var(--text-primary)', fontSize: '13.5px', fontWeight: '500', textAlign: 'right', wordBreak: 'break-word' },
+  cardFooter: { padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '12px', background: 'var(--bg-tertiary)', flexWrap: 'wrap' },
+  btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '9px 24px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
+  btnImprimir: { background: 'var(--accent-blue)', color: '#fff', border: 'none', padding: '9px 24px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
+  btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '9px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
 }
 
 export default function InstructorManager() {
@@ -38,6 +38,7 @@ export default function InstructorManager() {
   const [showModal, setShowModal] = useState(false)
   const [showCredencial, setShowCredencial] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
   
   const [selected, setSelected] = useState(null)
   const [form, setForm] = useState({
@@ -68,6 +69,12 @@ export default function InstructorManager() {
   }
 
   useEffect(() => { fetchData() }, [])
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 640)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -441,8 +448,14 @@ export default function InstructorManager() {
               </h3>
               <button style={modalCredencialStyles.btnCerrarWhite} onClick={() => setShowCredencial(false)}>✕</button>
             </div>
-            <div style={modalCredencialStyles.cardBody}>
-              <div style={modalCredencialStyles.avatarBox}>
+            <div style={{
+              ...modalCredencialStyles.cardBody,
+              ...(isMobile ? { flexDirection: 'column', alignItems: 'center', padding: '18px 16px', gap: '16px' } : {})
+            }}>
+              <div style={{
+                ...modalCredencialStyles.avatarBox,
+                ...(isMobile ? { width: '130px', height: '160px', borderRadius: '12px' } : {})
+              }}>
                 {selected.foto_url ? (
                   <img
                     src={(selected.foto_url.startsWith('http') || selected.foto_url.startsWith('data:')) ? selected.foto_url : `${import.meta.env.VITE_API_URL || ''}/storage/${selected.foto_url}`}
@@ -451,48 +464,60 @@ export default function InstructorManager() {
                   />
                 ) : (
                   <div style={modalCredencialStyles.avatarInicialesBox}>
-                    <span style={modalCredencialStyles.avatarIniciales}>
+                    <span style={{
+                      ...modalCredencialStyles.avatarIniciales,
+                      ...(isMobile ? { fontSize: '42px' } : {})
+                    }}>
                       {(selected.nombre?.charAt(0) || '') + (selected.apellido_paterno?.charAt(0) || '')}
                     </span>
                   </div>
                 )}
               </div>
-              <div style={modalCredencialStyles.cardInfo}>
+              <div style={{
+                ...modalCredencialStyles.cardInfo,
+                ...(isMobile ? { width: '100%', gap: '8px' } : {})
+              }}>
                 <div style={modalCredencialStyles.infoItem}>
-                  <span style={modalCredencialStyles.infoLabel}>Rol:</span>
-                  <span style={modalCredencialStyles.infoValue}>Instructor</span>
+                  <span style={{ ...modalCredencialStyles.infoLabel, ...(isMobile ? { minWidth: '80px', fontSize: '13px' } : {}) }}>Rol:</span>
+                  <span style={{ ...modalCredencialStyles.infoValue, ...(isMobile ? { fontSize: '13px' } : {}) }}>Instructor</span>
                 </div>
                 <div style={modalCredencialStyles.infoItem}>
-                  <span style={modalCredencialStyles.infoLabel}>Grado:</span>
+                  <span style={{ ...modalCredencialStyles.infoLabel, ...(isMobile ? { minWidth: '80px', fontSize: '13px' } : {}) }}>Grado:</span>
                   <span style={{
                     padding: '3px 10px',
                     borderRadius: '12px',
                     background: getCintaColor(selected),
                     color: '#ffffff',
                     fontWeight: '700',
-                    fontSize: '12.5px',
+                    fontSize: isMobile ? '12px' : '12.5px',
                     display: 'inline-block'
                   }}>
                     {getCintaLabel(selected)}
                   </span>
                 </div>
                 <div style={modalCredencialStyles.infoItem}>
-                  <span style={modalCredencialStyles.infoLabel}>Teléfono:</span>
-                  <span style={modalCredencialStyles.infoValue}>{selected.telefono || '-'}</span>
+                  <span style={{ ...modalCredencialStyles.infoLabel, ...(isMobile ? { minWidth: '80px', fontSize: '13px' } : {}) }}>Teléfono:</span>
+                  <span style={{ ...modalCredencialStyles.infoValue, ...(isMobile ? { fontSize: '13px' } : {}) }}>{selected.telefono || '-'}</span>
                 </div>
                 <div style={modalCredencialStyles.infoItem}>
-                  <span style={modalCredencialStyles.infoLabel}>F. Nac.:</span>
-                  <span style={modalCredencialStyles.infoValue}>{formatFechaNatural(selected.fecha_nacimiento)}</span>
+                  <span style={{ ...modalCredencialStyles.infoLabel, ...(isMobile ? { minWidth: '80px', fontSize: '13px' } : {}) }}>F. Nac.:</span>
+                  <span style={{ ...modalCredencialStyles.infoValue, ...(isMobile ? { fontSize: '13px' } : {}) }}>{formatFechaNatural(selected.fecha_nacimiento)}</span>
                 </div>
               </div>
             </div>
-            <div style={modalCredencialStyles.cardFooter}>
+            <div style={{
+              ...modalCredencialStyles.cardFooter,
+              ...(isMobile ? { padding: '14px 16px', gap: '10px' } : {})
+            }}>
               {selected.telefono && (
                 <a
                   href={'https://wa.me/52' + selected.telefono?.replace(/\s+/g, '')}
                   target="_blank"
                   rel="noreferrer"
-                  style={modalCredencialStyles.btnWhatsapp}
+                  style={{
+                    ...modalCredencialStyles.btnWhatsapp,
+                    ...(isMobile ? { flex: 1, justifyContent: 'center', padding: '9px 12px' } : {})
+                  }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '6px' }}>
                     <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.185-.573c.948.517 2.011.808 3.146.809 3.181 0 5.767-2.584 5.768-5.764 0-3.18-2.586-5.763-5.768-5.763zm4.52 8.161c-.199.557-1.162 1.058-1.597 1.115-.41.054-.935.086-1.503-.099-.345-.113-.775-.262-1.328-.489-2.315-.953-3.82-3.308-3.936-3.461-.116-.155-.945-1.258-.945-2.399 0-1.141.594-1.701.806-1.933.211-.231.462-.29.616-.29.154 0 .308.001.442.008.14.007.33-.053.516.39.186.444.636 1.547.692 1.659.056.111.093.242.019.39-.074.148-.112.241-.223.37-.111.13-.233.29-.333.389-.111.111-.228.232-.098.455.13.223.577.95 1.24 1.54.853.759 1.567.994 1.79.1.223-.112.455-.228.678-.541.222-.314.185-.537.408-.65s.445-.074.743.074c.297.149 1.874.883 2.196 1.043.322.16.537.241.616.37.079.13.079.752-.12 1.309z" />
@@ -501,13 +526,19 @@ export default function InstructorManager() {
                 </a>
               )}
               <button
-                style={modalCredencialStyles.btnImprimir}
+                style={{
+                  ...modalCredencialStyles.btnImprimir,
+                  ...(isMobile ? { flex: 1, justifyContent: 'center', padding: '9px 12px' } : {})
+                }}
                 onClick={() => window.print()}
               >
                 IMPRIMIR
               </button>
               <button
-                style={modalCredencialStyles.btnAceptar}
+                style={{
+                  ...modalCredencialStyles.btnAceptar,
+                  ...(isMobile ? { flex: 1, justifyContent: 'center', padding: '9px 12px' } : {})
+                }}
                 onClick={() => setShowCredencial(false)}
               >
                 CERRAR
