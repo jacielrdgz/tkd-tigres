@@ -504,6 +504,7 @@ export default function Alumnos() {
       cancelButtonText: 'Cancelar',
       background: '#13151f',
       color: '#fff',
+      scrollbarPadding: false,
       customClass: {
         popup: 'swal-custom-premium'
       }

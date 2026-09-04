@@ -68,7 +68,10 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
   const [modalConfirmLogout, setModalConfirmLogout] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoHover, setLogoHover] = useState(false);
   const avatarInputRef = useRef(null);
+  const logoInputRef = useRef(null);
 
   const mobileOpen = propMobileOpen !== undefined ? propMobileOpen : localMobileOpen;
   const setMobileOpen = propSetMobileOpen !== undefined ? propSetMobileOpen : setLocalMobileOpen;
@@ -105,6 +108,27 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
       toast.error('No se pudo subir la foto');
     } finally {
       setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleLogoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('foto', file);
+    setUploadingLogo(true);
+    try {
+      await api.post('/configuracion-escuela', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      await refreshUser();
+      setLogoError(false);
+      toast.success('¡Logo de la escuela actualizado!');
+    } catch {
+      toast.error('No se pudo subir el logo de la escuela');
+    } finally {
+      setUploadingLogo(false);
       e.target.value = '';
     }
   };
@@ -148,31 +172,57 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
       }}>
         {/* Logo & tenant info */}
         <div
-          style={{ ...styles.logoSection, cursor: logoUrlFinal ? 'pointer' : 'default', flexShrink: 0 }}
-          title={logoUrlFinal ? "Ver logo de la escuela" : tenantName}
+          style={{ ...styles.logoSection, cursor: 'pointer', flexShrink: 0 }}
+          title="Ver logo de la escuela"
           onClick={() => {
-            if (logoUrlFinal) {
-              setModalFoto({
-                url: logoUrlFinal,
-                titulo: tenantName,
-                sub: 'Logo Oficial de la Escuela',
-                isAvatar: false
-              })
-            }
+            setModalFoto({
+              url: logoUrlFinal,
+              titulo: tenantName,
+              sub: 'Logo Oficial de la Escuela',
+              isAvatar: false,
+              isLogo: true
+            })
           }}
         >
-          {logoUrlFinal && !logoError ? (
-            <img
-              src={logoUrlFinal}
-              alt="Logo"
-              style={styles.logoImage}
-              onError={() => setLogoError(true)}
-            />
-          ) : (
-            <div style={{ ...styles.logoImage, background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-blue)' }}>
-              <FiShield size={22} />
-            </div>
-          )}
+          <div
+            style={{
+              ...styles.logoImage,
+              position: 'relative',
+              cursor: 'pointer',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--accent-blue-bg)',
+            }}
+            onMouseEnter={() => setLogoHover(true)}
+            onMouseLeave={() => setLogoHover(false)}
+          >
+            {logoUrlFinal && !logoError ? (
+              <img
+                src={logoUrlFinal}
+                alt="Logo"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              uploadingLogo ? <FiLoader className="spin" size={18} color="var(--accent-blue)" /> : <FiShield size={22} color="var(--accent-blue)" />
+            )}
+            {/* Overlay con icono de ver foto */}
+            {logoHover && !uploadingLogo && (
+              <div style={styles.avatarOverlay}>
+                <FiEye size={14} color="#fff" />
+              </div>
+            )}
+          </div>
+          {/* Input file oculto para logo */}
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/svg+xml"
+            style={{ display: 'none' }}
+            onChange={handleLogoChange}
+          />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={styles.logoTitle}>{tenantName}</div>
             <div style={styles.logoSub}>{fechaHoy}</div>
@@ -209,8 +259,9 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
           ...styles.footer,
           flexShrink: 0,
           ...(isMobile ? {
-            padding: '12px 16px',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+            padding: '16px',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 85px)',
+            marginBottom: '10px',
           } : {}),
         }}>
           {/*Ajustes link*/}
@@ -524,16 +575,20 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
                   alt="Vista previa"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
-              ) : (
+              ) : modalFoto.isAvatar ? (
                 <div style={{ fontSize: '72px', fontWeight: '800', color: 'var(--accent-blue)' }}>
                   {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              ) : (
+                <div style={{ color: 'var(--accent-blue)' }}>
+                  <FiShield size={72} />
                 </div>
               )}
             </div>
 
             {/* Botones de acción */}
             <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-              {modalFoto.isAvatar && (
+              {(modalFoto.isAvatar || modalFoto.isLogo) && (
                 <button
                   style={{
                     flex: 1,
@@ -552,8 +607,13 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
                     boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
                   }}
                   onClick={() => {
+                    const isSchoolLogo = modalFoto.isLogo;
                     setModalFoto(null);
-                    avatarInputRef.current?.click();
+                    if (isSchoolLogo) {
+                      logoInputRef.current?.click();
+                    } else {
+                      avatarInputRef.current?.click();
+                    }
                   }}
                 >
                   <FiCamera size={16} />
