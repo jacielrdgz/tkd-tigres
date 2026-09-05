@@ -30,6 +30,10 @@ class EventoController extends Controller
     {
         Gate::authorize('create', Evento::class);
 
+        if ($request->has('costo') && ($request->costo === '' || $request->costo === null)) {
+            $request->merge(['costo' => null]);
+        }
+
         $validated = $request->validate([
             'nombre'      => 'required|string|max:150',
             'tipo'        => 'required|in:examen,torneo,demostracion,seminario',
@@ -39,6 +43,10 @@ class EventoController extends Controller
             'costo'       => 'nullable|numeric|min:0',
             'precios_cintas' => 'nullable|array',
         ]);
+
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'precios_cintas')) {
+            unset($validated['precios_cintas']);
+        }
 
         $evento = Evento::create($validated);
 
@@ -57,6 +65,10 @@ class EventoController extends Controller
     {
         Gate::authorize('update', $evento);
 
+        if ($request->has('costo') && ($request->costo === '' || $request->costo === null)) {
+            $request->merge(['costo' => null]);
+        }
+
         $validated = $request->validate([
             'nombre'      => 'sometimes|string|max:150',
             'tipo'        => 'sometimes|in:examen,torneo,demostracion,seminario',
@@ -66,6 +78,10 @@ class EventoController extends Controller
             'costo'       => 'nullable|numeric|min:0',
             'precios_cintas' => 'nullable|array',
         ]);
+
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'precios_cintas')) {
+            unset($validated['precios_cintas']);
+        }
 
         $evento->update($validated);
 

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import Swal from 'sweetalert2'
+import toast from 'react-hot-toast'
 import {
   FiAward,
   FiCalendar,
@@ -74,11 +75,11 @@ export default function Examenes() {
 
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === 'Escape') setModalExamen(false)
+      if (e.key === 'Escape' && !guardando) setModalExamen(false)
     }
     window.addEventListener('keydown', handleEsc)
     return () => window.removeEventListener('keydown', handleEsc)
-  }, [])
+  }, [guardando])
 
   const cargarExamenes = async (force = false) => {
     if (!force) {
@@ -120,6 +121,10 @@ export default function Examenes() {
 
   const abrirEditar = (e, ev) => {
     ev.stopPropagation()
+    if (String(e.id).startsWith('temp_')) {
+      toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
+      return
+    }
     setFormExamen({
       nombre: e.nombre || '',
       tipo: 'examen',
@@ -134,6 +139,8 @@ export default function Examenes() {
   }
 
   const guardarExamen = async () => {
+    if (guardando) return
+
     if (!formExamen.nombre.trim()) {
       Swal.fire({
         title: 'Campo requerido',
@@ -159,33 +166,124 @@ export default function Examenes() {
     }
 
     setGuardando(true)
-    try {
-      const payload = { ...formExamen, tipo: 'examen' }
-      if (editando) {
-        await api.put(`/eventos/${editando}`, payload)
-      } else {
-        await api.post('/eventos', payload)
+
+    const isEdit = !!editando
+    const examenId = editando
+    const payload = {
+      ...formExamen,
+      tipo: 'examen',
+      costo: formExamen.costo === '' || formExamen.costo === null || formExamen.costo === undefined ? null : Number(formExamen.costo)
+    }
+
+    if (isEdit) {
+      const originalExamen = examenes.find(e => e.id === examenId)
+      const optimisticExamen = {
+        ...originalExamen,
+        ...payload
       }
-      setModalExamen(false)
-      invalidateCache('examenes')
-      invalidateCache('eventos')
-      cargarExamenes(true)
-    } catch (err) {
-      Swal.fire({
-        title: 'Error',
-        text: 'No se pudo guardar la convocatoria del examen.',
-        icon: 'error',
-        confirmButtonColor: 'var(--accent-blue)',
-        background: 'var(--bg-secondary)',
-        color: 'var(--text-primary)'
+
+      // 1. Guardar y mostrar en UI de inmediato
+      setExamenes(prev => {
+        const next = prev.map(e => e.id === examenId ? optimisticExamen : e)
+        next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+        return next
       })
-    } finally {
+      setModalExamen(false)
       setGuardando(false)
+      toast.success('Examen actualizado')
+
+      // 2. Persistir en backend en segundo plano
+      api.put(`/eventos/${examenId}`, payload)
+        .then(res => {
+          if (res.data) {
+            setExamenes(prev => {
+              const next = prev.map(e => e.id === examenId ? { ...optimisticExamen, ...res.data } : e)
+              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+              return next
+            })
+          }
+          invalidateCache('examenes')
+          invalidateCache('eventos')
+        })
+        .catch(err => {
+          console.error('Error en segundo plano al actualizar examen:', err)
+          if (originalExamen) {
+            setExamenes(prev => {
+              const next = prev.map(e => e.id === examenId ? originalExamen : e)
+              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+              return next
+            })
+          }
+          const msg = err.response?.data?.message || 'No se pudo guardar la convocatoria del examen en el servidor.'
+          Swal.fire({
+            title: 'Error',
+            text: msg,
+            icon: 'error',
+            confirmButtonColor: 'var(--accent-blue)',
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)'
+          })
+        })
+
+    } else {
+      const tempId = 'temp_' + Date.now()
+      const optimisticExamen = {
+        ...payload,
+        id: tempId,
+        alumnos_count: 0,
+        total_recaudado: 0,
+        pendientes_pago: 0,
+        alumnos: [],
+        examen_alumnos: [],
+        created_at: new Date().toISOString()
+      }
+
+      // 1. Inserción optimista instantánea
+      setExamenes(prev => {
+        const next = [...prev, optimisticExamen]
+        next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+        return next
+      })
+      setModalExamen(false)
+      setGuardando(false)
+      toast.success('Convocatoria creada')
+
+      // 2. Persistir en backend en segundo plano
+      api.post('/eventos', payload)
+        .then(res => {
+          if (res.data) {
+            setExamenes(prev => {
+              const next = prev.map(e => e.id === tempId ? { ...optimisticExamen, ...res.data } : e)
+              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+              return next
+            })
+          }
+          invalidateCache('examenes')
+          invalidateCache('eventos')
+        })
+        .catch(err => {
+          console.error('Error en segundo plano al crear examen:', err)
+          setExamenes(prev => prev.filter(e => e.id !== tempId))
+          const msg = err.response?.data?.message || 'No se pudo guardar la convocatoria del examen en el servidor.'
+          Swal.fire({
+            title: 'Error',
+            text: msg,
+            icon: 'error',
+            confirmButtonColor: 'var(--accent-blue)',
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)'
+          })
+        })
     }
   }
 
   const eliminarExamen = async (id, ev) => {
     ev.stopPropagation()
+    if (String(id).startsWith('temp_')) {
+      toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
+      return
+    }
+
     Swal.fire({
       title: '¿Eliminar examen?',
       text: 'Se eliminará la convocatoria de examen y los registros de inscripción asociados.',
@@ -447,7 +545,13 @@ export default function Examenes() {
               <div
                 key={e.id}
                 style={{ ...s.card, opacity: esPasado ? 0.88 : 1 }}
-                onClick={() => navigate(`/examenes/${e.id}`)}
+                onClick={() => {
+                  if (String(e.id).startsWith('temp_')) {
+                    toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
+                    return
+                  }
+                  navigate(`/examenes/${e.id}`)
+                }}
                 onMouseEnter={ev => {
                   ev.currentTarget.style.transform = 'translateY(-3px)'
                   ev.currentTarget.style.borderColor = 'var(--accent-blue)'
@@ -566,12 +670,16 @@ export default function Examenes() {
 
       {/* MODAL CREAR / EDITAR EXAMEN (RESPONSIVO Y PULIDO) */}
       {modalExamen && (
-        <div style={s.overlay} className="mobile-fullscreen-overlay" onClick={() => setModalExamen(false)}>
+        <div style={s.overlay} className="mobile-fullscreen-overlay" onClick={guardando ? undefined : () => setModalExamen(false)}>
           <div
-            style={s.modal}
+            style={{
+              ...s.modal,
+              pointerEvents: guardando ? 'none' : 'auto'
+            }}
             className="mobile-fullscreen-modal"
             onClick={e => e.stopPropagation()}
             onKeyDown={e => {
+              if (guardando) return
               if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault()
                 guardarExamen()
@@ -587,8 +695,14 @@ export default function Examenes() {
               <button
                 type="button"
                 className="btn-cerrar-circular"
-                style={s.btnCerrarCircular}
-                onClick={() => setModalExamen(false)}
+                style={{
+                  ...s.btnCerrarCircular,
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : () => setModalExamen(false)}
+                disabled={guardando}
                 title="Cerrar modal"
                 onMouseEnter={e => {
                   e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
@@ -725,16 +839,26 @@ export default function Examenes() {
             <div style={s.modalFooter}>
               <button
                 type="button"
-                style={s.btnSecondary}
-                onClick={() => setModalExamen(false)}
+                style={{
+                  ...s.btnSecondary,
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : () => setModalExamen(false)}
                 disabled={guardando}
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                style={s.btnPrimaryModal}
-                onClick={guardarExamen}
+                style={{
+                  ...s.btnPrimaryModal,
+                  opacity: guardando ? 0.75 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : guardarExamen}
                 disabled={guardando}
               >
                 {guardando ? 'Guardando...' : (editando ? 'Guardar Cambios' : 'Crear Convocatoria')}

@@ -29,6 +29,18 @@ class Alumno extends Model
 
     protected $appends = ['edad', 'foto_url'];
 
+    protected static function booted(): void
+    {
+        static::saving(function ($alumno) {
+            if ($alumno->nombre_tutor === null) {
+                $alumno->nombre_tutor = '';
+            }
+            if ($alumno->telefono_tutor === null) {
+                $alumno->telefono_tutor = '';
+            }
+        });
+    }
+
     public function getEdadAttribute(): ?int
     {
         return $this->fecha_nacimiento

@@ -40,12 +40,19 @@ class StoreAlumnoRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         if ($this->has('telefono_tutor')) {
+            $tel = trim((string) $this->input('telefono_tutor'));
             $this->merge([
-                'telefono_tutor' => trim((string) $this->input('telefono_tutor')),
+                'telefono_tutor' => $tel === '' ? null : $tel,
+            ]);
+        }
+        if ($this->has('nombre_tutor')) {
+            $nom = trim((string) $this->input('nombre_tutor'));
+            $this->merge([
+                'nombre_tutor' => $nom === '' ? null : $nom,
             ]);
         }
         if ($this->has('email')) {
-            $email = $this->input('email');
+            $email = trim((string) $this->input('email'));
             $this->merge([
                 'email' => $email === '' ? null : $email,
             ]);

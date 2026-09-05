@@ -236,9 +236,10 @@ export default function PerfilAlumno() {
         return
       }
 
+      if (guardando) return
       setGuardando(true)
-      const formData = new FormData()
 
+      const formData = new FormData()
       const EXCLUIR = ['foto_url', 'foto', 'id', 'edad', 'cinta_config', 'ultimo_pago', 'estatus_pago', 'racha_faltas', 'created_at', 'updated_at']
       Object.entries(form).forEach(([k, v]) => {
         if (!EXCLUIR.includes(k) && v !== null && v !== undefined) {
@@ -252,49 +253,63 @@ export default function PerfilAlumno() {
         formData.append('foto', fotoFile)
       }
 
-      formData.append('_method', 'PUT')
-      await api.post(`/alumnos/${alumno.id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      const originalAlumno = alumno
+      const currentFotoUrl = fotoFile ? fotoPreview : (eliminarFoto ? null : alumno?.foto_url)
+      const cintaSel = cintas_config?.find(c => String(c.id) === String(form.configuracion_cinta_id))
+      const horarioSel = horarios?.find(h => String(h.id) === String(form.horario_id))
 
+      // 1. Guardar y mostrar en UI de inmediato
+      setAlumno(prev => ({
+        ...prev,
+        ...form,
+        foto_url: currentFotoUrl,
+        cinta_config: cintaSel || prev.cinta_config,
+        horario: horarioSel || prev.horario
+      }))
+      setModalEditar(false)
+      setGuardando(false)
       Swal.fire({
         icon: 'success',
         title: '¡Éxito!',
         text: 'Alumno actualizado correctamente.',
         background: '#13151f',
         color: '#fff',
-        timer: 2000,
+        timer: 1500,
         showConfirmButton: false,
         customClass: { popup: 'swal-custom-premium' }
       })
 
-      setModalEditar(false)
-      cargarPerfil()
+      // 2. Persistir en backend en segundo plano
+      formData.append('_method', 'PUT')
+      api.post(`/alumnos/${alumno.id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+        .then(res => {
+          if (res.data) {
+            setAlumno(prev => ({
+              ...prev,
+              ...res.data,
+              cinta_config: res.data.cinta_config || cintaSel || prev.cinta_config,
+              horario: res.data.horario || horarioSel || prev.horario
+            }))
+          }
+          invalidateCache('alumnos')
+        })
+        .catch(err => {
+          console.error('Error en segundo plano al actualizar alumno:', err)
+          if (originalAlumno) setAlumno(originalAlumno)
+          const msg = err.response?.data?.message || (err.response?.data?.errors ? Object.values(err.response.data.errors)[0][0] : 'Error al guardar cambios en el servidor.')
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: msg,
+            background: '#13151f',
+            color: '#fff',
+            customClass: { popup: 'swal-custom-premium' }
+          })
+        })
     } catch (err) {
-      console.error('Detalles del error:', err.response?.data)
-      if (err.response?.data?.errors) {
-        const errores = err.response.data.errors
-        setErrors(errores)
-        const primerError = Object.values(errores)[0][0]
-        Swal.fire({
-          icon: 'error',
-          title: 'Error al guardar',
-          text: primerError,
-          background: '#13151f',
-          color: '#fff',
-          customClass: { popup: 'swal-custom-premium' }
-        })
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Error al guardar.',
-          background: '#13151f',
-          color: '#fff',
-          customClass: { popup: 'swal-custom-premium' }
-        })
-      }
-    } finally {
+      console.error('Error al procesar formulario:', err)
       setGuardando(false)
     }
   }
@@ -979,11 +994,29 @@ export default function PerfilAlumno() {
 
       {/* Modal Editar Alumno */}
       {modalEditar && (
-        <div style={editModalStyles.overlay} className="mobile-fullscreen-overlay" onClick={() => setModalEditar(false)}>
-          <div style={editModalStyles.modal} className="mobile-fullscreen-modal" onClick={e => e.stopPropagation()}>
+        <div style={editModalStyles.overlay} className="mobile-fullscreen-overlay" onClick={guardando ? undefined : () => setModalEditar(false)}>
+          <div
+            style={{
+              ...editModalStyles.modal,
+              pointerEvents: guardando ? 'none' : 'auto'
+            }}
+            className="mobile-fullscreen-modal"
+            onClick={e => e.stopPropagation()}
+          >
             <div style={editModalStyles.modalHeader}>
               <h3 style={editModalStyles.modalTitulo}>Editar alumno</h3>
-              <button style={editModalStyles.btnCerrar} onClick={() => setModalEditar(false)}>X</button>
+              <button
+                style={{
+                  ...editModalStyles.btnCerrar,
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : () => setModalEditar(false)}
+                disabled={guardando}
+              >
+                X
+              </button>
             </div>
 
             <div style={editModalStyles.fotoUploadArea}>
@@ -1102,10 +1135,26 @@ export default function PerfilAlumno() {
             </div>
 
             <div style={editModalStyles.modalFooter}>
-              <button style={editModalStyles.btnSecondary} onClick={() => setModalEditar(false)} disabled={guardando}>Cancelar</button>
               <button
-                style={{ ...editModalStyles.btnPrimary, opacity: guardando ? 0.75 : 1, cursor: guardando ? 'not-allowed' : 'pointer' }}
-                onClick={guardar}
+                style={{
+                  ...editModalStyles.btnSecondary,
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : () => setModalEditar(false)}
+                disabled={guardando}
+              >
+                Cancelar
+              </button>
+              <button
+                style={{
+                  ...editModalStyles.btnPrimary,
+                  opacity: guardando ? 0.75 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : guardar}
                 disabled={guardando}
               >
                 {guardando ? 'Guardando...' : 'Guardar cambios'}

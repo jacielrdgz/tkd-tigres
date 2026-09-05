@@ -219,6 +219,11 @@ export default function Alumnos() {
   }
 
   const alternarEstatus = async (alumno) => {
+    if (String(alumno.id).startsWith('temp_')) {
+      toast('Sincronizando con el servidor, espera un momento...', { icon: '⏳' })
+      return
+    }
+
     // Invalida la caché de alumnos
     invalidateCache('alumnos')
 
@@ -312,7 +317,7 @@ export default function Alumnos() {
 
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !guardando) {
         setModal(false)
         setModalVer(false)
         setHistorialAlumno(null)
@@ -320,7 +325,7 @@ export default function Alumnos() {
     }
     window.addEventListener('keydown', handleEsc)
     return () => { window.removeEventListener('keydown', handleEsc) }
-  }, [])
+  }, [guardando])
 
   const editId = searchParams.get('edit')
   useEffect(() => {
@@ -349,6 +354,11 @@ export default function Alumnos() {
   }
 
   const abrirEditar = (alumno) => {
+    if (String(alumno.id).startsWith('temp_')) {
+      toast('Sincronizando con el servidor, espera un momento...', { icon: '⏳' })
+      return
+    }
+
     if (!cintasConfig || cintasConfig.length === 0) {
       cargarCintas()
     }
@@ -447,6 +457,8 @@ export default function Alumnos() {
   }
 
   const guardar = async () => {
+    if (guardando) return
+
     try {
       const e = validar()
       setErrors(e)
@@ -474,41 +486,124 @@ export default function Alumnos() {
         data.append('foto', fotoFile)
       }
 
-      if (editando) {
-        data.append('_method', 'PUT')
-        await api.post(`/alumnos/${editando}`, data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        toastSuccess("Alumno actualizado")
-      } else {
-        await api.post('/alumnos', data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        toastSuccess("Alumno creado")
-      }
-      invalidateCache('alumnos')
-      cerrar()
-      cargar(true)
-    } catch (err) {
-      console.error('Detalles del error:', err.response?.data)
+      const isEdit = !!editando
+      const studentId = editando
+      const currentFotoUrl = fotoFile ? fotoPreview : (eliminarFoto ? null : (form.foto_url || null))
 
-      if (err.response?.data?.errors) {
-        const errores = err.response.data.errors
-        setErrors(errores)
-        const primerError = Object.values(errores)[0][0]
-        toast.error(primerError)
-      } else {
-        toastError("Error al guardar.")
+      const calcularEdadOpt = (fecha) => {
+        if (!fecha) return null
+        const hoy = new Date()
+        const cumple = new Date(fecha)
+        let edad = hoy.getFullYear() - cumple.getFullYear()
+        const m = hoy.getMonth() - cumple.getMonth()
+        if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) edad--
+        return edad
       }
-    } finally {
+
+      const cintaSeleccionada = cintasConfig.find(c => String(c.id) === String(form.configuracion_cinta_id))
+      const horarioSeleccionado = horarios.find(h => String(h.id) === String(form.horario_id))
+
+      if (isEdit) {
+        const originalStudent = todosLosAlumnos.find(a => a.id === studentId)
+        const optimisticStudent = {
+          ...originalStudent,
+          ...form,
+          foto_url: currentFotoUrl,
+          edad: calcularEdadOpt(form.fecha_nacimiento),
+          cinta_config: cintaSeleccionada || originalStudent?.cinta_config,
+          horario: horarioSeleccionado || originalStudent?.horario,
+          horario_config: horarioSeleccionado || originalStudent?.horario_config || originalStudent?.horario,
+        }
+
+        // 1. Actualización optimista instantánea
+        setTodosLosAlumnos(prev => prev.map(a => a.id === studentId ? optimisticStudent : a))
+        toastSuccess("Alumno actualizado")
+        cerrar()
+        setGuardando(false)
+
+        // 2. Persistencia en segundo plano
+        data.append('_method', 'PUT')
+        api.post(`/alumnos/${studentId}`, data, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+          .then(res => {
+            if (res.data) {
+              setTodosLosAlumnos(prev => prev.map(a => a.id === studentId ? {
+                ...a,
+                ...res.data,
+                cinta_config: res.data.cinta_config || cintaSeleccionada || a.cinta_config,
+                horario: res.data.horario || horarioSeleccionado || a.horario,
+                horario_config: res.data.horario_config || res.data.horario || horarioSeleccionado || a.horario_config
+              } : a))
+            }
+            invalidateCache('alumnos')
+          })
+          .catch(err => {
+            console.error('Error en segundo plano al actualizar alumno:', err)
+            if (originalStudent) {
+              setTodosLosAlumnos(prev => prev.map(a => a.id === studentId ? originalStudent : a))
+            }
+            const msg = err.response?.data?.message || (err.response?.data?.errors ? Object.values(err.response.data.errors)[0][0] : "Error al actualizar alumno en el servidor.")
+            toastError(msg)
+          })
+
+      } else {
+        const tempId = 'temp_' + Date.now()
+        const optimisticStudent = {
+          ...form,
+          id: tempId,
+          foto_url: currentFotoUrl,
+          edad: calcularEdadOpt(form.fecha_nacimiento),
+          estatus: form.estatus || 'activo',
+          dia_pago: form.dia_pago || 1,
+          cinta_config: cintaSeleccionada || null,
+          horario: horarioSeleccionado || null,
+          horario_config: horarioSeleccionado || null,
+          racha_faltas: 0,
+          estatus_pago: 'al_dia',
+          created_at: new Date().toISOString(),
+        }
+
+        // 1. Inserción optimista instantánea
+        setTodosLosAlumnos(prev => [optimisticStudent, ...prev])
+        toastSuccess("Alumno creado")
+        cerrar()
+        setGuardando(false)
+
+        // 2. Persistencia en segundo plano
+        api.post('/alumnos', data, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+          .then(res => {
+            if (res.data) {
+              setTodosLosAlumnos(prev => prev.map(a => a.id === tempId ? {
+                ...res.data,
+                cinta_config: res.data.cinta_config || cintaSeleccionada,
+                horario: res.data.horario || horarioSeleccionado,
+                horario_config: res.data.horario_config || res.data.horario || horarioSeleccionado
+              } : a))
+            }
+            invalidateCache('alumnos')
+          })
+          .catch(err => {
+            console.error('Error en segundo plano al crear alumno:', err)
+            setTodosLosAlumnos(prev => prev.filter(a => a.id !== tempId))
+            const msg = err.response?.data?.message || (err.response?.data?.errors ? Object.values(err.response.data.errors)[0][0] : "Error al guardar alumno en el servidor.")
+            toastError(msg)
+          })
+      }
+    } catch (err) {
+      console.error('Error al guardar alumno:', err)
       setGuardando(false)
     }
-
-
   }
 
   const abrirEliminar = (alumno) => {
     if (!alumno) return
+    if (String(alumno.id).startsWith('temp_')) {
+      toast('Sincronizando con el servidor, espera un momento...', { icon: '⏳' })
+      return
+    }
 
     Swal.fire({
       title: '¿Eliminar alumno?',
@@ -1770,11 +1865,19 @@ export default function Alumnos() {
       {/* Deletion modal replaced by Swal.fire */}
 
       {modal && (
-        <div style={s.overlay} className="mobile-fullscreen-overlay">
+        <div
+          style={s.overlay}
+          className="mobile-fullscreen-overlay"
+          onClick={guardando ? undefined : (e => { if (e.target === e.currentTarget) cerrar(); })}
+        >
           <div
-            style={s.modal}
+            style={{
+              ...s.modal,
+              pointerEvents: guardando ? 'none' : 'auto'
+            }}
             className="mobile-fullscreen-modal"
             onKeyDown={e => {
+              if (guardando) return
               if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault()
                 guardar()
@@ -1786,8 +1889,14 @@ export default function Alumnos() {
               <button
                 type="button"
                 className="btn-cerrar-circular"
-                style={s.btnCerrarCircular}
-                onClick={cerrar}
+                style={{
+                  ...s.btnCerrarCircular,
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : cerrar}
+                disabled={guardando}
                 aria-label="Cerrar modal"
                 onMouseEnter={e => {
                   e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
@@ -1953,8 +2062,13 @@ export default function Alumnos() {
             <div style={s.modalFooter}>
               <button
                 type="button"
-                style={s.btnSecondary}
-                onClick={cerrar}
+                style={{
+                  ...s.btnSecondary,
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : cerrar}
                 disabled={guardando}
                 onMouseEnter={e => {
                   e.currentTarget.style.background = 'var(--bg-secondary)'

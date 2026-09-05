@@ -23,6 +23,18 @@ class Evento extends Model
         'precios_cintas' => 'array',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function ($evento) {
+            if ($evento->costo === '') {
+                $evento->costo = null;
+            }
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'precios_cintas')) {
+                unset($evento->precios_cintas);
+            }
+        });
+    }
+
     public function alumnos()
     {
         return $this->belongsToMany(Alumno::class, 'evento_alumno')

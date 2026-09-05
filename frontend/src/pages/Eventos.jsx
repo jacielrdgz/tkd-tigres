@@ -67,11 +67,11 @@ export default function Eventos() {
 
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === 'Escape') setModalEvento(false)
+      if (e.key === 'Escape' && !guardando) setModalEvento(false)
     }
     window.addEventListener('keydown', handleEsc)
     return () => window.removeEventListener('keydown', handleEsc)
-  }, [])
+  }, [guardando])
 
   const cargarEventos = async (force = false) => {
     if (!force) {
@@ -117,6 +117,10 @@ export default function Eventos() {
 
   const abrirEditar = (e, ev) => {
     ev.stopPropagation()
+    if (String(e.id).startsWith('temp_')) {
+      toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
+      return
+    }
     const tipoNormalizado = e.tipo === 'demostracion' ? 'fogueo' : (e.tipo || 'torneo')
     setFormEvento({
       nombre: e.nombre || '',
@@ -131,6 +135,8 @@ export default function Eventos() {
   }
 
   const guardarEvento = async () => {
+    if (guardando) return
+
     if (!formEvento.nombre.trim()) {
       return toast.warning('Ingresa el nombre del evento')
     }
@@ -139,35 +145,108 @@ export default function Eventos() {
     }
 
     setGuardando(true)
-    try {
-      const payload = {
-        ...formEvento,
-        costo: formEvento.costo !== '' ? parseFloat(formEvento.costo) : null
+
+    const isEdit = !!editando
+    const eventoId = editando
+    const payload = {
+      ...formEvento,
+      costo: formEvento.costo !== '' && formEvento.costo !== null && formEvento.costo !== undefined ? parseFloat(formEvento.costo) : null
+    }
+
+    if (isEdit) {
+      const originalEvento = eventos.find(e => e.id === eventoId)
+      const optimisticEvento = {
+        ...originalEvento,
+        ...payload
       }
 
-      if (editando) {
-        await api.put(`/eventos/${editando}`, payload)
-        toast.success('Evento actualizado exitosamente')
-      } else {
-        await api.post('/eventos', payload)
-        toast.success('Evento creado exitosamente')
-      }
-
+      // 1. Guardar y mostrar en UI de inmediato
+      setEventos(prev => {
+        const next = prev.map(e => e.id === eventoId ? optimisticEvento : e)
+        next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+        return next
+      })
       setModalEvento(false)
-      invalidateCache('eventos')
-      invalidateCache('eventos_lista')
-      cargarEventos(true)
-    } catch (err) {
-      console.error(err)
-      const msg = err.response?.data?.message || 'Error al guardar el evento'
-      toast.error(msg)
-    } finally {
       setGuardando(false)
+      toast.success('Evento actualizado exitosamente')
+
+      // 2. Persistir en segundo plano
+      api.put(`/eventos/${eventoId}`, payload)
+        .then(res => {
+          if (res.data) {
+            setEventos(prev => {
+              const next = prev.map(e => e.id === eventoId ? { ...optimisticEvento, ...res.data } : e)
+              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+              return next
+            })
+          }
+          invalidateCache('eventos')
+          invalidateCache('eventos_lista')
+        })
+        .catch(err => {
+          console.error('Error en segundo plano al actualizar evento:', err)
+          if (originalEvento) {
+            setEventos(prev => {
+              const next = prev.map(e => e.id === eventoId ? originalEvento : e)
+              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+              return next
+            })
+          }
+          const msg = err.response?.data?.message || 'Error al guardar el evento en el servidor'
+          toast.error(msg)
+        })
+
+    } else {
+      const tempId = 'temp_' + Date.now()
+      const optimisticEvento = {
+        ...payload,
+        id: tempId,
+        alumnos_count: 0,
+        total_recaudado: 0,
+        pendientes_pago: 0,
+        alumnos: [],
+        created_at: new Date().toISOString()
+      }
+
+      // 1. Inserción optimista instantánea
+      setEventos(prev => {
+        const next = [...prev, optimisticEvento]
+        next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+        return next
+      })
+      setModalEvento(false)
+      setGuardando(false)
+      toast.success('Evento creado exitosamente')
+
+      // 2. Persistir en segundo plano
+      api.post('/eventos', payload)
+        .then(res => {
+          if (res.data) {
+            setEventos(prev => {
+              const next = prev.map(e => e.id === tempId ? { ...optimisticEvento, ...res.data } : e)
+              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+              return next
+            })
+          }
+          invalidateCache('eventos')
+          invalidateCache('eventos_lista')
+        })
+        .catch(err => {
+          console.error('Error en segundo plano al crear evento:', err)
+          setEventos(prev => prev.filter(e => e.id !== tempId))
+          const msg = err.response?.data?.message || 'Error al guardar el evento en el servidor'
+          toast.error(msg)
+        })
     }
   }
 
   const eliminarEvento = async (id, ev) => {
     ev.stopPropagation()
+    if (String(id).startsWith('temp_')) {
+      toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
+      return
+    }
+
     const result = await Swal.fire({
       title: '¿Eliminar evento?',
       text: 'Se eliminará permanentemente la convocatoria y sus registros asociados.',
@@ -321,7 +400,13 @@ export default function Eventos() {
           ...s.card,
           opacity: esPasado ? 0.8 : 1
         }}
-        onClick={() => navigate(`/eventos/${e.id}`)}
+        onClick={() => {
+          if (String(e.id).startsWith('temp_')) {
+            toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
+            return
+          }
+          navigate(`/eventos/${e.id}`)
+        }}
         onMouseEnter={ev => {
           ev.currentTarget.style.transform = 'translateY(-3px)'
           ev.currentTarget.style.boxShadow = 'var(--shadow-lg)'
@@ -654,8 +739,22 @@ export default function Eventos() {
 
       {/* MODAL CREAR / EDITAR EVENTO */}
       {modalEvento && (
-        <div style={s.overlay}>
-          <div style={s.modal} className="mobile-fullscreen-modal">
+        <div style={s.overlay} onClick={guardando ? undefined : () => setModalEvento(false)}>
+          <div
+            style={{
+              ...s.modal,
+              pointerEvents: guardando ? 'none' : 'auto'
+            }}
+            className="mobile-fullscreen-modal"
+            onClick={e => e.stopPropagation()}
+            onKeyDown={e => {
+              if (guardando) return
+              if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault()
+                guardarEvento()
+              }
+            }}
+          >
             <div style={s.modalHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ ...s.statIconBox, width: '38px', height: '38px', background: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-blue)' }}>
@@ -667,9 +766,16 @@ export default function Eventos() {
                 </div>
               </div>
               <button
+                type="button"
                 className="btn-cerrar-circular"
-                style={s.btnCerrarCircular}
-                onClick={() => setModalEvento(false)}
+                style={{
+                  ...s.btnCerrarCircular,
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : () => setModalEvento(false)}
+                disabled={guardando}
                 title="Cerrar modal"
               >
                 <span style={{ fontSize: '18px', lineHeight: 1 }}>✕</span>
@@ -751,12 +857,28 @@ export default function Eventos() {
             </div>
 
             <div style={s.modalFooter}>
-              <button style={s.btnSecondary} onClick={() => setModalEvento(false)}>
+              <button
+                type="button"
+                style={{
+                  ...s.btnSecondary,
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : () => setModalEvento(false)}
+                disabled={guardando}
+              >
                 Cancelar
               </button>
               <button
-                style={s.btnPrimaryModal}
-                onClick={guardarEvento}
+                type="button"
+                style={{
+                  ...s.btnPrimaryModal,
+                  opacity: guardando ? 0.75 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardando ? 'none' : 'auto'
+                }}
+                onClick={guardando ? undefined : guardarEvento}
                 disabled={guardando}
               >
                 {guardando ? 'Guardando...' : (editando ? 'Guardar Cambios' : 'Crear Evento')}
