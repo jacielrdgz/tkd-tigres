@@ -53,6 +53,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
   const [fecha, setFecha] = useState(new Date().toLocaleDateString('sv-SE'))
   const [alumnos, setAlumnos] = useState([])
   const [presencias, setPresencias] = useState({})
+  const [initialPresencias, setInitialPresencias] = useState({})
   const [cargando, setCargando] = useState(false)
   const [guardando, setGuardando] = useState(false)
 
@@ -60,10 +61,12 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
   const [filtroHorario, setFiltroHorario] = useState('')
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onCerrar() }
+    const handler = (e) => {
+      if (e.key === 'Escape' && !guardando) onCerrar()
+    }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onCerrar])
+  }, [onCerrar, guardando])
 
   const cargar = useCallback(async (force = false) => {
     const key = `asistencias_dia_${fecha}`
@@ -72,8 +75,9 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
       if (cached && cached.data) {
         setAlumnos(cached.data)
         const mapa = {}
-        cached.data.forEach(a => { mapa[a.alumno_id] = a.presente })
+        cached.data.forEach(a => { mapa[a.alumno_id] = !!a.presente })
         setPresencias(mapa)
+        setInitialPresencias(mapa)
         setCargando(false)
       } else {
         setCargando(true)
@@ -87,8 +91,9 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
       const lista = res.data
       setAlumnos(lista)
       const mapa = {}
-      lista.forEach(a => { mapa[a.alumno_id] = a.presente })
+      lista.forEach(a => { mapa[a.alumno_id] = !!a.presente })
       setPresencias(mapa)
+      setInitialPresencias(mapa)
       setCache(key, lista)
     } catch {
       const cached = getCache(key)
@@ -225,24 +230,36 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
     if (alumnos.length === 0) return toast.warning('No hay alumnos cargados')
     setGuardando(true)
     try {
-      // Si hay un filtro de horario activo, solo enviamos/guardamos los alumnos de ese horario
-      const listaParaGuardar = filtroHorario
-        ? alumnos.filter(a => String(a.horario_config?.id) === filtroHorario || a.horario_config?.nombre === filtroHorario)
-        : alumnos;
+      let lista = []
+      if (filtroHorario) {
+        // Si hay un filtro de horario activo, enviamos los alumnos de ese horario
+        const alumnosHorario = alumnos.filter(a => String(a.horario_config?.id) === filtroHorario || a.horario_config?.nombre === filtroHorario)
+        lista = alumnosHorario.map(a => ({
+          alumno_id: a.alumno_id,
+          presente: !!presencias[a.alumno_id],
+        }))
+      } else {
+        // Sin filtro de horario: enviamos SOLO a los alumnos que:
+        // 1. Están marcados como presentes
+        // 2. O estaban inicialmente presentes y ahora fueron desmarcados (para borrarlos en BD)
+        // No enviamos a los alumnos no marcados que nunca estuvieron presentes, evitando borrar otras clases
+        lista = alumnos
+          .filter(a => !!presencias[a.alumno_id] || (initialPresencias[a.alumno_id] && !presencias[a.alumno_id]))
+          .map(a => ({
+            alumno_id: a.alumno_id,
+            presente: !!presencias[a.alumno_id],
+          }))
+      }
 
-      const lista = listaParaGuardar.map(a => ({
-        alumno_id: a.alumno_id,
-        presente: presencias[a.alumno_id] || false,
-      }))
       await api.post('/asistencias/registrar-dia', { fecha, asistencias: lista })
       invalidateCache('asistencias')
       const presentesCount = lista.filter(x => x.presente).length
-      toast.success(`Guardado: ${presentesCount} presentes para este horario.`, {
+      toast.success(`Guardado: ${presentesCount} presentes.`, {
         position: "top-right",
         autoClose: 2000,
       })
       onGuardado?.(fecha)
-      cargar()
+      await cargar(true)
     } catch {
       toast.error('Error al guardar asistencias')
     } finally {
@@ -254,7 +271,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
   const ausentes = filtrados.length - presentes
 
   return (
-    <div style={s.overlay} onClick={onCerrar}>
+    <div style={s.overlay} onClick={guardando ? undefined : onCerrar}>
       <div style={s.modal} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={s.header}>
@@ -265,7 +282,13 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
             <h2 style={s.titulo}>Registrar Asistencia</h2>
             <p style={s.subtitulo}>Pase de lista diario</p>
           </div>
-          <button style={s.btnCerrar} onClick={onCerrar}><FiX size={18} /></button>
+          <button
+            style={{ ...s.btnCerrar, opacity: guardando ? 0.4 : 1, cursor: guardando ? 'not-allowed' : 'pointer' }}
+            onClick={guardando ? undefined : onCerrar}
+            disabled={guardando}
+          >
+            <FiX size={18} />
+          </button>
         </div>
 
         {/* Selector de fecha + stats */}
@@ -275,8 +298,14 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
             <input
               type="date"
               value={fecha}
+              disabled={guardando}
               onChange={e => setFecha(e.target.value)}
-              style={{ ...s.inputFecha, width: 135 }}
+              style={{
+                ...s.inputFecha,
+                width: 135,
+                opacity: guardando ? 0.6 : 1,
+                cursor: guardando ? 'not-allowed' : 'auto'
+              }}
             />
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
@@ -287,8 +316,13 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
               <FiX size={14} strokeWidth={2.5} /> {ausentes} ausentes
             </span>
             <button
-              style={s.btnMarcarTodos}
-              onClick={marcarTodos}
+              style={{
+                ...s.btnMarcarTodos,
+                opacity: guardando ? 0.5 : 1,
+                cursor: guardando ? 'not-allowed' : 'pointer',
+              }}
+              disabled={guardando}
+              onClick={guardando ? undefined : marcarTodos}
             >
               <FiCheck size={13} />
               {filtrados.length > 0 && filtrados.every(a => presencias[a.alumno_id]) ? 'Desmarcar todos' : 'Marcar todos'}
@@ -301,15 +335,28 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
           <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
             <FiSearch size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
             <input
-              style={{ ...s.inputFecha, width: '100%', paddingLeft: 34 }}
+              style={{
+                ...s.inputFecha,
+                width: '100%',
+                paddingLeft: 34,
+                opacity: guardando ? 0.6 : 1,
+                cursor: guardando ? 'not-allowed' : 'auto'
+              }}
               placeholder="Buscar alumno..."
               value={busqueda}
+              disabled={guardando}
               onChange={e => setBusqueda(e.target.value)}
             />
           </div>
           <select
-            style={{ ...s.inputFecha, minWidth: 160 }}
+            style={{
+              ...s.inputFecha,
+              minWidth: 160,
+              opacity: guardando ? 0.6 : 1,
+              cursor: guardando ? 'not-allowed' : 'auto'
+            }}
             value={filtroHorario}
+            disabled={guardando}
             onChange={e => setFiltroHorario(e.target.value)}
           >
             <option value="">Todos los horarios</option>
@@ -337,8 +384,11 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
             ) : filtrados.map((a, idx) => (
               <div
                 key={a.alumno_id}
-                style={s.fila(presencias[a.alumno_id])}
-                onClick={() => toggle(a.alumno_id)}
+                style={{
+                  ...s.fila(presencias[a.alumno_id]),
+                  ...(guardando ? { opacity: 0.65, cursor: 'not-allowed', pointerEvents: 'none' } : {}),
+                }}
+                onClick={() => !guardando && toggle(a.alumno_id)}
               >
                 <div style={{ color: 'var(--text-dim)', fontSize: 11, width: 16, textAlign: 'right' }}>
                   {idx + 1}
@@ -379,15 +429,31 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
 
         {/* Footer */}
         <div style={s.footer}>
-          <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} dropUp={true} align="left" />
+          <div style={{ pointerEvents: guardando ? 'none' : 'auto', opacity: guardando ? 0.5 : 1 }}>
+            <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} dropUp={true} align="left" />
+          </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button style={s.btnCancelar} onClick={onCerrar}>Cancelar</button>
             <button
-              style={{ ...s.btnGuardar, opacity: guardando ? 0.7 : 1 }}
-              onClick={guardar}
+              style={{
+                ...s.btnCancelar,
+                opacity: guardando ? 0.5 : 1,
+                cursor: guardando ? 'not-allowed' : 'pointer'
+              }}
+              onClick={guardando ? undefined : onCerrar}
               disabled={guardando}
             >
-              <FiSave size={15} />
+              Cancelar
+            </button>
+            <button
+              style={{
+                ...s.btnGuardar,
+                opacity: guardando ? 0.7 : 1,
+                cursor: guardando ? 'not-allowed' : 'pointer'
+              }}
+              onClick={guardando ? undefined : guardar}
+              disabled={guardando}
+            >
+              <FiSave size={15} style={guardando ? { animation: 'spin 1s linear infinite' } : {}} />
               <span>{guardando ? 'Guardando…' : 'Guardar Asistencias'}</span>
             </button>
           </div>
@@ -398,6 +464,10 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
         @keyframes modalEnterUp {
           from { opacity: 0; transform: translateY(24px) scale(0.96); }
           to   { opacity: 1; transform: none; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
         }
         @media (max-width: 520px) {
           .modal-controles {

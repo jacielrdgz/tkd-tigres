@@ -17,7 +17,9 @@ class AsistenciaController extends Controller
     {
         $mes = $request->get('mes', Carbon::now()->format('Y-m'));
 
-        $alumnos = Alumno::where('estatus', 'activo')->pluck('id');
+        $alumnos = Alumno::where('estatus', 'activo')
+            ->with(['horarioConfig'])
+            ->get();
         $totalAlumnos = $alumnos->count();
 
         if ($totalAlumnos === 0) {
@@ -32,40 +34,40 @@ class AsistenciaController extends Controller
         $inicioMes = $carbonMes->copy()->startOfMonth()->toDateString();
         $finMes    = $carbonMes->copy()->endOfMonth()->toDateString();
 
-        // Fechas con clase en el mes de los alumnos activos
-        $asistenciasMes = Asistencia::whereIn('alumno_id', $alumnos)
+        $asistenciasMes = Asistencia::whereIn('alumno_id', $alumnos->pluck('id'))
             ->whereBetween('fecha', [$inicioMes, $finMes])
-            ->select('id', 'alumno_id', 'presente')
-            ->get();
+            ->where('presente', true)
+            ->select('id', 'alumno_id', 'fecha', 'presente')
+            ->get()
+            ->groupBy('alumno_id');
 
-        if ($asistenciasMes->isEmpty()) {
-            return response()->json([
-                'total_alumnos'   => $totalAlumnos,
-                'pct_promedio'    => 0,
-                'baja_asistencia' => 0,
-            ]);
-        }
-
-        $agrupadas = $asistenciasMes->groupBy('alumno_id');
+        [$anio, $mesNum] = explode('-', $mes);
 
         $sumPct = 0;
         $bajaAsistencia = 0;
+        $alumnosEvaluados = 0;
 
-        foreach ($alumnos as $alumnoId) {
-            $regs = $agrupadas->get($alumnoId, collect());
-            $total = $regs->count();
-            $asistio = $regs->filter(fn($r) => (bool)$r->presente)->count();
-            $pct = $total > 0 ? round(($asistio / $total) * 100) : 0;
+        foreach ($alumnos as $alumno) {
+            $regs = $asistenciasMes->get($alumno->id, collect());
+            $asistio = $regs->count();
 
-            $sumPct += $pct;
-            if ($pct < 60) {
-                $bajaAsistencia++;
+            $fechasEsperadas = $this->obtenerFechasClaseAlumno($alumno, (int)$anio, (int)$mesNum);
+            $todasFechas = array_unique(array_merge($fechasEsperadas, $regs->pluck('fecha')->toArray()));
+            $total = count($todasFechas);
+
+            if ($total > 0) {
+                $pct = (int) round(($asistio / $total) * 100);
+                $sumPct += $pct;
+                $alumnosEvaluados++;
+                if ($pct < 60) {
+                    $bajaAsistencia++;
+                }
             }
         }
 
         return response()->json([
             'total_alumnos'   => $totalAlumnos,
-            'pct_promedio'    => $totalAlumnos > 0 ? round($sumPct / $totalAlumnos) : 0,
+            'pct_promedio'    => $alumnosEvaluados > 0 ? (int) round($sumPct / $alumnosEvaluados) : 0,
             'baja_asistencia' => $bajaAsistencia,
         ]);
     }
@@ -90,43 +92,61 @@ class AsistenciaController extends Controller
             ->select('id', 'alumno_id', 'fecha', 'presente')
             ->get();
 
-        $fechaLimite = Carbon::now()->subDays(60)->toDateString();
+        $fechaLimiteReciente = Carbon::now()->subDays(60)->toDateString();
         $asistenciasRecientes = Asistencia::whereIn('alumno_id', $alumnoIds)
-            ->where('fecha', '>=', $fechaLimite)
-            ->select('id', 'alumno_id', 'fecha', 'presente')
-            ->orderBy('fecha', 'desc')
+            ->where('fecha', '>=', $fechaLimiteReciente)
+            ->where('presente', true)
+            ->select('id', 'alumno_id', 'fecha')
             ->get()
             ->groupBy('alumno_id');
 
-        $resultado = $alumnos->map(function ($alumno) use ($asistenciasMes, $asistenciasRecientes) {
-            $registros = $asistenciasMes->where('alumno_id', $alumno->id);
-            $total     = $registros->count();
-            $asistio   = $registros->where('presente', true)->count();
-            $falto     = $total - $asistio;
-            $pct       = $total > 0 ? round(($asistio / $total) * 100) : 0;
+        [$anio, $mesNum] = explode('-', $mes);
 
-            $recientes = $asistenciasRecientes->get($alumno->id, collect());
+        $resultado = $alumnos->map(function ($alumno) use ($asistenciasMes, $asistenciasRecientes, $anio, $mesNum) {
+            $registros = $asistenciasMes->where('alumno_id', $alumno->id);
+            $fechasAsistidas = $registros->where('presente', true)->pluck('fecha')->toArray();
+            $asistio = count($fechasAsistidas);
+
+            // Calcular fechas que debía asistir según horario
+            $fechasEsperadas = $this->obtenerFechasClaseAlumno($alumno, (int)$anio, (int)$mesNum);
+
+            // Total de días de clase esperados o asistidos
+            $todasFechasClase = array_unique(array_merge($fechasEsperadas, $fechasAsistidas));
+            $total = count($todasFechasClase);
+
+            $falto = max(0, $total - $asistio);
+            $pct = $total > 0 ? (int) round(($asistio / $total) * 100) : 0;
+
+            // Racha de faltas al vuelo basada en fechas recientes esperadas
             $rachaFaltas = 0;
-            foreach ($recientes as $asist) {
-                if ($asist->presente == 0) $rachaFaltas++;
-                else break;
+            $fechasRecientesEsperadas = $this->obtenerFechasClaseAlumno($alumno, (int)now()->year, (int)now()->month);
+            rsort($fechasRecientesEsperadas); // De más reciente a más antigua
+
+            $asistidasRecientesSet = $asistenciasRecientes->get($alumno->id, collect())->pluck('fecha')->flip();
+
+            foreach ($fechasRecientesEsperadas as $f) {
+                if (!$asistidasRecientesSet->has($f)) {
+                    $rachaFaltas++;
+                } else {
+                    break;
+                }
             }
 
             return [
-                'alumno_id'      => $alumno->id,
-                'nombre'         => $alumno->nombre,
+                'alumno_id'        => $alumno->id,
+                'nombre'           => $alumno->nombre,
                 'apellido_paterno' => $alumno->apellido_paterno,
                 'apellido_materno' => $alumno->apellido_materno,
-                'foto_url'       => $alumno->foto_url,
-                'telefono_tutor' => $alumno->telefono_tutor,
-                'cinta_config'   => $alumno->cintaConfig,
-                'horario_config' => $alumno->horarioConfig,
+                'foto_url'         => $alumno->foto_url,
+                'telefono_tutor'   => $alumno->telefono_tutor,
+                'cinta_config'     => $alumno->cintaConfig,
+                'horario_config'   => $alumno->horarioConfig,
                 'fecha_nacimiento' => $alumno->fecha_nacimiento,
-                'asistio'        => $asistio,
-                'falto'          => $falto,
-                'total'          => $total,
-                'pct'            => $pct,
-                'racha_faltas'   => $rachaFaltas,
+                'asistio'          => $asistio,
+                'falto'            => $falto,
+                'total'            => $total,
+                'pct'              => $pct,
+                'racha_faltas'     => $rachaFaltas,
             ];
         });
 
@@ -135,7 +155,7 @@ class AsistenciaController extends Controller
 
     // -------------------------------------------------------------------------
     // GET /api/asistencias/alumno/{id}?mes=2026-05
-    // { alumno: {...}, dias: { "2026-05-04": "asistio"|"falto"|"sin_clase" } }
+    // { alumno: {...}, stats: {...}, dias: { "2026-05-04": "asistio"|"falto"|"sin_clase" } }
     // -------------------------------------------------------------------------
     public function alumno(Request $request, $alumnoId)
     {
@@ -155,42 +175,67 @@ class AsistenciaController extends Controller
             ->get()
             ->keyBy('fecha');
 
-        $dias = [];
-        for ($d = 1; $d <= $diasEnMes; $d++) {
-            $fechaStr = $mes . '-' . str_pad($d, 2, '0', STR_PAD_LEFT);
-            $diaSemana = Carbon::parse($fechaStr)->dayOfWeek; // 0=Dom, 6=Sab
+        $hoyStr = Carbon::today()->toDateString();
+        $horaFin = $alumno->horarioConfig && $alumno->horarioConfig->hora_fin
+            ? $alumno->horarioConfig->hora_fin
+            : '20:00:00';
+        $claseHoyPaso = Carbon::now()->format('H:i:s') >= $horaFin;
+        $fechaIngreso = $alumno->fecha_ingreso ? Carbon::parse($alumno->fecha_ingreso)->toDateString() : null;
 
+        $dias = [];
+        $asistioCount = 0;
+        $faltoCount = 0;
+
+        for ($d = 1; $d <= $diasEnMes; $d++) {
+            $fechaStr = sprintf('%s-%02d', $mes, $d);
+            $diaSemana = Carbon::parse($fechaStr)->dayOfWeek; // 0=Dom, 6=Sab
             $esFinDeSemana = in_array($diaSemana, [0, 6]);
 
-            if (isset($registros[$fechaStr])) {
-                $dias[$fechaStr] = $registros[$fechaStr]->presente ? 'asistio' : 'falto';
-            } elseif ($esFinDeSemana) {
+            // Determinar si le tocaba clase según horario
+            $tieneClase = false;
+            if ($diasConClaseSet !== null) {
+                $tieneClase = in_array($diaSemana, $diasConClaseSet);
+            } else {
+                $tieneClase = !$esFinDeSemana;
+            }
+
+            // Si es antes de su fecha de ingreso a la escuela
+            if ($fechaIngreso && $fechaStr < $fechaIngreso) {
                 $dias[$fechaStr] = 'sin_clase';
-            } elseif ($diasConClaseSet !== null && !in_array($diaSemana, $diasConClaseSet)) {
+                continue;
+            }
+
+            // Si hay registro guardado en BD:
+            if (isset($registros[$fechaStr])) {
+                if ((bool)$registros[$fechaStr]->presente) {
+                    $dias[$fechaStr] = 'asistio';
+                    $asistioCount++;
+                } else {
+                    $dias[$fechaStr] = 'falto';
+                    $faltoCount++;
+                }
+                continue;
+            }
+
+            // Si no hay registro en BD: cálculo al vuelo
+            if ($fechaStr > $hoyStr) {
+                // Fecha futura: aún no ocurre la clase
+                $dias[$fechaStr] = 'sin_clase';
+            } elseif (!$tieneClase) {
+                // No le correspondía clase ese día
+                $dias[$fechaStr] = 'sin_clase';
+            } elseif ($fechaStr === $hoyStr && !$claseHoyPaso) {
+                // Hoy le corresponde clase pero aún no ha concluido el horario
                 $dias[$fechaStr] = 'sin_clase';
             } else {
-                // Si hay horario definido y ese día tiene clase, pero no hay registro
-                // A petición del usuario: si no se registró falta, no se cuenta como falta
-                $dias[$fechaStr] = 'sin_clase';
+                // Fecha pasada (o clase de hoy concluida) donde le tocaba clase y no asistió: FALTA
+                $dias[$fechaStr] = 'falto';
+                $faltoCount++;
             }
         }
 
-        // Calcular stats del mes para la respuesta basados exactamente en lo que muestra el calendario
-        $totalClases = 0;
-        $asistio     = 0;
-        $falto       = 0;
-        
-        foreach ($dias as $estado) {
-            if ($estado === 'asistio') {
-                $asistio++;
-                $totalClases++;
-            } elseif ($estado === 'falto') {
-                $falto++;
-                $totalClases++;
-            }
-        }
-        
-        $pct = $totalClases > 0 ? round(($asistio / $totalClases) * 100) : 0;
+        $totalClases = $asistioCount + $faltoCount;
+        $pct = $totalClases > 0 ? (int) round(($asistioCount / $totalClases) * 100) : 0;
 
         return response()->json([
             'alumno' => [
@@ -203,10 +248,10 @@ class AsistenciaController extends Controller
                 'horario_config'   => $alumno->horarioConfig,
             ],
             'stats' => [
-                'total'  => $totalClases,
-                'asistio' => $asistio,
-                'falto'  => $falto,
-                'pct'    => $pct,
+                'total'   => $totalClases,
+                'asistio' => $asistioCount,
+                'falto'   => $faltoCount,
+                'pct'     => $pct,
             ],
             'dias' => $dias,
         ]);
@@ -220,7 +265,10 @@ class AsistenciaController extends Controller
     {
         $mes = $request->get('mes', Carbon::now()->format('Y-m'));
 
-        $alumnos = Alumno::where('estatus', 'activo')->pluck('id');
+        $alumnos = Alumno::where('estatus', 'activo')
+            ->with('horarioConfig')
+            ->get();
+
         if ($alumnos->isEmpty()) {
             return response()->json([]);
         }
@@ -229,17 +277,29 @@ class AsistenciaController extends Controller
         $inicioMes = $carbonMes->copy()->startOfMonth()->toDateString();
         $finMes    = $carbonMes->copy()->endOfMonth()->toDateString();
 
-        $registros = Asistencia::whereIn('alumno_id', $alumnos)
+        $registros = Asistencia::whereIn('alumno_id', $alumnos->pluck('id'))
             ->whereBetween('fecha', [$inicioMes, $finMes])
-            ->select('id', 'fecha', 'presente')
+            ->select('id', 'alumno_id', 'fecha', 'presente')
             ->get();
 
         $agrupadas = $registros->groupBy('fecha');
 
         $porFecha = [];
         foreach ($agrupadas as $fecha => $asists) {
-            $total = $asists->count();
             $asistieron = $asists->filter(fn($r) => (bool)$r->presente)->count();
+
+            // Calcular cuántos alumnos debían tener clase ese día
+            $diaSemana = Carbon::parse($fecha)->dayOfWeek;
+            $esFinDeSemana = in_array($diaSemana, [0, 6]);
+
+            $esperados = $alumnos->filter(function ($a) use ($fecha, $diaSemana, $esFinDeSemana) {
+                if ($a->fecha_ingreso && $fecha < $a->fecha_ingreso) return false;
+                $dias = $this->obtenerDiasConClase($a->horarioConfig);
+                return $dias !== null ? in_array($diaSemana, $dias) : !$esFinDeSemana;
+            })->count();
+
+            $total = max($asistieron, $esperados);
+
             $porFecha[$fecha] = [
                 'asistieron' => $asistieron,
                 'total'      => $total,
@@ -256,29 +316,89 @@ class AsistenciaController extends Controller
     // -------------------------------------------------------------------------
     public function dia(Request $request, string $fecha)
     {
-        $registros = Asistencia::where('fecha', $fecha)
-            ->with(['alumno.cintaConfig'])
+        $fechaCarbon = Carbon::parse($fecha);
+        $diaSemana = $fechaCarbon->dayOfWeek;
+        $esFinDeSemana = in_array($diaSemana, [0, 6]);
+        $hoyStr = Carbon::today()->toDateString();
+        $esHoy = ($fecha === $hoyStr);
+        $esFuturo = ($fecha > $hoyStr);
+
+        $alumnos = Alumno::where('estatus', 'activo')
+            ->with(['cintaConfig', 'horarioConfig'])
             ->get();
 
-        $alumnos = $registros->map(function ($registro) {
-            $alumno = $registro->alumno;
-            if (!$alumno) return null;
+        $registros = Asistencia::where('fecha', $fecha)
+            ->get()
+            ->keyBy('alumno_id');
 
-            return [
+        $listaAlumnos = [];
+
+        foreach ($alumnos as $alumno) {
+            $registro = $registros->get($alumno->id);
+
+            // Si tiene registro explícito en BD:
+            if ($registro) {
+                $listaAlumnos[] = [
+                    'id'               => $alumno->id,
+                    'nombre'           => $alumno->nombre,
+                    'apellido_paterno' => $alumno->apellido_paterno,
+                    'apellido_materno' => $alumno->apellido_materno,
+                    'foto_url'         => $alumno->foto_url,
+                    'cinta_config'     => $alumno->cintaConfig,
+                    'horario_config'   => $alumno->horarioConfig,
+                    'asistio'          => (bool) $registro->presente,
+                ];
+                continue;
+            }
+
+            // Si no tiene registro, verificar si le correspondía clase
+            if ($alumno->fecha_ingreso && $fecha < $alumno->fecha_ingreso) {
+                continue;
+            }
+
+            $diasConClase = $this->obtenerDiasConClase($alumno->horarioConfig);
+            $tieneClase = $diasConClase !== null
+                ? in_array($diaSemana, $diasConClase)
+                : !$esFinDeSemana;
+
+            if (!$tieneClase) {
+                continue; // No le correspondía clase este día
+            }
+
+            // Si es fecha futura, no lo listamos como falta aún
+            if ($esFuturo) {
+                continue;
+            }
+
+            // Si es hoy, verificar si ya terminó su clase
+            if ($esHoy) {
+                $horaFin = $alumno->horarioConfig && $alumno->horarioConfig->hora_fin
+                    ? $alumno->horarioConfig->hora_fin
+                    : '20:00:00';
+                if (Carbon::now()->format('H:i:s') < $horaFin) {
+                    // La clase aún no ocurre o está en curso
+                    continue;
+                }
+            }
+
+            // Le correspondía clase y no asistió: FALTÓ
+            $listaAlumnos[] = [
                 'id'               => $alumno->id,
                 'nombre'           => $alumno->nombre,
                 'apellido_paterno' => $alumno->apellido_paterno,
                 'apellido_materno' => $alumno->apellido_materno,
                 'foto_url'         => $alumno->foto_url,
                 'cinta_config'     => $alumno->cintaConfig,
-                'asistio'          => (bool) $registro->presente,
+                'horario_config'   => $alumno->horarioConfig,
+                'asistio'          => false,
             ];
-        })->filter()->values();
+        }
 
-        $total     = $alumnos->count();
-        $asistieron = $alumnos->where('asistio', true)->count();
-        $faltaron  = $total - $asistieron;
-        $pct       = $total > 0 ? round(($asistieron / $total) * 100) : 0;
+        $colAlumnos = collect($listaAlumnos);
+        $total      = $colAlumnos->count();
+        $asistieron = $colAlumnos->where('asistio', true)->count();
+        $faltaron   = $colAlumnos->where('asistio', false)->count();
+        $pct        = $total > 0 ? (int) round(($asistieron / $total) * 100) : 0;
 
         return response()->json([
             'fecha'   => $fecha,
@@ -288,7 +408,7 @@ class AsistenciaController extends Controller
                 'faltaron'   => $faltaron,
                 'pct'        => $pct,
             ],
-            'alumnos' => $alumnos,
+            'alumnos' => $colAlumnos->values(),
         ]);
     }
 
@@ -338,12 +458,12 @@ class AsistenciaController extends Controller
 
         $fechaCarbon = Carbon::parse($request->fecha);
         $diaSemana = $fechaCarbon->dayOfWeek; // 0=Dom, 1=Lun, ..., 6=Sab
-        $tenantId = auth()->user()->tenant_id;
         $ahora = now();
 
         // Obtener todos los alumnos involucrados con su horarioConfig cargado en 1 sola consulta
         $alumnoIds = collect($request->asistencias)->pluck('alumno_id')->toArray();
         $alumnos = Alumno::with('horarioConfig')->whereIn('id', $alumnoIds)->get()->keyBy('id');
+        $tenantId = auth()->user()?->tenant_id ?? $alumnos->first()?->tenant_id;
 
         $recordsToUpsert = [];
         $recordsToDelete = [];
@@ -369,7 +489,7 @@ class AsistenciaController extends Controller
         }
 
         // Ejecutar upsert y delete masivos en 1 sola transacción ultrarrápida
-        \Illuminate\Support\Facades\DB::transaction(function () use ($recordsToUpsert, $recordsToDelete, $request) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($recordsToUpsert, $recordsToDelete, $request, $tenantId) {
             if (!empty($recordsToUpsert)) {
                 Asistencia::upsert(
                     $recordsToUpsert,
@@ -379,9 +499,12 @@ class AsistenciaController extends Controller
             }
 
             if (!empty($recordsToDelete)) {
-                Asistencia::whereIn('alumno_id', $recordsToDelete)
-                    ->where('fecha', $request->fecha)
-                    ->delete();
+                $deleteQuery = Asistencia::whereIn('alumno_id', $recordsToDelete)
+                    ->where('fecha', $request->fecha);
+                if ($tenantId) {
+                    $deleteQuery->where('tenant_id', $tenantId);
+                }
+                $deleteQuery->delete();
             }
         });
 
@@ -391,6 +514,65 @@ class AsistenciaController extends Controller
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Retorna un array con todas las fechas (YYYY-MM-DD) del mes dado en las que
+     * el alumno tenía programada clase, respetando:
+     * 1. Su fecha de ingreso (no cuenta antes de entrar).
+     * 2. Los días configurados en su horario (o lunes a viernes por defecto).
+     * 3. No cuenta fechas futuras ni clases de hoy que aún no hayan terminado.
+     */
+    private function obtenerFechasClaseAlumno($alumno, int $anio, int $mesNum, ?string $fechaLimite = null): array
+    {
+        $diasEnMes = cal_days_in_month(CAL_GREGORIAN, $mesNum, $anio);
+        $diasConClaseSet = $this->obtenerDiasConClase($alumno->horarioConfig);
+
+        $hoy = Carbon::today();
+        $hoyStr = $hoy->toDateString();
+        $horaFin = $alumno->horarioConfig && $alumno->horarioConfig->hora_fin
+            ? $alumno->horarioConfig->hora_fin
+            : '20:00:00';
+        $claseHoyPaso = Carbon::now()->format('H:i:s') >= $horaFin;
+
+        $fechaIngreso = $alumno->fecha_ingreso ? Carbon::parse($alumno->fecha_ingreso)->toDateString() : null;
+        $limiteStr = $fechaLimite ?? $hoyStr;
+
+        $fechas = [];
+        for ($d = 1; $d <= $diasEnMes; $d++) {
+            $fechaStr = sprintf('%04d-%02d-%02d', $anio, $mesNum, $d);
+
+            // Si es posterior al límite permitido
+            if ($fechaStr > $limiteStr) {
+                continue;
+            }
+
+            // Si es hoy pero la clase todavía no termina
+            if ($fechaStr === $hoyStr && !$claseHoyPaso) {
+                continue;
+            }
+
+            // Si es anterior a la fecha de ingreso
+            if ($fechaIngreso && $fechaStr < $fechaIngreso) {
+                continue;
+            }
+
+            $diaSemana = Carbon::parse($fechaStr)->dayOfWeek; // 0=Dom, 6=Sab
+            $esFinDeSemana = in_array($diaSemana, [0, 6]);
+
+            $tieneClase = false;
+            if ($diasConClaseSet !== null) {
+                $tieneClase = in_array($diaSemana, $diasConClaseSet);
+            } else {
+                $tieneClase = !$esFinDeSemana;
+            }
+
+            if ($tieneClase) {
+                $fechas[] = $fechaStr;
+            }
+        }
+
+        return $fechas;
+    }
 
     /**
      * Convierte el string de días del horario ("Lunes, Miércoles, Viernes")
