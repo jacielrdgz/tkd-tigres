@@ -87,8 +87,12 @@ class AsistenciaController extends Controller
 
         $alumnoIds = $alumnos->pluck('id');
 
+        $carbonMes = Carbon::parse($mes . '-01');
+        $inicioMes = $carbonMes->copy()->startOfMonth()->toDateString();
+        $finMes    = $carbonMes->copy()->endOfMonth()->toDateString();
+
         $asistenciasMes = Asistencia::whereIn('alumno_id', $alumnoIds)
-            ->where('fecha', 'like', $mes . '%')
+            ->whereBetween('fecha', [$inicioMes, $finMes])
             ->select('id', 'alumno_id', 'fecha', 'presente')
             ->get();
 
@@ -104,7 +108,9 @@ class AsistenciaController extends Controller
 
         $resultado = $alumnos->map(function ($alumno) use ($asistenciasMes, $asistenciasRecientes, $anio, $mesNum) {
             $registros = $asistenciasMes->where('alumno_id', $alumno->id);
-            $fechasAsistidas = $registros->where('presente', true)->pluck('fecha')->toArray();
+            $fechasAsistidas = $registros->where('presente', true)
+                ->map(fn($r) => Carbon::parse($r->fecha)->toDateString())
+                ->toArray();
             $asistio = count($fechasAsistidas);
 
             // Calcular fechas que debía asistir según horario
@@ -122,7 +128,9 @@ class AsistenciaController extends Controller
             $fechasRecientesEsperadas = $this->obtenerFechasClaseAlumno($alumno, (int)now()->year, (int)now()->month);
             rsort($fechasRecientesEsperadas); // De más reciente a más antigua
 
-            $asistidasRecientesSet = $asistenciasRecientes->get($alumno->id, collect())->pluck('fecha')->flip();
+            $asistidasRecientesSet = $asistenciasRecientes->get($alumno->id, collect())
+                ->map(fn($r) => Carbon::parse($r->fecha)->toDateString())
+                ->flip();
 
             foreach ($fechasRecientesEsperadas as $f) {
                 if (!$asistidasRecientesSet->has($f)) {
@@ -163,17 +171,21 @@ class AsistenciaController extends Controller
 
         $alumno = Alumno::with(['cintaConfig', 'horarioConfig'])->findOrFail($alumnoId);
 
-        [$anio, $mesNum] = explode('-', $mes);
-        $diasEnMes = cal_days_in_month(CAL_GREGORIAN, (int)$mesNum, (int)$anio);
+        $carbonMes = Carbon::parse($mes . '-01');
+        $inicioMes = $carbonMes->copy()->startOfMonth()->toDateString();
+        $finMes    = $carbonMes->copy()->endOfMonth()->toDateString();
+        $diasEnMes = $carbonMes->daysInMonth;
 
         // Días de la semana que tiene el alumno según su horario
         $diasConClaseSet = $this->obtenerDiasConClase($alumno->horarioConfig);
 
         // Registros de asistencia del alumno en el mes
         $registros = Asistencia::where('alumno_id', $alumnoId)
-            ->where('fecha', 'like', $mes . '%')
+            ->whereBetween('fecha', [$inicioMes, $finMes])
             ->get()
-            ->keyBy('fecha');
+            ->mapWithKeys(function ($r) {
+                return [Carbon::parse($r->fecha)->toDateString() => $r];
+            });
 
         $hoyStr = Carbon::today()->toDateString();
         $horaFin = $alumno->horarioConfig && $alumno->horarioConfig->hora_fin
@@ -524,7 +536,7 @@ class AsistenciaController extends Controller
      */
     private function obtenerFechasClaseAlumno($alumno, int $anio, int $mesNum, ?string $fechaLimite = null): array
     {
-        $diasEnMes = cal_days_in_month(CAL_GREGORIAN, $mesNum, $anio);
+        $diasEnMes = Carbon::createFromDate($anio, $mesNum, 1)->daysInMonth;
         $diasConClaseSet = $this->obtenerDiasConClase($alumno->horarioConfig);
 
         $hoy = Carbon::today();
