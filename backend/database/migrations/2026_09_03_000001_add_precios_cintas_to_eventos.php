@@ -12,7 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('eventos', function (Blueprint $table) {
-            $table->json('precios_cintas')->nullable();
+            if (!Schema::hasColumn('eventos', 'precios_cintas')) {
+                $table->json('precios_cintas')->nullable();
+            }
+            if (!Schema::hasColumn('eventos', 'lugar')) {
+                $table->string('lugar', 200)->nullable();
+            }
+            if (!Schema::hasColumn('eventos', 'costo')) {
+                $table->decimal('costo', 10, 2)->nullable();
+            }
         });
     }
 
