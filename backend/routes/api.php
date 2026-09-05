@@ -27,6 +27,134 @@ Route::get('/ping', fn() => response()->json([
 
 Route::get('/ejecutar-migraciones', function () {
     try {
+        // 1. DDL directo para corregir columnas críticas inmediatamente
+        $ddlReport = [];
+        try {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE alumnos ALTER COLUMN nombre_tutor DROP NOT NULL');
+            $ddlReport[] = 'nombre_tutor drop not null: ok';
+        } catch (\Throwable $e) { $ddlReport[] = 'nombre_tutor: ' . $e->getMessage(); }
+
+        try {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE alumnos ALTER COLUMN telefono_tutor DROP NOT NULL');
+            $ddlReport[] = 'telefono_tutor drop not null: ok';
+        } catch (\Throwable $e) { $ddlReport[] = 'telefono_tutor: ' . $e->getMessage(); }
+
+        try {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS fecha_ingreso DATE NULL');
+            $ddlReport[] = 'fecha_ingreso add column: ok';
+        } catch (\Throwable $e) { $ddlReport[] = 'fecha_ingreso: ' . $e->getMessage(); }
+
+        try {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE eventos ADD COLUMN IF NOT EXISTS precios_cintas JSON NULL');
+            $ddlReport[] = 'precios_cintas add column: ok';
+        } catch (\Throwable $e) { $ddlReport[] = 'precios_cintas: ' . $e->getMessage(); }
+
+        try {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE eventos ADD COLUMN IF NOT EXISTS lugar VARCHAR(200) NULL');
+            $ddlReport[] = 'lugar add column: ok';
+        } catch (\Throwable $e) { $ddlReport[] = 'lugar: ' . $e->getMessage(); }
+
+        try {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE eventos ADD COLUMN IF NOT EXISTS costo NUMERIC(10,2) NULL');
+            $ddlReport[] = 'costo add column: ok';
+        } catch (\Throwable $e) { $ddlReport[] = 'costo: ' . $e->getMessage(); }
+
+        try {
+            \Illuminate\Support\Facades\DB::statement('CREATE INDEX IF NOT EXISTS asistencias_fecha_idx ON asistencias(fecha)');
+            $ddlReport[] = 'index asistencias fecha: ok';
+        } catch (\Throwable $e) { $ddlReport[] = 'index asistencias: ' . $e->getMessage(); }
+
+        try {
+            \Illuminate\Support\Facades\DB::statement('CREATE INDEX IF NOT EXISTS pagos_alumno_id_idx ON pagos(alumno_id)');
+            \Illuminate\Support\Facades\DB::statement('CREATE INDEX IF NOT EXISTS pagos_alumno_fecha_inicio_idx ON pagos(alumno_id, fecha_inicio)');
+            $ddlReport[] = 'indexes pagos: ok';
+        } catch (\Throwable $e) { $ddlReport[] = 'indexes pagos: ' . $e->getMessage(); }
+
+        // 2. Registrar migraciones base
+        if (!\Illuminate\Support\Facades\Schema::hasTable('migrations')) {
+            \Illuminate\Support\Facades\DB::statement('
+                CREATE TABLE IF NOT EXISTS migrations (
+                    id SERIAL PRIMARY KEY,
+                    migration VARCHAR(255) NOT NULL,
+                    batch INTEGER NOT NULL
+                )
+            ');
+        }
+
+        $tableToMigration = [
+            'users'                  => '0001_01_01_000000_create_users_table',
+            'cache'                  => '0001_01_01_000001_create_cache_table',
+            'jobs'                   => '0001_01_01_000002_create_jobs_table',
+            'personal_access_tokens' => '2026_04_12_190923_create_personal_access_tokens_table',
+            'alumnos'                => '2026_04_12_191309_create_alumnos_table',
+            'asistencias'            => '2026_04_12_191342_create_asistencias_table',
+            'eventos'                => '2026_04_12_191349_create_eventos_table',
+            'evento_alumno'          => '2026_04_12_191357_create_evento_alumno_table',
+            'pagos'                  => '2026_04_13_042851_create_pagos_table',
+            'tenants'                => '2026_04_16_000001_create_tenants_table',
+            'configuraciones_cintas' => '2026_04_21_174516_create_configuraciones_cintas_table',
+            'horarios'               => '2026_04_24_011124_create_horarios_table',
+            'instructors'            => '2026_05_07_063413_create_instructors_table',
+            'escuelas'               => '2026_05_07_075644_create_escuelas_table',
+            'direcciones_escuelas'   => '2026_05_07_075709_create_direcciones_escuelas_table',
+            'examen_alumno'          => '2026_05_14_000001_refactor_eventos_relacional',
+            'global_configs'         => '2026_05_27_000758_create_global_configs_table',
+            'suscripcion_historials' => '2026_05_27_000932_create_suscripcion_historials_table',
+        ];
+
+        $existing = \Illuminate\Support\Facades\DB::table('migrations')->pluck('migration')->toArray();
+
+        foreach ($tableToMigration as $table => $migrationName) {
+            if (\Illuminate\Support\Facades\Schema::hasTable($table) && !in_array($migrationName, $existing)) {
+                \Illuminate\Support\Facades\DB::table('migrations')->insert([
+                    'migration' => $migrationName,
+                    'batch'     => 1,
+                ]);
+                $existing[] = $migrationName;
+            }
+        }
+
+        $pre2026Sept = [
+            '2026_04_13_165246_add_foto_to_alumnos_table',
+            '2026_04_15_060523_add_horario_to_alumnos_table',
+            '2026_04_16_000002_add_tenant_id_to_all_tables',
+            '2026_04_16_235959_backfill_tenant_id_on_existing_records',
+            '2026_04_23_190722_alter_cinta_to_configuracion_cinta_id_on_alumnos_table',
+            '2026_04_23_193612_add_color_texto_to_configuraciones_cintas_table',
+            '2026_04_23_194702_add_color_texto_to_configuraciones_cintas_table',
+            '2026_04_24_013453_add_horario_id_to_alumnos_table',
+            '2026_04_24_014106_drop_horario_column_from_alumnos_table',
+            '2026_05_07_000001_add_dia_pago_to_alumnos_table',
+            '2026_05_07_000002_add_periodo_to_pagos_table',
+            '2026_05_07_064516_add_details_to_tenants_table',
+            '2026_05_07_072622_add_extra_fields_to_instructors_table',
+            '2026_05_12_000001_add_tipo_to_pagos_table',
+            '2026_05_12_000003_add_detalles_to_eventos_and_pivot',
+            '2026_05_14_055554_add_es_historico_to_examen_alumnos_table',
+            '2026_05_14_064143_normalize_event_tables',
+            '2026_05_14_064629_sync_pago_inscripcion_amounts',
+            '2026_05_14_070845_simplify_evento_alumno_table',
+            '2026_05_26_224954_add_avatar_to_users_table',
+            '2026_05_26_232805_add_is_superadmin_to_users_table',
+            '2026_05_26_234535_add_escuela_solicitada_to_users_table',
+            '2026_05_27_000823_add_subscription_fields_to_tenants_table',
+            '2026_05_27_000853_add_last_login_and_suspension_to_users_table',
+            '2026_08_26_014000_change_foto_columns_to_text',
+            '2026_08_26_020000_ensure_superadmin_has_no_tenant',
+            '2026_08_26_100000_add_telefono_to_users_table',
+        ];
+
+        foreach ($pre2026Sept as $mig) {
+            if (!in_array($mig, $existing)) {
+                \Illuminate\Support\Facades\DB::table('migrations')->insert([
+                    'migration' => $mig,
+                    'batch'     => 1,
+                ]);
+                $existing[] = $mig;
+            }
+        }
+
+        // 3. Ejecutar migrate
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         $outputMigrate = \Illuminate\Support\Facades\Artisan::output();
 
@@ -35,36 +163,11 @@ Route::get('/ejecutar-migraciones', function () {
             ->where('is_superadmin', true)
             ->update(['tenant_id' => null]);
 
-        // Sincronizar todos los tenants con sus escuelas (nombre y logo)
-        if (\Illuminate\Support\Facades\Schema::hasTable('escuelas') && \Illuminate\Support\Facades\Schema::hasTable('tenants')) {
-            $escuelas = \Illuminate\Support\Facades\DB::table('escuelas')->get();
-            foreach ($escuelas as $esc) {
-                $updates = [];
-                if (!empty($esc->nombre)) {
-                    $updates['nombre'] = $esc->nombre;
-                }
-                if (!empty($esc->logo_url)) {
-                    $updates['logo'] = $esc->logo_url;
-                }
-                if (!empty($updates) && !empty($esc->tenant_id)) {
-                    \Illuminate\Support\Facades\DB::table('tenants')->where('id', $esc->tenant_id)->update($updates);
-                }
-            }
-        }
-
-        $outputSeed = '';
-        try {
-            \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
-            $outputSeed = \Illuminate\Support\Facades\Artisan::output();
-        } catch (\Throwable $se) {
-            $outputSeed = 'Seed ignorado: ' . $se->getMessage();
-        }
-
         return response()->json([
             'status' => 'success',
-            'message' => 'Migraciones ejecutadas con éxito y SuperAdmin desvinculado de tenants.',
+            'message' => 'Migraciones y esquema sincronizados con éxito.',
+            'ddl_report' => $ddlReport,
             'migrate_output' => $outputMigrate,
-            'seed_output' => $outputSeed,
         ]);
     } catch (\Throwable $e) {
         return response()->json([

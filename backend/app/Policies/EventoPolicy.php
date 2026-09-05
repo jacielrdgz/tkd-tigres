@@ -12,7 +12,7 @@ class EventoPolicy
      */
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['owner', 'secretario', 'instructor']);
+        return in_array($user->role, ['owner', 'secretario', 'instructor', 'admin']) || $user->isSuperAdmin();
     }
 
     /**
@@ -20,7 +20,8 @@ class EventoPolicy
      */
     public function view(User $user, Evento $evento): bool
     {
-        return in_array($user->role, ['owner', 'secretario', 'instructor']) && $user->tenant_id === $evento->tenant_id;
+        if ($user->isSuperAdmin()) return true;
+        return in_array($user->role, ['owner', 'secretario', 'instructor', 'admin']) && $user->tenant_id === $evento->tenant_id;
     }
 
     /**
@@ -28,7 +29,7 @@ class EventoPolicy
      */
     public function create(User $user): bool
     {
-        return in_array($user->role, ['owner', 'secretario']);
+        return in_array($user->role, ['owner', 'secretario', 'admin']) || $user->isSuperAdmin();
     }
 
     /**
@@ -36,7 +37,8 @@ class EventoPolicy
      */
     public function update(User $user, Evento $evento): bool
     {
-        return in_array($user->role, ['owner', 'secretario']) && $user->tenant_id === $evento->tenant_id;
+        if ($user->isSuperAdmin()) return true;
+        return in_array($user->role, ['owner', 'secretario', 'admin']) && $user->tenant_id === $evento->tenant_id;
     }
 
     /**
@@ -44,6 +46,7 @@ class EventoPolicy
      */
     public function delete(User $user, Evento $evento): bool
     {
-        return $user->role === 'owner' && $user->tenant_id === $evento->tenant_id;
+        if ($user->isSuperAdmin()) return true;
+        return in_array($user->role, ['owner', 'admin']) && $user->tenant_id === $evento->tenant_id;
     }
 }

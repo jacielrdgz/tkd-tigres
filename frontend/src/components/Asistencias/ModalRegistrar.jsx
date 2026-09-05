@@ -227,7 +227,9 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
   }
 
   const guardar = async () => {
+    if (guardando) return
     if (alumnos.length === 0) return toast.warning('No hay alumnos cargados')
+
     setGuardando(true)
     try {
       let lista = []
@@ -251,18 +253,40 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
           }))
       }
 
-      await api.post('/asistencias/registrar-dia', { fecha, asistencias: lista })
-      invalidateCache('asistencias')
       const presentesCount = lista.filter(x => x.presente).length
+
+      // 1. Actualización optimista de caché en memoria para que no haya retraso
+      const key = `asistencias_dia_${fecha}`
+      const nuevaLista = alumnos.map(a => {
+        const mod = lista.find(l => l.alumno_id === a.alumno_id)
+        if (mod !== undefined) {
+          return { ...a, presente: mod.presente ? 1 : 0 }
+        }
+        return a
+      })
+      setCache(key, nuevaLista)
+
+      // 2. Cerrar modal de inmediato y notificar a la vista padre
       toast.success(`Guardado: ${presentesCount} presentes.`, {
         position: "top-right",
         autoClose: 2000,
       })
       onGuardado?.(fecha)
-      await cargar(true)
-    } catch {
-      toast.error('Error al guardar asistencias')
-    } finally {
+      onCerrar()
+
+      // 3. Persistir en backend en segundo plano
+      api.post('/asistencias/registrar-dia', { fecha, asistencias: lista })
+        .then(() => {
+          invalidateCache('asistencias')
+        })
+        .catch(err => {
+          console.error('Error en segundo plano al guardar asistencias:', err)
+          toast.error('Error al guardar asistencias en el servidor')
+          invalidateCache('asistencias')
+        })
+    } catch (err) {
+      console.error('Error al procesar asistencias:', err)
+      toast.error('Error al procesar asistencias')
       setGuardando(false)
     }
   }

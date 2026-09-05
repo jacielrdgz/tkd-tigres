@@ -143,8 +143,26 @@ class AlumnoController extends Controller
             }
         }
 
-        $alumno = Alumno::create($validated);
-        return response()->json($alumno, 201);
+        $validated['nombre_tutor'] = $validated['nombre_tutor'] ?? '';
+        $validated['telefono_tutor'] = $validated['telefono_tutor'] ?? '';
+
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('alumnos', 'fecha_ingreso')) {
+            unset($validated['fecha_ingreso']);
+        }
+
+        try {
+            $alumno = Alumno::create($validated);
+            return response()->json($alumno, 201);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error creando alumno: ' . $e->getMessage(), [
+                'exception' => $e,
+                'data' => $validated
+            ]);
+            return response()->json([
+                'message' => 'Error al guardar el alumno: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function show(Alumno $alumno)
@@ -188,8 +206,29 @@ class AlumnoController extends Controller
             }
         }
 
-        $alumno->update($validated);
-        return response()->json($alumno);
+        if (array_key_exists('nombre_tutor', $validated) && $validated['nombre_tutor'] === null) {
+            $validated['nombre_tutor'] = '';
+        }
+        if (array_key_exists('telefono_tutor', $validated) && $validated['telefono_tutor'] === null) {
+            $validated['telefono_tutor'] = '';
+        }
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('alumnos', 'fecha_ingreso')) {
+            unset($validated['fecha_ingreso']);
+        }
+
+        try {
+            $alumno->update($validated);
+            return response()->json($alumno);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error actualizando alumno: ' . $e->getMessage(), [
+                'exception' => $e,
+                'data' => $validated
+            ]);
+            return response()->json([
+                'message' => 'Error al actualizar el alumno: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function quitarFoto(Alumno $alumno)

@@ -107,6 +107,7 @@ export default function Pagos() {
   const [modalPago, setModalPago] = useState(null) // alumno al que se va a registrar pago
   const [pagoAEditar, setPagoAEditar] = useState(null) // si estamos editando, guardamos el objeto pago aquí
   const [formPago, setFormPago] = useState({ monto: '', metodo_pago: 'efectivo', fecha_pago: hoy, mes_periodo: '', tipo: 'mensualidad' })
+  const [guardandoPago, setGuardandoPago] = useState(false)
 
   // Panel de historial
   const [historialAlumno, setHistorialAlumno] = useState(null) // alumno seleccionado
@@ -599,6 +600,8 @@ export default function Pagos() {
   }
 
   const confirmarPago = async () => {
+    if (guardandoPago) return
+
     if (!formPago.monto || isNaN(parseFloat(formPago.monto))) {
       return toast.error('Ingresa un monto válido')
     }
@@ -673,47 +676,94 @@ export default function Pagos() {
       }
     }
 
-    try {
-      let res
-      if (pagoAEditar) {
-        res = await api.put(`/pagos/${pagoAEditar.id}`, data)
-        toast.success('Pago actualizado')
-      } else {
-        res = await api.post('/pagos', data)
-        toast.success('Pago registrado')
+    setGuardandoPago(true)
 
-        // Ofrecer recibo
-        Swal.fire({
-          title: '¿Qué desea hacer?',
-          text: 'Se ha registrado el pago correctamente.',
-          icon: 'success',
-          showCancelButton: true,
-          showDenyButton: true,
-          confirmButtonText: 'Descargar PDF',
-          denyButtonText: 'Enviar por WhatsApp',
-          cancelButtonText: 'Cerrar',
-          confirmButtonColor: 'var(--accent-blue)',
-          denyButtonColor: '#22c55e',
-          background: 'var(--bg-secondary)',
-          color: 'var(--text-primary)'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            generarRecibo(res.data, modalPago)
-          } else if (result.isDenied) {
-            enviarComprobanteWhatsApp(res.data, modalPago)
-          }
-        })
-      }
-      invalidateCache('pagos')
-      invalidateCache('alumnos')
-      cargar(true)
-      setModalPago(null)
-      setPagoAEditar(null)
-      if (historialAlumno) abrirHistorial(historialAlumno)
-    } catch (e) {
-      console.error("Error al guardar pago:", e.response?.data || e.message)
-      toast.error('Error al guardar pago')
+    const alumnoParaRecibo = modalPago
+    const isEdit = !!pagoAEditar
+    const tempId = isEdit ? pagoAEditar.id : ('temp_' + Date.now())
+    const optimisticPago = {
+      ...(pagoAEditar || {}),
+      ...data,
+      id: tempId,
+      alumno: alumnoParaRecibo,
+      created_at: new Date().toISOString()
     }
+
+    // 1. Inserción/actualización optimista en UI instantánea (0ms)
+    setPagosActivos(prev => {
+      if (isEdit) {
+        return prev.map(p => p.id === pagoAEditar.id ? optimisticPago : p)
+      }
+      return [optimisticPago, ...prev]
+    })
+
+    if (historialAlumno && historialAlumno.id === alumnoParaRecibo.id) {
+      setHistorial(prev => {
+        if (isEdit) {
+          return prev.map(p => p.id === pagoAEditar.id ? optimisticPago : p)
+        }
+        return [optimisticPago, ...prev]
+      })
+    }
+
+    // 2. Cerrar modal de inmediato para evitar bloqueos o clics repetidos
+    setModalPago(null)
+    setPagoAEditar(null)
+    setGuardandoPago(false)
+    toast.success(isEdit ? 'Pago actualizado' : 'Pago registrado')
+
+    // 3. Ofrecer recibo de inmediato sin esperar al backend
+    if (!isEdit) {
+      Swal.fire({
+        title: '¿Qué desea hacer?',
+        text: 'Se ha registrado el pago correctamente.',
+        icon: 'success',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: 'Descargar PDF',
+        denyButtonText: 'Enviar por WhatsApp',
+        cancelButtonText: 'Cerrar',
+        confirmButtonColor: 'var(--accent-blue)',
+        denyButtonColor: '#22c55e',
+        background: 'var(--bg-secondary)',
+        color: 'var(--text-primary)'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          generarRecibo(optimisticPago, alumnoParaRecibo)
+        } else if (result.isDenied) {
+          enviarComprobanteWhatsApp(optimisticPago, alumnoParaRecibo)
+        }
+      })
+    }
+
+    // 4. Persistir en backend en segundo plano
+    const request = isEdit
+      ? api.put(`/pagos/${pagoAEditar.id}`, data)
+      : api.post('/pagos', data)
+
+    request
+      .then(res => {
+        if (res.data) {
+          const realPago = res.data
+          setPagosActivos(prev => prev.map(p => p.id === tempId ? { ...p, ...realPago } : p))
+          if (historialAlumno && historialAlumno.id === alumnoParaRecibo.id) {
+            setHistorial(prev => prev.map(p => p.id === tempId ? { ...p, ...realPago } : p))
+          }
+        }
+        invalidateCache('pagos')
+        invalidateCache('alumnos')
+      })
+      .catch(e => {
+        console.error("Error en segundo plano al guardar pago:", e.response?.data || e.message)
+        if (!isEdit) {
+          setPagosActivos(prev => prev.filter(p => p.id !== tempId))
+          if (historialAlumno && historialAlumno.id === alumnoParaRecibo.id) {
+            setHistorial(prev => prev.filter(p => p.id !== tempId))
+          }
+        }
+        const msg = e.response?.data?.message || 'Error al guardar el pago en el servidor.'
+        toast.error(msg)
+      })
   }
 
   const eliminarPago = async (pagoId, e) => {
@@ -740,12 +790,31 @@ export default function Pagos() {
 
   const abrirHistorial = async (alumno) => {
     setHistorialAlumno(alumno)
-    setCargandoHistorial(true)
+    // Carga instantánea de pagos conocidos en memoria (0ms)
+    const pagosLocales = pagosActivos
+      .filter(p => p.alumno_id === alumno.id)
+      .sort((a, b) => new Date(b.fecha_inicio || b.fecha_pago || b.created_at) - new Date(a.fecha_inicio || a.fecha_pago || a.created_at))
+
+    if (pagosLocales.length > 0) {
+      setHistorial(pagosLocales)
+      setCargandoHistorial(false)
+    } else {
+      setHistorial([])
+      setCargandoHistorial(true)
+    }
+
     try {
       const res = await api.get(`/pagos/alumno/${alumno.id}`)
-      setHistorial(res.data)
-    } catch { toast.error('Error al cargar historial') }
-    setCargandoHistorial(false)
+      if (Array.isArray(res.data)) {
+        setHistorial(res.data)
+      }
+    } catch {
+      if (pagosLocales.length === 0) {
+        toast.error('Error al cargar historial')
+      }
+    } finally {
+      setCargandoHistorial(false)
+    }
   }
 
   const cerrarHistorial = () => { setHistorialAlumno(null); setHistorial([]) }
@@ -1160,28 +1229,53 @@ export default function Pagos() {
             </div>
 
             <div style={s.modalFooter}>
-              <button style={{ ...s.btnSecondary, transition: 'all 0.2s' }} onClick={() => { setModalPago(null); setPagoAEditar(null); }}
+              <button
+                style={{
+                  ...s.btnSecondary,
+                  transition: 'all 0.2s',
+                  opacity: guardandoPago ? 0.6 : 1,
+                  cursor: guardandoPago ? 'not-allowed' : 'pointer'
+                }}
+                onClick={guardandoPago ? undefined : () => { setModalPago(null); setPagoAEditar(null); }}
+                disabled={guardandoPago}
                 onMouseOver={e => {
+                  if (guardandoPago) return;
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
                   e.currentTarget.style.color = '#ffffff';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                 }}
                 onMouseOut={e => {
+                  if (guardandoPago) return;
                   e.currentTarget.style.background = 'var(--bg-tertiary)';
                   e.currentTarget.style.color = 'var(--text-secondary)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}>Cancelar</button>
-              <button style={{ ...s.btnConfirmar, transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} onClick={confirmarPago}
+              <button
+                style={{
+                  ...s.btnConfirmar,
+                  transition: 'all 0.2s',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  opacity: guardandoPago ? 0.75 : 1,
+                  cursor: guardandoPago ? 'not-allowed' : 'pointer',
+                  pointerEvents: guardandoPago ? 'none' : 'auto'
+                }}
+                onClick={guardandoPago ? undefined : confirmarPago}
+                disabled={guardandoPago}
                 onMouseOver={e => {
+                  if (guardandoPago) return;
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = '0 6px 15px rgba(16, 185, 129, 0.4)';
                 }}
                 onMouseOut={e => {
+                  if (guardandoPago) return;
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}>
                 <FiCheck size={16} />
-                {pagoAEditar ? 'Guardar Cambios' : 'Confirmar Pago'}
+                {guardandoPago ? 'Guardando...' : (pagoAEditar ? 'Guardar Cambios' : 'Confirmar Pago')}
               </button>
             </div>
           </div>

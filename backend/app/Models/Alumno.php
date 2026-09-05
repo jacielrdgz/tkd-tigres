@@ -38,6 +38,12 @@ class Alumno extends Model
             if ($alumno->telefono_tutor === null) {
                 $alumno->telefono_tutor = '';
             }
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('alumnos', 'fecha_ingreso')) {
+                unset($alumno->fecha_ingreso);
+            }
+            if (empty($alumno->tenant_id)) {
+                $alumno->tenant_id = auth()->user()?->tenant_id ?? 1;
+            }
         });
     }
 

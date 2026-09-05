@@ -47,10 +47,26 @@ class EventoController extends Controller
         if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'precios_cintas')) {
             unset($validated['precios_cintas']);
         }
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'lugar')) {
+            unset($validated['lugar']);
+        }
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'costo')) {
+            unset($validated['costo']);
+        }
 
-        $evento = Evento::create($validated);
-
-        return response()->json($evento, 201);
+        try {
+            $evento = Evento::create($validated);
+            return response()->json($evento, 201);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error creando evento: ' . $e->getMessage(), [
+                'exception' => $e,
+                'data' => $validated
+            ]);
+            return response()->json([
+                'message' => 'Error al guardar el evento: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function show(Evento $evento)
@@ -82,10 +98,26 @@ class EventoController extends Controller
         if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'precios_cintas')) {
             unset($validated['precios_cintas']);
         }
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'lugar')) {
+            unset($validated['lugar']);
+        }
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'costo')) {
+            unset($validated['costo']);
+        }
 
-        $evento->update($validated);
-
-        return response()->json($evento);
+        try {
+            $evento->update($validated);
+            return response()->json($evento);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error actualizando evento: ' . $e->getMessage(), [
+                'exception' => $e,
+                'data' => $validated
+            ]);
+            return response()->json([
+                'message' => 'Error al actualizar el evento: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(Evento $evento)

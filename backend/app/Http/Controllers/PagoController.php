@@ -47,6 +47,7 @@ class PagoController extends Controller
 
         $pagos = Pago::where('alumno_id', $alumno->id)
             ->orderBy('fecha_inicio', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
 
         return response()->json($pagos);
@@ -74,12 +75,27 @@ class PagoController extends Controller
             $validated['mes'] = Carbon::parse($validated['fecha_inicio'])->format('Y-m');
         }
 
-        // Asignar el tenant_id del usuario actual
-        $validated['tenant_id'] = auth()->user()->tenant_id;
+        // Asignar el tenant_id con fallback seguro
+        $tenantId = auth()->user()?->tenant_id;
+        if (!$tenantId) {
+            $alumnoRecord = Alumno::find($validated['alumno_id']);
+            $tenantId = $alumnoRecord?->tenant_id ?? 1;
+        }
+        $validated['tenant_id'] = $tenantId;
 
-        $pago = Pago::create($validated);
-
-        return response()->json($pago->load('alumno'), 201);
+        try {
+            $pago = Pago::create($validated);
+            return response()->json($pago->load('alumno'), 201);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error creando pago: ' . $e->getMessage(), [
+                'exception' => $e,
+                'data' => $validated
+            ]);
+            return response()->json([
+                'message' => 'Error al registrar el pago: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function show(Pago $pago)
