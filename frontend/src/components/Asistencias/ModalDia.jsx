@@ -37,10 +37,20 @@ function Avatar({ alumno, size = 36 }) {
   )
 }
 
-export default function ModalDia({ fecha, onCerrar }) {
+export default function ModalDia({ fecha, onCerrar, isMobile: propIsMobile }) {
   const [tab, setTab] = useState('todos')
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(false)
+
+  const [localIsMobile, setLocalIsMobile] = useState(() => window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setLocalIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isMobile = typeof propIsMobile === 'boolean' ? propIsMobile : localIsMobile
 
   useEffect(() => {
     if (!fecha) return
@@ -163,15 +173,31 @@ export default function ModalDia({ fecha, onCerrar }) {
   }
 
   return (
-    <div style={s.overlay} className="mobile-fullscreen-overlay" onClick={onCerrar}>
-      <div style={s.modal} className="mobile-fullscreen-modal" onClick={e => e.stopPropagation()}>
+    <div style={{ ...s.overlay, padding: isMobile ? 8 : 16 }} onClick={onCerrar}>
+      <div style={{
+        ...s.modal,
+        maxHeight: isMobile ? '92vh' : 'calc(100vh - 40px)',
+      }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div style={s.header}>
-          <div style={s.iconBox}>
-            <FiCalendar size={26} />
+        <div style={{
+          ...s.header,
+          padding: isMobile ? '16px 16px 14px' : '22px 22px 18px',
+        }}>
+          <div style={{
+            ...s.iconBox,
+            width: isMobile ? 40 : 48,
+            height: isMobile ? 40 : 48,
+            borderRadius: isMobile ? 12 : 14,
+          }}>
+            <FiCalendar size={isMobile ? 22 : 26} />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={s.titulo}>{fechaFormateada}</h2>
+          <div style={{ flex: 1, minWidth: 0, paddingRight: 32 }}>
+            <h2 style={{
+              ...s.titulo,
+              fontSize: isMobile ? 15 : 17,
+            }}>
+              {fechaFormateada}
+            </h2>
           </div>
           <button type="button" className="btn-cerrar-circular" style={s.btnCerrar} onClick={onCerrar} aria-label="Cerrar">
             <FiX size={17} />
@@ -179,7 +205,12 @@ export default function ModalDia({ fecha, onCerrar }) {
         </div>
 
         {/* 4 Mini Stats */}
-        <div style={s.statsGrid}>
+        <div style={{
+          ...s.statsGrid,
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+          padding: isMobile ? '12px 14px' : '14px 22px',
+          gap: isMobile ? 8 : 10,
+        }}>
           {[
             { label: 'Total', value: stats.total, color: 'var(--text-primary)' },
             { label: 'Asistieron', value: stats.asistieron, color: 'var(--accent-green)' },
@@ -190,9 +221,12 @@ export default function ModalDia({ fecha, onCerrar }) {
               color: stats.pct >= 80 ? 'var(--accent-green)' : stats.pct >= 60 ? 'var(--accent-yellow)' : 'var(--accent-red)',
             },
           ].map(({ label, value, color }) => (
-            <div key={label} style={s.statCard}>
+            <div key={label} style={{
+              ...s.statCard,
+              padding: isMobile ? '8px 6px' : '10px 8px',
+            }}>
               <span style={s.statLabel}>{label}</span>
-              <span style={{ ...s.statValue, color }}>
+              <span style={{ ...s.statValue, color, fontSize: isMobile ? 18 : 20 }}>
                 {cargando ? <span style={s.skeletonInline} /> : value}
               </span>
             </div>
@@ -200,8 +234,23 @@ export default function ModalDia({ fecha, onCerrar }) {
         </div>
 
         {/* Tabs filtro y Botón Exportar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 22px 14px', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: isMobile ? '0 14px 12px' : '0 22px 14px',
+          gap: 10,
+          flexDirection: isMobile ? 'column' : 'row',
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: 4,
+            width: isMobile ? '100%' : 'auto',
+            background: isMobile ? 'var(--bg-primary)' : 'transparent',
+            padding: isMobile ? 3 : 0,
+            borderRadius: isMobile ? 10 : 0,
+            border: isMobile ? '1px solid var(--border)' : 'none',
+          }}>
             {[
               { key: 'todos', label: `Todos (${alumnos.length})` },
               { key: 'asistieron', label: `Asistieron (${asistieron.length})` },
@@ -211,9 +260,14 @@ export default function ModalDia({ fecha, onCerrar }) {
                 key={key}
                 style={{
                   ...s.tabBtn,
+                  flex: isMobile ? 1 : 'none',
+                  textAlign: 'center',
+                  padding: isMobile ? '8px 4px' : '7px 14px',
+                  fontSize: isMobile ? 11.5 : 12,
                   background: tab === key ? 'var(--accent-blue)' : 'transparent',
                   color: tab === key ? '#fff' : 'var(--text-muted)',
                   fontWeight: tab === key ? 700 : 500,
+                  boxShadow: tab === key && isMobile ? 'var(--shadow-sm)' : 'none',
                 }}
                 onClick={() => setTab(key)}
               >
@@ -222,17 +276,23 @@ export default function ModalDia({ fecha, onCerrar }) {
             ))}
           </div>
 
-          <BotonExportar
-            onExportarExcel={exportarExcel}
-            onExportarPDF={exportarPDF}
-            disabled={cargando || alumnos.length === 0}
-            align="right"
-            className=""
-          />
+          <div style={{ width: isMobile ? '100%' : 'auto' }}>
+            <BotonExportar
+              onExportarExcel={exportarExcel}
+              onExportarPDF={exportarPDF}
+              disabled={cargando || alumnos.length === 0}
+              align={isMobile ? 'left' : 'right'}
+              className=""
+            />
+          </div>
         </div>
 
         {/* Lista */}
-        <div style={s.lista}>
+        <div style={{
+          ...s.lista,
+          padding: isMobile ? '4px 14px 18px' : '4px 22px 22px',
+          gap: isMobile ? 6 : 8,
+        }}>
           {cargando
             ? Array.from({ length: 6 }).map((_, i) => (
               <div key={i} style={{ ...s.fila(true), animation: 'shimmer 1.5s infinite' }}>
@@ -249,29 +309,61 @@ export default function ModalDia({ fecha, onCerrar }) {
               : listaMostrada.map(a => (
                 <div
                   key={a.id}
-                  style={s.fila(a.asistio)}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'translateX(4px)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                  style={{
+                    ...s.fila(a.asistio),
+                    padding: isMobile ? '8px 10px' : '10px 14px',
+                    gap: isMobile ? 8 : 10,
+                  }}
+                  onMouseEnter={e => !isMobile && (e.currentTarget.style.transform = 'translateX(4px)')}
+                  onMouseLeave={e => !isMobile && (e.currentTarget.style.transform = 'none')}
                 >
                   {/* Ícono status */}
                   <div style={{
                     ...s.statusBox,
+                    width: isMobile ? 24 : 28,
+                    height: isMobile ? 24 : 28,
+                    borderRadius: isMobile ? 6 : 8,
                     background: a.asistio ? 'var(--accent-green)' : 'var(--accent-red)',
-                    boxShadow: `0 4px 10px ${a.asistio ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                    boxShadow: `0 3px 8px ${a.asistio ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
                   }}>
-                    {a.asistio ? <FiCheck size={14} strokeWidth={3} /> : <FiX size={14} />}
+                    {a.asistio ? <FiCheck size={isMobile ? 12 : 14} strokeWidth={3} /> : <FiX size={isMobile ? 12 : 14} />}
                   </div>
 
                   {/* Avatar */}
-                  <Avatar alumno={a} />
+                  <Avatar alumno={a} size={isMobile ? 34 : 36} />
 
-                  {/* Nombre */}
-                  <span style={s.nombre}>
-                    {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
-                  </span>
+                  {/* Nombre y grado */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      ...s.nombre,
+                      fontSize: isMobile ? 13 : 14,
+                      lineHeight: 1.25,
+                      whiteSpace: isMobile ? 'normal' : 'nowrap',
+                      wordBreak: 'break-word',
+                    }}>
+                      {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
+                    </div>
 
-                  {/* Badge grado */}
-                  {a.cinta_config && (
+                    {isMobile && a.cinta_config && (
+                      <div style={{ marginTop: 2 }}>
+                        <span style={{
+                          padding: '2px 7px',
+                          borderRadius: 99,
+                          fontSize: 9.5,
+                          fontWeight: 700,
+                          background: a.cinta_config.color_hex || 'var(--bg-tertiary)',
+                          color: a.cinta_config.color_texto || 'var(--text-primary)',
+                          display: 'inline-block',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {a.cinta_config.nombre_nivel}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Badge grado en desktop */}
+                  {!isMobile && a.cinta_config && (
                     <span style={{
                       ...s.badge,
                       background: a.cinta_config.color_hex || 'var(--bg-tertiary)',

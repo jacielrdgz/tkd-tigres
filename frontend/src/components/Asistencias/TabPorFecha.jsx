@@ -15,8 +15,17 @@ function pctBg(pct) {
   return 'rgba(239,68,68,0.08)'
 }
 
-export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando, onDiaClick }) {
+export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando, onDiaClick, isMobile: propIsMobile }) {
   const [hoveredCell, setHoveredCell] = useState(null)
+  const [localIsMobile, setLocalIsMobile] = useState(() => window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setLocalIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isMobile = typeof propIsMobile === 'boolean' ? propIsMobile : localIsMobile
 
   const [anio, mesNum] = mes.split('-').map(Number)
 
@@ -67,60 +76,119 @@ export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando
   return (
     <div>
       {/* Calendario */}
-      <div style={s.calContenedor}>
+      <div style={{
+        ...s.calContenedor,
+        padding: isMobile ? '16px 10px' : '24px',
+        borderRadius: isMobile ? 16 : 20,
+      }}>
         {/* Header del calendario */}
-        <div style={s.calHeader}>
-          <span style={s.calTitulo}>{mesLabel}</span>
-          <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{
+          ...s.calHeader,
+          marginBottom: isMobile ? 14 : 20,
+        }}>
+          <span style={{
+            ...s.calTitulo,
+            fontSize: isMobile ? 17 : 20,
+          }}>
+            {mesLabel}
+          </span>
+          <div style={{ display: 'flex', gap: isMobile ? 6 : 8 }}>
             <button
-              style={s.btnNav}
+              style={{
+                ...s.btnNav,
+                width: isMobile ? 32 : 38,
+                height: isMobile ? 32 : 38,
+              }}
               onClick={() => {
                 const nueva = new Date(anio, mesNum - 2, 1)
                 onCambiarMes(`${nueva.getFullYear()}-${String(nueva.getMonth() + 1).padStart(2, '0')}`)
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-primary)'}
+              aria-label="Mes anterior"
             >
-              <FiChevronLeft size={18} />
+              <FiChevronLeft size={isMobile ? 16 : 18} />
             </button>
             <button
-              style={s.btnNav}
+              style={{
+                ...s.btnNav,
+                width: isMobile ? 32 : 38,
+                height: isMobile ? 32 : 38,
+              }}
               onClick={() => {
                 const nueva = new Date(anio, mesNum, 1)
                 onCambiarMes(`${nueva.getFullYear()}-${String(nueva.getMonth() + 1).padStart(2, '0')}`)
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-primary)'}
+              aria-label="Mes siguiente"
             >
-              <FiChevronRight size={18} />
+              <FiChevronRight size={isMobile ? 16 : 18} />
             </button>
           </div>
         </div>
 
         {/* Labels días semana */}
-        <div style={s.grid}>
+        <div style={{
+          ...s.grid,
+          gap: isMobile ? 4 : 8,
+        }}>
           {DIAS_SEMANA.map(d => (
-            <div key={d} style={s.labelDia}>{d}</div>
+            <div key={d} style={{
+              ...s.labelDia,
+              fontSize: isMobile ? 9.5 : 10,
+              paddingBottom: isMobile ? 6 : 10,
+            }}>
+              {d}
+            </div>
           ))}
 
           {/* Celdas */}
           {cargando
             ? Array.from({ length: 35 }).map((_, i) => (
-              <div key={i} style={{ ...s.celdaBase, background: 'var(--bg-tertiary)', animation: 'shimmer 1.5s infinite' }} />
+              <div
+                key={i}
+                style={{
+                  ...s.celdaBase,
+                  minHeight: isMobile ? 46 : 72,
+                  aspectRatio: isMobile ? '1/1' : '1.2/1',
+                  background: 'var(--bg-tertiary)',
+                  animation: 'shimmer 1.5s infinite',
+                }}
+              />
             ))
             : celdas.map((c, i) => {
-              if (!c) return <div key={i} style={s.celdaVacia} />
+              if (!c) {
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      aspectRatio: isMobile ? '1/1' : '1.2/1',
+                      minHeight: isMobile ? 46 : 72,
+                    }}
+                  />
+                )
+              }
 
               if (!c.tieneDatos) {
                 return (
                   <div key={i} style={{
                     ...s.celdaBase,
+                    aspectRatio: isMobile ? '1/1' : '1.2/1',
+                    minHeight: isMobile ? 46 : 72,
+                    padding: isMobile ? '5px 4px' : '10px 8px',
+                    borderRadius: isMobile ? 8 : 12,
                     background: 'var(--bg-primary)',
                     border: c.esHoy ? '2px solid var(--accent-blue)' : '1.5px solid var(--border)',
                     boxShadow: c.esHoy ? '0 0 0 3px rgba(59,130,246,0.12)' : 'none',
                     opacity: 0.45,
                   }}>
-                    <span style={s.numDia}>{c.d}</span>
+                    <span style={{
+                      ...s.numDia,
+                      fontSize: isMobile ? 11.5 : 14,
+                    }}>
+                      {c.d}
+                    </span>
                   </div>
                 )
               }
@@ -131,25 +199,48 @@ export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando
                   key={i}
                   style={{
                     ...s.celdaBase,
+                    aspectRatio: isMobile ? '1/1' : '1.2/1',
+                    minHeight: isMobile ? 46 : 72,
+                    padding: isMobile ? '5px 4px' : '10px 8px',
+                    borderRadius: isMobile ? 8 : 12,
                     background: isHovered ? (c.pct >= 80 ? 'rgba(16,185,129,0.18)' : 'rgba(239,68,68,0.18)') : pctBg(c.pct),
                     border: c.esHoy
                       ? '2px solid var(--accent-blue)'
                       : `1.5px solid ${c.pct >= 80 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
                     boxShadow: c.esHoy ? '0 0 0 3px rgba(59,130,246,0.12)' : (isHovered ? 'var(--shadow-md)' : 'none'),
                     cursor: 'pointer',
-                    transform: isHovered ? 'translateY(-3px) scale(1.02)' : 'none',
+                    transform: isHovered ? (isMobile ? 'scale(1.04)' : 'translateY(-3px) scale(1.02)') : 'none',
                     transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
                   }}
                   onClick={() => onDiaClick(c.fecha)}
-                  onMouseEnter={() => setHoveredCell(c.fecha)}
-                  onMouseLeave={() => setHoveredCell(null)}
+                  onMouseEnter={() => !isMobile && setHoveredCell(c.fecha)}
+                  onMouseLeave={() => !isMobile && setHoveredCell(null)}
                 >
-                  <span style={{ ...s.numDia, color: pctColor(c.pct) }}>{c.d}</span>
-                  <div style={s.barBg}>
+                  <span style={{
+                    ...s.numDia,
+                    fontSize: isMobile ? 11.5 : 14,
+                    color: pctColor(c.pct),
+                  }}>
+                    {c.d}
+                  </span>
+                  <div style={{
+                    ...s.barBg,
+                    height: isMobile ? 3 : 4,
+                  }}>
                     <div style={{ ...s.barFill, width: `${c.pct}%`, background: pctColor(c.pct) }} />
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: pctColor(c.pct), lineHeight: 1 }}>
-                    {c.asistieron}/{c.total} · {c.pct}%
+                  <span style={{
+                    fontSize: isMobile ? 9 : 10,
+                    fontWeight: 700,
+                    color: pctColor(c.pct),
+                    lineHeight: 1,
+                    textAlign: isMobile ? 'center' : 'left',
+                    width: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {isMobile ? `${c.pct}%` : `${c.asistieron}/${c.total} · ${c.pct}%`}
                   </span>
                 </div>
               )

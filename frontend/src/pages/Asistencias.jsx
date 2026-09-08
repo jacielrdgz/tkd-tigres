@@ -372,6 +372,7 @@ export default function Asistencias() {
         <ModalAlumno
           alumno={alumnoSeleccionado}
           onCerrar={() => setAlumnoSeleccionado(null)}
+          isMobile={isMobile}
         />
       )}
 
@@ -379,11 +380,13 @@ export default function Asistencias() {
         <ModalDia
           fecha={fechaSeleccionada}
           onCerrar={() => setFechaSeleccionada(null)}
+          isMobile={isMobile}
         />
       )}
 
       {modalRegistrar && (
         <ModalRegistrar
+          isMobile={isMobile}
           onCerrar={() => {
             setModalRegistrar(false)
             if (haGuardadoEnModal) {

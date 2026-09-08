@@ -50,7 +50,7 @@ function Avatar({ alumno, size = 38 }) {
   )
 }
 
-export default function ModalRegistrar({ onCerrar, onGuardado }) {
+export default function ModalRegistrar({ onCerrar, onGuardado, isMobile: propIsMobile }) {
   const { user } = useAuth()
   const [fecha, setFecha] = useState(new Date().toLocaleDateString('sv-SE'))
   const [alumnos, setAlumnos] = useState([])
@@ -58,6 +58,16 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
   const [initialPresencias, setInitialPresencias] = useState({})
   const [cargando, setCargando] = useState(false)
   const [guardando, setGuardando] = useState(false)
+
+  const [localIsMobile, setLocalIsMobile] = useState(() => window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setLocalIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isMobile = typeof propIsMobile === 'boolean' ? propIsMobile : localIsMobile
 
   const [busqueda, setBusqueda] = useState('')
   const [filtroHorario, setFiltroHorario] = useState('')
@@ -297,15 +307,26 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
   const ausentes = filtrados.length - presentes
 
   return (
-    <div style={s.overlay} onClick={guardando ? undefined : onCerrar}>
-      <div style={s.modal} onClick={e => e.stopPropagation()}>
+    <div style={{ ...s.overlay, padding: isMobile ? 8 : 16 }} onClick={guardando ? undefined : onCerrar}>
+      <div style={{
+        ...s.modal,
+        maxHeight: isMobile ? '94vh' : 'calc(100vh - 40px)',
+      }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div style={s.header}>
-          <div style={s.iconBox}>
-            <FiCalendar size={24} />
+        <div style={{
+          ...s.header,
+          padding: isMobile ? '14px 16px 12px' : '20px 22px 16px',
+        }}>
+          <div style={{
+            ...s.iconBox,
+            width: isMobile ? 38 : 46,
+            height: isMobile ? 38 : 46,
+            borderRadius: isMobile ? 10 : 12,
+          }}>
+            <FiCalendar size={isMobile ? 20 : 24} />
           </div>
           <div>
-            <h2 style={s.titulo}>Registrar Asistencia</h2>
+            <h2 style={{ ...s.titulo, fontSize: isMobile ? 16 : 18 }}>Registrar Asistencia</h2>
             <p style={s.subtitulo}>Pase de lista diario</p>
           </div>
           <button
@@ -321,61 +342,115 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
         </div>
 
         {/* Selector de fecha + stats */}
-        <div className="modal-controles" style={s.controles}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label style={s.labelFecha}>Fecha:</label>
-            <input
-              type="date"
-              value={fecha}
-              disabled={guardando}
-              onChange={e => setFecha(e.target.value)}
-              style={{
-                ...s.inputFecha,
-                width: 135,
-                opacity: guardando ? 0.6 : 1,
-                cursor: guardando ? 'not-allowed' : 'auto'
-              }}
-            />
+        <div style={{
+          ...s.controles,
+          padding: isMobile ? '10px 14px' : '12px 16px',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'stretch' : 'center',
+          gap: isMobile ? 8 : 8,
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            width: isMobile ? '100%' : 'auto',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: isMobile ? 1 : 'none' }}>
+              <label style={s.labelFecha}>Fecha:</label>
+              <input
+                type="date"
+                value={fecha}
+                disabled={guardando}
+                onChange={e => setFecha(e.target.value)}
+                style={{
+                  ...s.inputFecha,
+                  width: isMobile ? '100%' : 135,
+                  opacity: guardando ? 0.6 : 1,
+                  cursor: guardando ? 'not-allowed' : 'auto',
+                }}
+              />
+            </div>
+
+            {isMobile && (
+              <button
+                style={{
+                  ...s.btnMarcarTodos,
+                  width: 'auto',
+                  padding: '7px 12px',
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                }}
+                disabled={guardando}
+                onClick={guardando ? undefined : marcarTodos}
+              >
+                <FiCheck size={13} />
+                {filtrados.length > 0 && filtrados.every(a => presencias[a.alumno_id]) ? 'Desmarcar' : 'Marcar todos'}
+              </button>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--accent-green)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-              <FiCheck size={14} strokeWidth={2.5} /> {presentes} presentes
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--accent-red)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-              <FiX size={14} strokeWidth={2.5} /> {ausentes} ausentes
-            </span>
-            <button
-              style={{
-                ...s.btnMarcarTodos,
-                opacity: guardando ? 0.5 : 1,
-                cursor: guardando ? 'not-allowed' : 'pointer',
-              }}
-              disabled={guardando}
-              onClick={guardando ? undefined : marcarTodos}
-              onMouseEnter={e => {
-                if (!guardando) {
-                  e.currentTarget.style.borderColor = 'var(--border-hover)'
-                  e.currentTarget.style.color = 'var(--text-primary)'
-                  e.currentTarget.style.transform = 'translateY(-1px)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!guardando) {
-                  e.currentTarget.style.borderColor = 'var(--border)'
-                  e.currentTarget.style.color = 'var(--text-secondary)'
-                  e.currentTarget.style.transform = 'none'
-                }
-              }}
-            >
-              <FiCheck size={13} />
-              {filtrados.length > 0 && filtrados.every(a => presencias[a.alumno_id]) ? 'Desmarcar todos' : 'Marcar todos'}
-            </button>
+
+          <div style={{
+            display: 'flex',
+            gap: 12,
+            alignItems: 'center',
+            justifyContent: isMobile ? 'space-between' : 'flex-end',
+            flexShrink: 0,
+            width: isMobile ? '100%' : 'auto',
+            background: isMobile ? 'var(--bg-primary)' : 'transparent',
+            padding: isMobile ? '6px 10px' : 0,
+            borderRadius: isMobile ? 8 : 0,
+            border: isMobile ? '1px solid var(--border)' : 'none',
+          }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--accent-green)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <FiCheck size={14} strokeWidth={2.5} /> {presentes} presentes
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--accent-red)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <FiX size={14} strokeWidth={2.5} /> {ausentes} ausentes
+              </span>
+            </div>
+
+            {!isMobile && (
+              <button
+                style={{
+                  ...s.btnMarcarTodos,
+                  opacity: guardando ? 0.5 : 1,
+                  cursor: guardando ? 'not-allowed' : 'pointer',
+                }}
+                disabled={guardando}
+                onClick={guardando ? undefined : marcarTodos}
+                onMouseEnter={e => {
+                  if (!guardando) {
+                    e.currentTarget.style.borderColor = 'var(--border-hover)'
+                    e.currentTarget.style.color = 'var(--text-primary)'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!guardando) {
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                    e.currentTarget.style.color = 'var(--text-secondary)'
+                    e.currentTarget.style.transform = 'none'
+                  }
+                }}
+              >
+                <FiCheck size={13} />
+                {filtrados.length > 0 && filtrados.every(a => presencias[a.alumno_id]) ? 'Desmarcar todos' : 'Marcar todos'}
+              </button>
+            )}
           </div>
         </div>
 
         {/* Filtros: Buscador y Horario */}
-        <div style={{ display: 'flex', gap: 10, padding: '12px 22px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+        <div style={{
+          display: 'flex',
+          gap: isMobile ? 8 : 10,
+          padding: isMobile ? '10px 14px' : '12px 22px',
+          borderBottom: '1px solid var(--border)',
+          flexDirection: isMobile ? 'column' : 'row',
+        }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: isMobile ? '100%' : 200 }}>
             <FiSearch size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
             <input
               style={{
@@ -394,7 +469,8 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
           <select
             style={{
               ...s.inputFecha,
-              minWidth: 160,
+              minWidth: isMobile ? '100%' : 160,
+              width: isMobile ? '100%' : 'auto',
               opacity: guardando ? 0.6 : 1,
               cursor: guardando ? 'not-allowed' : 'auto'
             }}
@@ -412,7 +488,11 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
         </div>
 
         {/* Lista */}
-        <div style={s.lista}>
+        <div style={{
+          ...s.lista,
+          padding: isMobile ? '10px 12px' : '10px 22px',
+          gap: isMobile ? 6 : 7,
+        }}>
           {cargando
             ? Array.from({ length: 8 }).map((_, i) => (
               <div key={i} style={{ ...s.fila(true), gap: 10, animation: 'shimmer 1.5s infinite' }}>
@@ -429,23 +509,56 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
                 key={a.alumno_id}
                 style={{
                   ...s.fila(presencias[a.alumno_id]),
+                  padding: isMobile ? '10px 12px' : '10px 14px',
+                  gap: isMobile ? 10 : 12,
                   ...(guardando ? { opacity: 0.65, cursor: 'not-allowed', pointerEvents: 'none' } : {}),
                 }}
                 onClick={() => !guardando && toggle(a.alumno_id)}
               >
-                <div style={{ color: 'var(--text-dim)', fontSize: 11, width: 16, textAlign: 'right' }}>
-                  {idx + 1}
-                </div>
-                <Avatar alumno={a} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={s.nombre}>{a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}</div>
-                  <div style={s.horario}>
-                    {a.horario_config
-                      ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
-                      : 'Sin horario'}
+                {!isMobile && (
+                  <div style={{ color: 'var(--text-dim)', fontSize: 11, width: 16, textAlign: 'right' }}>
+                    {idx + 1}
                   </div>
+                )}
+                <Avatar alumno={a} size={isMobile ? 40 : 38} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    ...s.nombre,
+                    fontSize: isMobile ? 13.5 : 14,
+                    lineHeight: 1.3,
+                  }}>
+                    {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
+                  </div>
+
+                  {isMobile ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 3 }}>
+                      {a.cinta_config && (
+                        <span style={{
+                          padding: '2px 7px',
+                          borderRadius: 99,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          background: a.cinta_config.color_hex || 'var(--bg-tertiary)',
+                          color: a.cinta_config.color_texto || 'var(--text-primary)',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {a.cinta_config.nombre_nivel}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+                        {a.horario_config ? a.horario_config.nombre : 'Sin horario'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={s.horario}>
+                      {a.horario_config
+                        ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
+                        : 'Sin horario'}
+                    </div>
+                  )}
                 </div>
-                {a.cinta_config && (
+
+                {!isMobile && a.cinta_config && (
                   <span style={{
                     ...s.badge,
                     background: a.cinta_config.color_hex || 'var(--bg-tertiary)',
@@ -454,16 +567,20 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
                     {a.cinta_config.nombre_nivel}
                   </span>
                 )}
+
                 <div style={{
                   ...s.checkBox,
+                  width: isMobile ? 36 : 30,
+                  height: isMobile ? 36 : 30,
+                  borderRadius: isMobile ? 10 : 9,
                   background: presencias[a.alumno_id] ? 'var(--accent-green)' : 'var(--accent-red)',
                   boxShadow: presencias[a.alumno_id]
                     ? '0 4px 10px rgba(16,185,129,0.35)'
                     : '0 4px 10px rgba(239,68,68,0.25)',
                 }}>
                   {presencias[a.alumno_id]
-                    ? <FiCheck size={14} strokeWidth={3} color="#fff" />
-                    : <FiX size={14} strokeWidth={3} color="#fff" />}
+                    ? <FiCheck size={isMobile ? 16 : 14} strokeWidth={3} color="#fff" />
+                    : <FiX size={isMobile ? 16 : 14} strokeWidth={3} color="#fff" />}
                 </div>
               </div>
             ))
@@ -471,14 +588,34 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
         </div>
 
         {/* Footer */}
-        <div style={s.footer}>
-          <div style={{ pointerEvents: guardando ? 'none' : 'auto', opacity: guardando ? 0.5 : 1 }}>
-            <BotonExportar onExportarExcel={exportarExcel} onExportarPDF={exportarPDF} dropUp={true} align="left" />
+        <div style={{
+          ...s.footer,
+          padding: isMobile ? '12px 14px' : '14px 22px',
+          flexDirection: isMobile ? 'column-reverse' : 'row',
+          gap: isMobile ? 8 : 10,
+        }}>
+          <div style={{
+            pointerEvents: guardando ? 'none' : 'auto',
+            opacity: guardando ? 0.5 : 1,
+            width: isMobile ? '100%' : 'auto',
+          }}>
+            <BotonExportar
+              onExportarExcel={exportarExcel}
+              onExportarPDF={exportarPDF}
+              dropUp={true}
+              align={isMobile ? 'left' : 'left'}
+            />
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{
+            display: 'flex',
+            gap: 8,
+            width: isMobile ? '100%' : 'auto',
+          }}>
             <button
               style={{
                 ...s.btnCancelar,
+                flex: isMobile ? 1 : 'none',
+                height: isMobile ? 40 : 'auto',
                 opacity: guardando ? 0.5 : 1,
                 cursor: guardando ? 'not-allowed' : 'pointer'
               }}
@@ -505,6 +642,8 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
             <button
               style={{
                 ...s.btnGuardar,
+                flex: isMobile ? 1.4 : 'none',
+                height: isMobile ? 40 : 'auto',
                 opacity: guardando ? 0.7 : 1,
                 cursor: guardando ? 'not-allowed' : 'pointer'
               }}

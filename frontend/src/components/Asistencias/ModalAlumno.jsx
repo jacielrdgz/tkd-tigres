@@ -46,13 +46,23 @@ function Avatar({ alumno, size = 56 }) {
 
 const DIAS_SEMANA = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB']
 
-export default function ModalAlumno({ alumno, onCerrar }) {
+export default function ModalAlumno({ alumno, onCerrar, isMobile: propIsMobile }) {
   const [mes, setMes] = useState(() => {
     const hoy = new Date()
     return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
   })
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(false)
+
+  const [localIsMobile, setLocalIsMobile] = useState(() => window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setLocalIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isMobile = typeof propIsMobile === 'boolean' ? propIsMobile : localIsMobile
 
   useEffect(() => {
     if (!alumno) return
@@ -107,24 +117,40 @@ export default function ModalAlumno({ alumno, onCerrar }) {
   const aluData = datos?.alumno ?? alumno
 
   return (
-    <div style={s.overlay} onClick={onCerrar}>
-      <div style={s.modal} onClick={e => e.stopPropagation()}>
+    <div style={{ ...s.overlay, padding: isMobile ? 8 : 16 }} onClick={onCerrar}>
+      <div style={{
+        ...s.modal,
+        maxHeight: isMobile ? '92vh' : 'calc(100vh - 40px)',
+      }} onClick={e => e.stopPropagation()}>
         <button type="button" className="btn-cerrar-circular" style={s.btnCerrar} onClick={onCerrar} aria-label="Cerrar">
           <FiX size={17} />
         </button>
 
         {/* Header */}
-        <div style={s.header}>
-          <Avatar alumno={aluData} size={58} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={s.nombre}>
+        <div style={{
+          ...s.header,
+          padding: isMobile ? '16px 14px 14px' : '24px 24px 20px',
+          gap: isMobile ? 12 : 16,
+        }}>
+          <Avatar alumno={aluData} size={isMobile ? 46 : 58} />
+          <div style={{ flex: 1, minWidth: 0, paddingRight: 32 }}>
+            <h2 style={{
+              ...s.nombre,
+              fontSize: isMobile ? 16 : 20,
+            }}>
               {aluData.nombre} {aluData.apellido_paterno} {aluData.apellido_materno || ''}
             </h2>
-            <div style={s.subinfo}>
+            <div style={{
+              ...s.subinfo,
+              fontSize: isMobile ? 11 : 12,
+            }}>
               {aluData.horario_config ? (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  <FiClock size={12} style={{ color: 'var(--text-muted)' }} />
-                  {`${aluData.horario_config.nombre} (${formatHora(aluData.horario_config.hora_inicio)} - ${formatHora(aluData.horario_config.hora_fin)}) · ${aluData.horario_config.dias || ''}`}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                  <FiClock size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                  <span>
+                    {`${aluData.horario_config.nombre} (${formatHora(aluData.horario_config.hora_inicio)} - ${formatHora(aluData.horario_config.hora_fin)})`}
+                    {aluData.horario_config.dias ? ` · ${aluData.horario_config.dias}` : ''}
+                  </span>
                 </span>
               ) : (
                 'Sin horario'
@@ -136,6 +162,8 @@ export default function ModalAlumno({ alumno, onCerrar }) {
                 background: aluData.cinta_config.color_hex || 'var(--bg-tertiary)',
                 color: aluData.cinta_config.color_texto || 'var(--text-primary)',
                 marginTop: 6,
+                fontSize: isMobile ? 10 : 11,
+                padding: isMobile ? '2px 8px' : '3px 10px',
               }}>
                 {aluData.cinta_config.nombre_nivel}
               </span>
@@ -144,16 +172,24 @@ export default function ModalAlumno({ alumno, onCerrar }) {
         </div>
 
         {/* 4 Mini Stats */}
-        <div style={s.statsGrid}>
+        <div style={{
+          ...s.statsGrid,
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+          gap: isMobile ? 8 : 10,
+          padding: isMobile ? '12px 14px' : '16px 24px',
+        }}>
           {[
             { label: 'Clases del Mes', value: stats?.total ?? '—', color: 'var(--text-primary)' },
             { label: 'Asistió', value: stats?.asistio ?? '—', color: 'var(--accent-green)' },
             { label: 'Faltó', value: stats?.falto ?? '—', color: 'var(--accent-red)' },
             { label: '% Asistencia', value: stats ? `${stats.pct}%` : '—', color: pctColor(stats?.pct) },
           ].map(({ label, value, color }) => (
-            <div key={label} style={s.statCard}>
+            <div key={label} style={{
+              ...s.statCard,
+              padding: isMobile ? '10px 8px' : '12px 8px',
+            }}>
               <span style={s.statLabel}>{label}</span>
-              <span style={{ ...s.statValue, color }}>
+              <span style={{ ...s.statValue, color, fontSize: isMobile ? 19 : 22 }}>
                 {cargando ? <span style={s.skeletonInline} /> : value}
               </span>
             </div>
@@ -161,19 +197,39 @@ export default function ModalAlumno({ alumno, onCerrar }) {
         </div>
 
         {/* Calendario */}
-        <div style={s.calSec}>
-          <div style={s.calHeader}>
-            <span style={s.calTitulo}>{mesLabel}</span>
+        <div style={{
+          ...s.calSec,
+          padding: isMobile ? '12px 14px 18px' : '16px 24px 24px',
+        }}>
+          <div style={{
+            ...s.calHeader,
+            marginBottom: isMobile ? 10 : 14,
+          }}>
+            <span style={{
+              ...s.calTitulo,
+              fontSize: isMobile ? 15 : 16,
+            }}>
+              {mesLabel}
+            </span>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button style={s.btnNav} onClick={() => cambiarMes(-1)}><FiChevronLeft size={16} /></button>
-              <button style={s.btnNav} onClick={() => cambiarMes(1)}><FiChevronRight size={16} /></button>
+              <button style={s.btnNav} onClick={() => cambiarMes(-1)} aria-label="Mes anterior"><FiChevronLeft size={16} /></button>
+              <button style={s.btnNav} onClick={() => cambiarMes(1)} aria-label="Mes siguiente"><FiChevronRight size={16} /></button>
             </div>
           </div>
 
           {/* Días semana */}
-          <div style={s.calGrid}>
+          <div style={{
+            ...s.calGrid,
+            gap: isMobile ? 4 : 5,
+          }}>
             {DIAS_SEMANA.map(d => (
-              <div key={d} style={s.labelDia}>{d}</div>
+              <div key={d} style={{
+                ...s.labelDia,
+                fontSize: isMobile ? 9.5 : 10,
+                paddingBottom: isMobile ? 5 : 8,
+              }}>
+                {d}
+              </div>
             ))}
             {cargando
               ? Array.from({ length: 35 }).map((_, i) => (
@@ -182,10 +238,18 @@ export default function ModalAlumno({ alumno, onCerrar }) {
               : celdas.map((c, i) => {
                 if (!c) return <div key={i} />
                 return (
-                  <div key={i} style={s.celda(c.estado, c.esHoy)} title={c.fecha}>
+                  <div
+                    key={i}
+                    style={{
+                      ...s.celda(c.estado, c.esHoy),
+                      borderRadius: isMobile ? 8 : 10,
+                      fontSize: isMobile ? 12 : 13,
+                    }}
+                    title={c.fecha}
+                  >
                     <span style={s.numDia}>{c.d}</span>
-                    {c.estado === 'asistio' && <FiCheck size={10} strokeWidth={3} />}
-                    {c.estado === 'falto' && <FiX size={10} strokeWidth={3} />}
+                    {c.estado === 'asistio' && <FiCheck size={isMobile ? 9 : 10} strokeWidth={3} />}
+                    {c.estado === 'falto' && <FiX size={isMobile ? 9 : 10} strokeWidth={3} />}
                   </div>
                 )
               })
@@ -193,19 +257,24 @@ export default function ModalAlumno({ alumno, onCerrar }) {
           </div>
 
           {/* Leyenda */}
-          <div style={s.leyenda}>
+          <div style={{
+            ...s.leyenda,
+            gap: isMobile ? 10 : 16,
+            marginTop: isMobile ? 12 : 16,
+            justifyContent: isMobile ? 'center' : 'flex-start',
+          }}>
             {[
               { color: 'var(--accent-green)', bg: 'var(--accent-green-bg)', label: 'Asistió' },
               { color: 'var(--accent-red)', bg: 'var(--accent-red-bg)', label: 'Faltó' },
               { color: 'var(--border-hover)', bg: 'var(--bg-tertiary)', label: 'Sin clase' },
             ].map(({ color, bg, label }) => (
-              <span key={label} style={s.leyendaItem}>
-                <span style={{ ...s.leyendaDot, background: bg, border: `1.5px solid ${color}` }} />
+              <span key={label} style={{ ...s.leyendaItem, fontSize: isMobile ? 11 : 12 }}>
+                <span style={{ ...s.leyendaDot, width: isMobile ? 12 : 14, height: isMobile ? 12 : 14, background: bg, border: `1.5px solid ${color}` }} />
                 {label}
               </span>
             ))}
-            <span style={s.leyendaItem}>
-              <span style={{ ...s.leyendaDot, background: 'transparent', border: '2px solid var(--accent-blue)', boxShadow: '0 0 0 2px rgba(59,130,246,0.2)' }} />
+            <span style={{ ...s.leyendaItem, fontSize: isMobile ? 11 : 12 }}>
+              <span style={{ ...s.leyendaDot, width: isMobile ? 12 : 14, height: isMobile ? 12 : 14, background: 'transparent', border: '2px solid var(--accent-blue)', boxShadow: '0 0 0 2px rgba(59,130,246,0.2)' }} />
               Hoy
             </span>
           </div>
