@@ -39,9 +39,11 @@ function Avatar({ alumno, size = 38 }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)',
+      background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)',
+      color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.34, fontWeight: 700,
+      fontSize: size * 0.36, fontWeight: 700,
+      boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)',
     }}>
       {iniciales}
     </div>
@@ -310,6 +312,22 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
             style={{ ...s.btnCerrar, opacity: guardando ? 0.4 : 1, cursor: guardando ? 'not-allowed' : 'pointer' }}
             onClick={guardando ? undefined : onCerrar}
             disabled={guardando}
+            onMouseEnter={e => {
+              if (!guardando) {
+                e.currentTarget.style.background = 'var(--bg-tertiary)'
+                e.currentTarget.style.borderColor = 'var(--border-hover)'
+                e.currentTarget.style.color = 'var(--text-primary)'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }
+            }}
+            onMouseLeave={e => {
+              if (!guardando) {
+                e.currentTarget.style.background = 'var(--bg-secondary)'
+                e.currentTarget.style.borderColor = 'var(--border)'
+                e.currentTarget.style.color = 'var(--text-muted)'
+                e.currentTarget.style.transform = 'none'
+              }
+            }}
           >
             <FiX size={18} />
           </button>
@@ -347,6 +365,20 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
               }}
               disabled={guardando}
               onClick={guardando ? undefined : marcarTodos}
+              onMouseEnter={e => {
+                if (!guardando) {
+                  e.currentTarget.style.borderColor = 'var(--border-hover)'
+                  e.currentTarget.style.color = 'var(--text-primary)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!guardando) {
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                  e.currentTarget.style.transform = 'none'
+                }
+              }}
             >
               <FiCheck size={13} />
               {filtrados.length > 0 && filtrados.every(a => presencias[a.alumno_id]) ? 'Desmarcar todos' : 'Marcar todos'}
@@ -465,6 +497,21 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
               }}
               onClick={guardando ? undefined : onCerrar}
               disabled={guardando}
+              onMouseEnter={e => {
+                if (!guardando) {
+                  e.currentTarget.style.borderColor = 'var(--border-hover)'
+                  e.currentTarget.style.color = 'var(--text-primary)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!guardando) {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                  e.currentTarget.style.transform = 'none'
+                }
+              }}
             >
               Cancelar
             </button>
@@ -476,6 +523,20 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
               }}
               onClick={guardando ? undefined : guardar}
               disabled={guardando}
+              onMouseEnter={e => {
+                if (!guardando) {
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+                  e.currentTarget.style.filter = 'brightness(1.08)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!guardando) {
+                  e.currentTarget.style.transform = 'none'
+                  e.currentTarget.style.boxShadow = 'none'
+                  e.currentTarget.style.filter = 'none'
+                }
+              }}
             >
               <FiSave size={15} style={guardando ? { animation: 'spin 1s linear infinite' } : {}} />
               <span>{guardando ? 'Guardando…' : 'Guardar Asistencias'}</span>
@@ -542,6 +603,7 @@ const s = {
     border: '1px solid var(--border)', background: 'var(--bg-secondary)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', color: 'var(--text-muted)',
+    transition: 'all 0.2s ease',
   },
   controles: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -561,6 +623,7 @@ const s = {
     color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 600,
     cursor: 'pointer', fontFamily: 'inherit',
     width: 138, flexShrink: 0,
+    transition: 'all 0.2s ease',
   },
   lista: {
     flex: 1, overflowY: 'auto',
@@ -611,13 +674,15 @@ const s = {
     border: '1px solid var(--border)', borderRadius: 10,
     color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600,
     cursor: 'pointer', fontFamily: 'inherit',
+    transition: 'all 0.2s ease',
   },
   btnGuardar: {
     padding: '10px 24px', background: 'var(--accent-blue)',
     border: 'none', borderRadius: 10,
     color: '#fff', fontSize: 13, fontWeight: 700,
     cursor: 'pointer', fontFamily: 'inherit',
-    boxShadow: 'var(--shadow-glow-blue)',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
     display: 'flex', alignItems: 'center', gap: 8,
   },
 }

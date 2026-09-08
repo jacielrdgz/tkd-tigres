@@ -111,12 +111,14 @@ export default function AsistenciasTopbar({
           style={s.btnPrimario}
           onClick={onRegistrar}
           onMouseEnter={e => {
-            e.currentTarget.style.boxShadow = '0 0 30px rgba(59,130,246,0.5)'
             e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+            e.currentTarget.style.filter = 'brightness(1.08)'
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.boxShadow = 'var(--shadow-glow-blue)'
             e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = 'none'
+            e.currentTarget.style.filter = 'none'
           }}
         >
           <FiClipboard size={15} />
@@ -193,8 +195,8 @@ const s = {
     fontSize: '13px',
     fontWeight: '700',
     cursor: 'pointer',
-    transition: 'all 0.15s',
-    boxShadow: 'var(--shadow-glow-blue)',
+    transition: 'all 0.2s ease',
+    boxShadow: 'none',
     fontFamily: 'inherit',
   },
   dropdown: {

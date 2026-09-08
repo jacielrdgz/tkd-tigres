@@ -1693,7 +1693,7 @@ export default function ExamenDetalle() {
                               onChange={() => toggleSeleccionarAlumnoModal(a.id)}
                               style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-blue)', flexShrink: 0 }}
                             />
-                            <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', color: '#ffffff', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 6px rgba(59, 130, 246, 0.25)' }}>
                               {obtenerIniciales(a.nombre, a.apellido_paterno)}
                             </div>
                             <div style={{ minWidth: 0 }}>
@@ -2235,15 +2235,16 @@ const s = {
     width: '38px',
     height: '38px',
     borderRadius: '50%',
-    background: 'var(--accent-blue-bg)',
-    color: 'var(--accent-blue)',
+    background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)',
+    color: '#ffffff',
     fontWeight: '700',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '13px',
     flexShrink: 0,
-    border: '2px solid var(--border)'
+    border: '2px solid var(--border)',
+    boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)',
   },
   badgeCinta: {
     padding: '4px 12px',

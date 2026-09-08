@@ -1694,7 +1694,6 @@ export default function Alumnos() {
               }}>
                 <InfoItem label="ID" value={alumnoVer.id} isMobile={isMobile} />
                 <InfoItem label="F. Nac." value={alumnoVer.fecha_nacimiento} isMobile={isMobile} />
-                <InfoItem label="F. Ingreso" value={alumnoVer.fecha_ingreso || 'No registrada'} isMobile={isMobile} />
                 <InfoItem label="Edad" value={alumnoVer.edad ? `${alumnoVer.edad} años` : '-'} isMobile={isMobile} />
                 <InfoItem label="Cinta" value={alumnoVer.cinta_config?.nombre_nivel || 'Sin cinta'} isMobile={isMobile} />
                 <InfoItem label="Tutor" value={limpiarDato(alumnoVer.nombre_tutor)} isMobile={isMobile} />
@@ -1755,6 +1754,16 @@ export default function Alumnos() {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   style={{ ...s.btnPrimary, padding: '8px 16px', fontSize: '12px' }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+                    e.currentTarget.style.filter = 'brightness(1.08)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none'
+                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.filter = 'none'
+                  }}
                   onClick={() => {
                     setFormManual({
                       grado_anterior_id: historialAlumno.configuracion_cinta_id || '',
@@ -1855,8 +1864,31 @@ export default function Alumnos() {
               </div>
             </div>
             <div style={s.modalFooter}>
-              <button style={s.btnSecondary} onClick={() => setModalManual(false)}>CANCELAR</button>
-              <button style={s.btnPrimary} onClick={guardarHistorialManual}>GUARDAR</button>
+              <button style={s.btnSecondary} onClick={() => setModalManual(false)}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--border-hover)'
+                  e.currentTarget.style.color = 'var(--text-primary)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                  e.currentTarget.style.transform = 'none'
+                }}
+              >CANCELAR</button>
+              <button style={s.btnPrimary} onClick={guardarHistorialManual}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+                  e.currentTarget.style.filter = 'brightness(1.08)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none'
+                  e.currentTarget.style.boxShadow = 'none'
+                  e.currentTarget.style.filter = 'none'
+                }}
+              >GUARDAR</button>
             </div>
           </div>
         </div>
@@ -1930,9 +1962,9 @@ export default function Alumnos() {
                   />
                 ) : (
                   <div style={s.fotoPlaceholder}>
-                    <FiCamera size={26} color="var(--accent-blue)" style={{ marginBottom: '4px' }} />
-                    <span style={{ fontSize: '11px', color: '#60a5fa', fontWeight: '600' }}>
-                      {form.nombre ? 'Cambiar foto' : 'Subir foto'}
+                    <FiCamera size={26} color="#ffffff" style={{ marginBottom: '4px' }} />
+                    <span style={{ fontSize: '11px', color: '#ffffff', fontWeight: '700' }}>
+                      Subir foto
                     </span>
                   </div>
                 )}
@@ -2097,13 +2129,15 @@ export default function Alumnos() {
                 onMouseEnter={e => {
                   if (!guardando) {
                     e.currentTarget.style.transform = 'translateY(-1px)'
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.45)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)'
+                    e.currentTarget.style.filter = 'brightness(1.08)'
                   }
                 }}
                 onMouseLeave={e => {
                   if (!guardando) {
                     e.currentTarget.style.transform = 'none'
-                    e.currentTarget.style.boxShadow = 'var(--shadow-glow-blue)'
+                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.filter = 'none'
                   }
                 }}
               >
@@ -2122,11 +2156,11 @@ function InfoItem({ label, value, isMobile }) {
     <div style={s.infoItem}>
       <span style={{
         ...s.infoLabel,
-        ...(isMobile ? { minWidth: '80px', fontSize: '13px' } : {})
+        ...(isMobile ? { width: '70px', minWidth: '70px', fontSize: '13px' } : {})
       }}>{label}:</span>
       <span style={{
         ...s.infoValue,
-        ...(isMobile ? { fontSize: '13px', textAlign: 'right' } : {})
+        ...(isMobile ? { fontSize: '13px' } : {})
       }}>{value}</span>
     </div>
   )
@@ -2703,7 +2737,7 @@ const s = {
   td: { padding: '10px 16px', fontSize: '14px', color: 'var(--text-secondary)', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', },
   tdCenter: { padding: '32px', textAlign: 'center', color: 'var(--text-muted)' },
   fotoTabla: { width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' },
-  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: '700', color: 'var(--accent-blue)' },
+  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: '#fff', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)' },
   nombreNom: { fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' },
   emailSub: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' },
   cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', textAlign: 'center', minWidth: '110px', verticalAlign: 'middle' },
@@ -2729,15 +2763,15 @@ const s = {
     boxShadow: 'none',
     transition: 'all 0.2s ease',
   },
-  btnPrimary: { background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s' },
-  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
+  btnPrimary: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontSize: '13.5px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif', letterSpacing: '0.2px', fontWeight: '700', cursor: 'pointer', boxShadow: 'none', transition: 'all 0.2s ease' },
+  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontSize: '13.5px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif', letterSpacing: '0.2px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s ease' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
 
   // MODAL HISTORIAL (Estilo Pagos.jsx)
   modalHistorial: { background: 'var(--bg-secondary)', borderRadius: '16px', width: '580px', maxWidth: '95vw', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' },
   modalHistorialHeader: { padding: '24px 28px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' },
   avatarSm: { width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border)', background: 'var(--bg-primary)', flexShrink: 0 },
-  avatarInicialSm: { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '800' },
+  avatarInicialSm: { width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '800' },
   drawerNombre: { fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' },
   drawerSub: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' },
   modalHistorialContent: { padding: '28px', maxHeight: '70vh', overflowY: 'auto', background: 'var(--bg-secondary)' },
@@ -2760,12 +2794,12 @@ const s = {
   cardBody: { padding: '24px 28px', display: 'flex', gap: '20px', alignItems: 'flex-start' },
   avatarBox: { width: '170px', height: '210px', flexShrink: 0, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: '12px' },
   avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  avatarInicialesBox: { width: '100%', height: '100%', background: 'var(--accent-blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  avatarIniciales: { fontSize: '48px', fontWeight: '700', color: 'var(--accent-blue)' },
+  avatarInicialesBox: { width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  avatarIniciales: { fontSize: '48px', fontWeight: '700', color: '#ffffff' },
   cardInfo: { flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 },
-  infoItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '6px' },
-  infoLabel: { fontWeight: '700', color: 'var(--text-muted)', fontSize: '13.5px', textAlign: 'left', minWidth: '85px', flexShrink: 0 },
-  infoValue: { color: 'var(--text-primary)', fontSize: '13.5px', fontWeight: '500', textAlign: 'right', wordBreak: 'break-word' },
+  infoItem: { display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--border)', paddingBottom: '7px', paddingTop: '4px' },
+  infoLabel: { fontWeight: '700', color: 'var(--text-muted)', fontSize: '13.5px', textAlign: 'right', width: '75px', minWidth: '75px', flexShrink: 0 },
+  infoValue: { color: 'var(--text-primary)', fontSize: '13.5px', fontWeight: '700', textAlign: 'left', flex: 1, wordBreak: 'break-word' },
   cardFooter: { padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '12px', background: 'var(--bg-tertiary)', flexWrap: 'wrap' },
   btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '9px 24px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
   btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '9px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
@@ -2791,7 +2825,7 @@ const s = {
     transition: 'all 0.15s ease',
   },
   fotoUploadArea: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '12px', gap: '5px' },
-  fotoPreviewBox: { width: '84px', height: '84px', borderRadius: '50%', border: '1.5px solid rgba(59, 130, 246, 0.25)', cursor: 'pointer', overflow: 'hidden', background: 'rgba(59, 130, 246, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 },
+  fotoPreviewBox: { width: '84px', height: '84px', borderRadius: '50%', border: '2px solid rgba(255, 255, 255, 0.15)', cursor: 'pointer', overflow: 'hidden', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0, boxShadow: '0 8px 16px -4px rgba(0, 0, 0, 0.3)' },
   fotoPreviewImg: { width: '100%', height: '100%', objectFit: 'cover' },
   fotoPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
   btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '11px', cursor: 'pointer', fontWeight: '600' },
@@ -2849,8 +2883,8 @@ const s = {
   avatarInicialesMobile: {
     width: '100%',
     height: '100%',
-    background: 'rgba(59, 130, 246, 0.15)',
-    color: '#3b82f6',
+    background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)',
+    color: '#ffffff',
     fontWeight: '800',
     fontSize: '15px',
     display: 'flex',
