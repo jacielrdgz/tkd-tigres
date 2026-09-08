@@ -2244,7 +2244,7 @@ const s = {
     fontSize: '13px',
     flexShrink: 0,
     border: '2px solid var(--border)',
-    boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)',
+    boxShadow: 'none',
   },
   badgeCinta: {
     padding: '4px 12px',

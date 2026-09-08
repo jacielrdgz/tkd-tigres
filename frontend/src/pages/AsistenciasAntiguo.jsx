@@ -906,7 +906,7 @@ const s = {
   td: { padding: '12px 16px', fontSize: '14px', color: 'var(--text-secondary)', textAlign: 'center' },
   tdCenter: { padding: '60px', textAlign: 'center', color: 'var(--text-muted)' },
   fotoTabla: { width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' },
-  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#fff', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)' },
+  fotoVacia: { width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#fff', boxShadow: 'none' },
   nombreNom: { fontWeight: '600', color: 'var(--text-primary)' },
   cinta: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', display: 'inline-block', minWidth: '100px' },
   badge: { padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', },

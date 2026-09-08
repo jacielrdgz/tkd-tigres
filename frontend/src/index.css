@@ -521,6 +521,40 @@ body {
 .gap-lg { gap: 24px; }
 
 /* ============================================================
+   Botón de Cerrar Circular Normalizado (Toda la Aplicación)
+   ============================================================ */
+.btn-cerrar-circular,
+button.btn-cerrar-circular {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  max-width: 34px !important;
+  max-height: 34px !important;
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-muted) !important;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-cerrar-circular:hover,
+button.btn-cerrar-circular:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #ef4444 !important;
+  transform: rotate(90deg) !important;
+}
+
+/* ============================================================
    Responsive Usability Overrides (Celular / Tablet)
    ============================================================ */
 

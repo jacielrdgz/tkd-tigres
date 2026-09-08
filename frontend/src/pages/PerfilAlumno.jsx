@@ -1,11 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { FiX, FiCamera, FiChevronDown } from 'react-icons/fi'
+import { FiX, FiCamera, FiChevronDown, FiEye } from 'react-icons/fi'
+import { FaWhatsapp } from 'react-icons/fa'
+import { toast } from 'react-toastify'
 import api from '../api/axios'
 import './PerfilAlumno.css'
 import Swal from 'sweetalert2'
 import ModalAlumno from '../components/Asistencias/ModalAlumno'
+import ModalFotoPreview from '../components/Common/ModalFotoPreview'
 import { invalidateCache } from '../utils/cacheManager'
 
 // Helper para limpiar strings nulos/vacíos
@@ -72,7 +75,7 @@ const editModalStyles = {
     transition: 'all 0.15s ease',
   },
   fotoUploadArea: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '12px', gap: '5px' },
-  fotoPreviewBox: { width: '84px', height: '84px', borderRadius: '50%', border: '2px solid rgba(255, 255, 255, 0.15)', cursor: 'pointer', overflow: 'hidden', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0, boxShadow: '0 8px 16px -4px rgba(0, 0, 0, 0.3)' },
+  fotoPreviewBox: { width: '84px', height: '84px', borderRadius: '50%', border: '2px dashed var(--border)', cursor: 'pointer', overflow: 'hidden', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0, boxShadow: 'none' },
   fotoPreviewImg: { width: '100%', height: '100%', objectFit: 'cover' },
   fotoPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
   btnQuitarFoto: { background: 'none', border: 'none', color: 'var(--accent-red)', fontSize: '11px', cursor: 'pointer', fontWeight: '600' },
@@ -499,9 +502,26 @@ function FormDropdown({ label, required, options = [], value, onChange, placehol
 const modalStyles = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
   modalCard: { background: 'var(--bg-secondary)', borderRadius: '16px', width: '580px', maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto', border: '1px solid var(--border)', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)', boxSizing: 'border-box' },
-  cardHeader: { background: 'var(--bg-tertiary)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
+  cardHeader: { padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
   cardTitle: { fontSize: '16px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-primary)', margin: 0, paddingRight: '8px', lineHeight: 1.3 },
-  btnCerrarWhite: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
+  btnCerrarCircular: {
+    width: '34px',
+    height: '34px',
+    minWidth: '34px',
+    minHeight: '34px',
+    borderRadius: '50%',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-muted)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    flexShrink: 0,
+    aspectRatio: '1 / 1',
+    padding: 0,
+    transition: 'all 0.15s ease',
+  },
   cardBody: { padding: '24px 28px', display: 'flex', gap: '20px', alignItems: 'flex-start', textAlign: 'left' },
   avatarBox: { width: '170px', height: '210px', flexShrink: 0, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: '12px' },
   avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
@@ -511,9 +531,43 @@ const modalStyles = {
   infoItem: { display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--border)', paddingBottom: '7px', paddingTop: '4px' },
   infoLabel: { fontWeight: '700', color: 'var(--text-muted)', fontSize: '13.5px', textAlign: 'right', width: '75px', minWidth: '75px', flexShrink: 0 },
   infoValue: { color: 'var(--text-primary)', fontSize: '13.5px', fontWeight: '700', textAlign: 'left', flex: 1, wordBreak: 'break-word' },
-  cardFooter: { padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '12px', background: 'var(--bg-tertiary)', flexWrap: 'wrap' },
-  btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '9px 24px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
-  btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '9px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
+  cardFooter: { padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', flexWrap: 'wrap' },
+  btnAceptar: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-secondary)',
+    padding: '10px 24px',
+    borderRadius: '10px',
+    fontWeight: '600',
+    fontSize: '13px',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    transition: 'all 0.2s ease',
+  },
+  btnWhatsapp: {
+    background: 'linear-gradient(135deg, #25D366 0%, #1ebd5a 100%)',
+    color: '#ffffff',
+    border: 'none',
+    padding: '10px 24px',
+    borderRadius: '10px',
+    fontWeight: '700',
+    fontSize: '13px',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
+  },
 }
 
 function InfoItem({ label, value, isMobile }) {
@@ -538,6 +592,9 @@ export default function PerfilAlumno() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [verFotoModal, setVerFotoModal] = useState(false)
+  const [avatarHover, setAvatarHover] = useState(false)
+  const [subiendoFotoDirecta, setSubiendoFotoDirecta] = useState(false)
+  const avatarInputDirectRef = useRef(null)
   const [showCredencialModal, setShowCredencialModal] = useState(false)
   const [showAsistenciasModal, setShowAsistenciasModal] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
@@ -629,6 +686,34 @@ export default function PerfilAlumno() {
     setFotoFile(file)
     setFotoPreview(URL.createObjectURL(file))
     setEliminarFoto(false)
+  }
+
+  const handleCambiarFotoDirecta = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !alumno) return
+    try {
+      setSubiendoFotoDirecta(true)
+      const formData = new FormData()
+      formData.append('_method', 'PUT')
+      formData.append('foto', file)
+      const res = await api.post(`/alumnos/${alumno.id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      const updatedAlumno = res.data?.alumno || res.data?.data
+      const nuevaFotoUrl = updatedAlumno?.foto_url ? updatedAlumno.foto_url : URL.createObjectURL(file)
+      setData(prev => prev ? ({
+        ...prev,
+        alumno: { ...prev.alumno, foto_url: nuevaFotoUrl, foto: 'updated' }
+      }) : prev)
+      invalidateCache('alumnos_search')
+      toast.success('Foto actualizada con éxito')
+    } catch (err) {
+      console.error('Error al actualizar foto:', err)
+      toast.error('Error al subir la nueva foto')
+    } finally {
+      setSubiendoFotoDirecta(false)
+      if (e.target) e.target.value = ''
+    }
   }
 
   const validar = () => {
@@ -865,8 +950,15 @@ export default function PerfilAlumno() {
         <div className="perfil-header-flex">
           <div 
             className="perfil-avatar-container"
-            style={{ cursor: tieneFoto(alumno.foto) ? 'pointer' : 'default' }}
-            onClick={() => { if (tieneFoto(alumno.foto)) setVerFotoModal(true) }}
+            style={{
+              cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+            title="Ver foto ampliada"
+            onMouseEnter={() => setAvatarHover(true)}
+            onMouseLeave={() => setAvatarHover(false)}
+            onClick={() => setVerFotoModal(true)}
           >
             {tieneFoto(alumno.foto) ? (
               <img 
@@ -889,6 +981,22 @@ export default function PerfilAlumno() {
             }}>
               {obtenerIniciales(alumno.nombre, alumno.apellido_paterno)}
             </div>
+            {/* Overlay con icono de ver foto (ojo) como en el logo */}
+            {avatarHover && (
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(0, 0, 0, 0.55)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                borderRadius: '50%',
+                transition: 'opacity 0.15s ease',
+              }}>
+                <FiEye size={22} color="#fff" />
+              </div>
+            )}
           </div>
           <div className="perfil-header-info">
             <div className="perfil-header-title-flex">
@@ -1331,18 +1439,28 @@ export default function PerfilAlumno() {
         </div>
       </div>
 
-      {/* Lightbox Modal de Foto de Perfil */}
+      {/* ── MODAL FOTO DE PERFIL AMPLIADA ── */}
       {verFotoModal && (
-        <div 
-          className="perfil-lightbox-overlay" 
-          onClick={() => setVerFotoModal(false)}
-        >
-          <div className="perfil-lightbox-content" onClick={e => e.stopPropagation()}>
-            <button className="perfil-lightbox-close" onClick={() => setVerFotoModal(false)}>✕</button>
-            <img src={alumno.foto_url} alt={alumno.nombre} className="perfil-lightbox-img" />
-          </div>
-        </div>
+        <ModalFotoPreview
+          isOpen={verFotoModal}
+          onClose={() => setVerFotoModal(false)}
+          titulo={`${alumno.nombre} ${alumno.apellido_paterno} ${alumno.apellido_materno || ''}`.trim()}
+          url={tieneFoto(alumno.foto) ? alumno.foto_url : null}
+          isAvatar={true}
+          iniciales={obtenerIniciales(alumno.nombre, alumno.apellido_paterno)}
+          onCambiarFotoClick={() => avatarInputDirectRef.current?.click()}
+          subiendo={subiendoFotoDirecta}
+        />
       )}
+
+      {/* Input de archivo oculto para cambiar foto desde el modal */}
+      <input
+        ref={avatarInputDirectRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        style={{ display: 'none' }}
+        onChange={handleCambiarFotoDirecta}
+      />
 
       {/* Modal Credencial de Alumno */}
       {showCredencialModal && (
@@ -1352,7 +1470,27 @@ export default function PerfilAlumno() {
               <h3 style={modalStyles.cardTitle}>
                 {alumno.nombre} {alumno.apellido_paterno} {alumno.apellido_materno || ''}
               </h3>
-              <button style={modalStyles.btnCerrarWhite} onClick={() => setShowCredencialModal(false)}>✕</button>
+              <button
+                type="button"
+                className="btn-cerrar-circular"
+                style={modalStyles.btnCerrarCircular}
+                onClick={() => setShowCredencialModal(false)}
+                aria-label="Cerrar modal"
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                  e.currentTarget.style.color = 'var(--accent-red)'
+                  e.currentTarget.style.transform = 'rotate(90deg)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-muted)'
+                  e.currentTarget.style.transform = 'none'
+                }}
+              >
+                <FiX size={17} />
+              </button>
             </div>
             <div style={{
               ...modalStyles.cardBody,
@@ -1400,28 +1538,48 @@ export default function PerfilAlumno() {
               ...modalStyles.cardFooter,
               ...(isMobile ? { padding: '14px 16px', gap: '10px' } : {})
             }}>
-              <a
-                href={'https://wa.me/52' + alumno.telefono_tutor?.replace(/\s+/g, '')}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  ...modalStyles.btnWhatsapp,
-                  ...(isMobile ? { flex: 1, justifyContent: 'center', padding: '9px 12px' } : {})
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '6px' }}>
-                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.185-.573c.948.517 2.011.808 3.146.809 3.181 0 5.767-2.584 5.768-5.764 0-3.18-2.586-5.763-5.768-5.763zm4.52 8.161c-.199.557-1.162 1.058-1.597 1.115-.41.054-.935.086-1.503-.099-.345-.113-.775-.262-1.328-.489-2.315-.953-3.82-3.308-3.936-3.461-.116-.155-.945-1.258-.945-2.399 0-1.141.594-1.701.806-1.933.211-.231.462-.29.616-.29.154 0 .308.001.442.008.14.007.33-.053.516.39.186.444.636 1.547.692 1.659.056.111.093.242.019.39-.074.148-.112.241-.223.37-.111.13-.233.29-.333.389-.111.111-.228.232-.098.455.13.223.577.95 1.24 1.54.853.759 1.567.994 1.79.1.223-.112.455-.228.678-.541.222-.314.185-.537.408-.65s.445-.074.743.074c.297.149 1.874.883 2.196 1.043.322.16.537.241.616.37.079.13.079.752-.12 1.309z" />
-                </svg>
-                WHATSAPP
-              </a>
+              {alumno.telefono_tutor && (
+                <a
+                  href={'https://wa.me/52' + alumno.telefono_tutor?.replace(/\s+/g, '')}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    ...modalStyles.btnWhatsapp,
+                    ...(isMobile ? { flex: 1, justifyContent: 'center', padding: '9px 12px' } : {})
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                    e.currentTarget.style.filter = 'brightness(1.08)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none'
+                    e.currentTarget.style.filter = 'none'
+                  }}
+                >
+                  <FaWhatsapp size={18} />
+                  <span>WhatsApp</span>
+                </a>
+              )}
               <button
                 style={{
                   ...modalStyles.btnAceptar,
                   ...(isMobile ? { flex: 1, justifyContent: 'center', padding: '9px 12px' } : {})
                 }}
                 onClick={() => setShowCredencialModal(false)}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)'
+                  e.currentTarget.style.color = '#ffffff'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-secondary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                  e.currentTarget.style.transform = 'none'
+                }}
               >
-                CERRAR
+                Cerrar
               </button>
             </div>
           </div>
@@ -1490,9 +1648,28 @@ export default function PerfilAlumno() {
 
             <div style={editModalStyles.fotoUploadArea}>
               <div
-                style={editModalStyles.fotoPreviewBox}
+                style={{
+                  ...editModalStyles.fotoPreviewBox,
+                  border: fotoPreview ? '2px solid var(--border)' : '2px dashed var(--border)',
+                }}
                 onClick={() => fileRef.current.click()}
                 title="Toca para seleccionar foto"
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'
+                  const icon = e.currentTarget.querySelector('.foto-cam-icon')
+                  if (icon) icon.style.color = 'var(--accent-blue)'
+                  const text = e.currentTarget.querySelector('.foto-cam-text')
+                  if (text) text.style.color = 'var(--accent-blue)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = fotoPreview ? 'var(--border)' : 'var(--border)'
+                  e.currentTarget.style.background = 'var(--bg-primary)'
+                  const icon = e.currentTarget.querySelector('.foto-cam-icon')
+                  if (icon) icon.style.color = 'var(--text-muted)'
+                  const text = e.currentTarget.querySelector('.foto-cam-text')
+                  if (text) text.style.color = 'var(--text-muted)'
+                }}
               >
                 {fotoPreview ? (
                   <img
@@ -1503,8 +1680,8 @@ export default function PerfilAlumno() {
                   />
                 ) : (
                   <div style={editModalStyles.fotoPlaceholder}>
-                    <FiCamera size={26} color="#ffffff" style={{ marginBottom: '4px' }} />
-                    <span style={{ fontSize: '11px', color: '#ffffff', fontWeight: '700' }}>
+                    <FiCamera className="foto-cam-icon" size={24} color="var(--text-muted)" style={{ marginBottom: '4px', transition: 'color 0.2s' }} />
+                    <span className="foto-cam-text" style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', transition: 'color 0.2s' }}>
                       Subir foto
                     </span>
                   </div>

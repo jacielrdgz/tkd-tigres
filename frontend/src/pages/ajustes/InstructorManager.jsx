@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
-import { FiUser, FiCamera, FiUserPlus } from 'react-icons/fi'
+import { FiUser, FiCamera, FiUserPlus, FiX } from 'react-icons/fi'
+import { FaWhatsapp } from 'react-icons/fa'
 
 const formatFechaNatural = (fecha) => {
   if (!fecha) return '-'
@@ -13,9 +14,26 @@ const formatFechaNatural = (fecha) => {
 const modalCredencialStyles = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
   modalCard: { background: 'var(--bg-secondary)', borderRadius: '16px', width: '580px', maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto', border: '1px solid var(--border)', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)', boxSizing: 'border-box' },
-  cardHeader: { background: 'var(--bg-tertiary)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
+  cardHeader: { padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' },
   cardTitle: { fontSize: '16px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-primary)', margin: 0, paddingRight: '8px', lineHeight: 1.3 },
-  btnCerrarWhite: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' },
+  btnCerrarCircular: {
+    width: '34px',
+    height: '34px',
+    minWidth: '34px',
+    minHeight: '34px',
+    borderRadius: '50%',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-muted)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    flexShrink: 0,
+    aspectRatio: '1 / 1',
+    padding: 0,
+    transition: 'all 0.15s ease',
+  },
   cardBody: { padding: '24px 28px', display: 'flex', gap: '20px', alignItems: 'flex-start', textAlign: 'left' },
   avatarBox: { width: '170px', height: '210px', flexShrink: 0, border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: '12px' },
   avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
@@ -25,10 +43,60 @@ const modalCredencialStyles = {
   infoItem: { display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--border)', paddingBottom: '7px', paddingTop: '4px' },
   infoLabel: { fontWeight: '700', color: 'var(--text-muted)', fontSize: '13.5px', textAlign: 'right', width: '75px', minWidth: '75px', flexShrink: 0 },
   infoValue: { color: 'var(--text-primary)', fontSize: '13.5px', fontWeight: '700', textAlign: 'left', flex: 1, wordBreak: 'break-word' },
-  cardFooter: { padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: '12px', background: 'var(--bg-tertiary)', flexWrap: 'wrap' },
-  btnAceptar: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '9px 24px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
-  btnImprimir: { background: 'var(--accent-blue)', color: '#fff', border: 'none', padding: '9px 24px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
-  btnWhatsapp: { border: '1px solid var(--accent-green)', color: 'var(--accent-green)', background: 'var(--accent-green-bg)', padding: '9px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' },
+  cardFooter: { padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', flexWrap: 'wrap' },
+  btnAceptar: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-secondary)',
+    padding: '10px 24px',
+    borderRadius: '10px',
+    fontWeight: '600',
+    fontSize: '13px',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    transition: 'all 0.2s ease',
+  },
+  btnImprimir: {
+    background: 'var(--accent-blue)',
+    color: '#fff',
+    border: 'none',
+    padding: '10px 24px',
+    borderRadius: '10px',
+    fontWeight: '700',
+    fontSize: '13px',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    transition: 'all 0.2s ease',
+  },
+  btnWhatsapp: {
+    background: 'linear-gradient(135deg, #25D366 0%, #1ebd5a 100%)',
+    color: '#ffffff',
+    border: 'none',
+    padding: '10px 24px',
+    borderRadius: '10px',
+    fontWeight: '700',
+    fontSize: '13px',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    letterSpacing: '0.2px',
+    textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.2s ease',
+  },
 }
 
 export default function InstructorManager() {
@@ -446,7 +514,27 @@ export default function InstructorManager() {
               <h3 style={modalCredencialStyles.cardTitle}>
                 {selected.nombre} {selected.apellido_paterno} {selected.apellido_materno || ''}
               </h3>
-              <button style={modalCredencialStyles.btnCerrarWhite} onClick={() => setShowCredencial(false)}>✕</button>
+              <button
+                type="button"
+                className="btn-cerrar-circular"
+                style={modalCredencialStyles.btnCerrarCircular}
+                onClick={() => setShowCredencial(false)}
+                aria-label="Cerrar modal"
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                  e.currentTarget.style.color = 'var(--accent-red)'
+                  e.currentTarget.style.transform = 'rotate(90deg)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-muted)'
+                  e.currentTarget.style.transform = 'none'
+                }}
+              >
+                <FiX size={17} />
+              </button>
             </div>
             <div style={{
               ...modalCredencialStyles.cardBody,
@@ -518,11 +606,17 @@ export default function InstructorManager() {
                     ...modalCredencialStyles.btnWhatsapp,
                     ...(isMobile ? { flex: 1, justifyContent: 'center', padding: '9px 12px' } : {})
                   }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                    e.currentTarget.style.filter = 'brightness(1.08)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none'
+                    e.currentTarget.style.filter = 'none'
+                  }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '6px' }}>
-                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.185-.573c.948.517 2.011.808 3.146.809 3.181 0 5.767-2.584 5.768-5.764 0-3.18-2.586-5.763-5.768-5.763zm4.52 8.161c-.199.557-1.162 1.058-1.597 1.115-.41.054-.935.086-1.503-.099-.345-.113-.775-.262-1.328-.489-2.315-.953-3.82-3.308-3.936-3.461-.116-.155-.945-1.258-.945-2.399 0-1.141.594-1.701.806-1.933.211-.231.462-.29.616-.29.154 0 .308.001.442.008.14.007.33-.053.516.39.186.444.636 1.547.692 1.659.056.111.093.242.019.39-.074.148-.112.241-.223.37-.111.13-.233.29-.333.389-.111.111-.228.232-.098.455.13.223.577.95 1.24 1.54.853.759 1.567.994 1.79.1.223-.112.455-.228.678-.541.222-.314.185-.537.408-.65s.445-.074.743.074c.297.149 1.874.883 2.196 1.043.322.16.537.241.616.37.079.13.079.752-.12 1.309z" />
-                  </svg>
-                  WHATSAPP
+                  <FaWhatsapp size={18} />
+                  <span>WhatsApp</span>
                 </a>
               )}
               <button
@@ -531,8 +625,18 @@ export default function InstructorManager() {
                   ...(isMobile ? { flex: 1, justifyContent: 'center', padding: '9px 12px' } : {})
                 }}
                 onClick={() => window.print()}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)'
+                  e.currentTarget.style.filter = 'brightness(1.08)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none'
+                  e.currentTarget.style.boxShadow = 'none'
+                  e.currentTarget.style.filter = 'none'
+                }}
               >
-                IMPRIMIR
+                Imprimir
               </button>
               <button
                 style={{
@@ -540,8 +644,20 @@ export default function InstructorManager() {
                   ...(isMobile ? { flex: 1, justifyContent: 'center', padding: '9px 12px' } : {})
                 }}
                 onClick={() => setShowCredencial(false)}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)'
+                  e.currentTarget.style.color = '#ffffff'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--bg-secondary)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                  e.currentTarget.style.transform = 'none'
+                }}
               >
-                CERRAR
+                Cerrar
               </button>
             </div>
           </div>

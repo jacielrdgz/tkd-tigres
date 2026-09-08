@@ -109,8 +109,8 @@ export default function ModalAlumno({ alumno, onCerrar }) {
   return (
     <div style={s.overlay} onClick={onCerrar}>
       <div style={s.modal} onClick={e => e.stopPropagation()}>
-        <button style={s.btnCerrar} onClick={onCerrar} aria-label="Cerrar">
-          <FiX size={18} />
+        <button type="button" className="btn-cerrar-circular" style={s.btnCerrar} onClick={onCerrar} aria-label="Cerrar">
+          <FiX size={17} />
         </button>
 
         {/* Header */}
@@ -244,12 +244,12 @@ const s = {
   },
   btnCerrar: {
     position: 'absolute', top: 14, right: 14,
-    width: 34, height: 34, borderRadius: 8,
+    width: 34, height: 34, borderRadius: '50%',
     border: '1px solid var(--border)',
-    background: 'var(--bg-primary)',
+    background: 'var(--bg-tertiary)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', color: 'var(--text-muted)',
-    zIndex: 10, transition: 'all 0.15s',
+    zIndex: 10,
   },
   header: {
     display: 'flex', alignItems: 'flex-start', gap: 16,

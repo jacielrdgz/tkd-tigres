@@ -373,7 +373,7 @@ const s = {
   card: { background: 'var(--bg-secondary)', borderRadius: '24px', border: '1px solid var(--border)', padding: '32px', boxShadow: 'var(--shadow-sm)', animation: 'fadeIn 0.4s ease-out' },
   layout: { display: 'flex', gap: '48px', flexWrap: 'wrap' },
   photoSection: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', minWidth: '240px' },
-  photoFrame: { width: '220px', height: '220px', borderRadius: '32px', background: 'var(--bg-primary)', border: '2px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', transition: '0.3s', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.05)' },
+  photoFrame: { width: '220px', height: '220px', borderRadius: '32px', background: 'var(--bg-primary)', border: '2px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', transition: '0.3s', boxShadow: 'none' },
   logoImg: { width: '100%', height: '100%', objectFit: 'contain', padding: '10px' },
   logoPlaceholder: { fontSize: '64px' },
   btnUpload: { position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '12px', fontSize: '12px', fontWeight: '800', textAlign: 'center', cursor: 'pointer', backdropFilter: 'blur(8px)', transition: '0.2s' },

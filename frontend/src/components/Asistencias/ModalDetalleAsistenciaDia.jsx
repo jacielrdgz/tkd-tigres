@@ -103,10 +103,10 @@ const ModalDetalleAsistenciaDia = ({ estaAbierto, alCerrar, fecha, alumnos, hist
     },
     btnClose: {
       position: 'absolute',
-      top: '24px',
-      right: '24px',
-      width: '36px',
-      height: '36px',
+      top: '16px',
+      right: '16px',
+      width: '34px',
+      height: '34px',
       borderRadius: '50%',
       background: 'var(--bg-tertiary)',
       border: '1px solid var(--border)',
@@ -115,7 +115,7 @@ const ModalDetalleAsistenciaDia = ({ estaAbierto, alCerrar, fecha, alumnos, hist
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      transition: 'all 0.2s',
+      zIndex: 10,
     },
     scrollArea: {
       padding: '24px',
@@ -181,8 +181,8 @@ const ModalDetalleAsistenciaDia = ({ estaAbierto, alCerrar, fecha, alumnos, hist
             <h2 style={s.title}>{fechaFormateada}</h2>
             <span style={s.subtitle}>{mesAnio}</span>
           </div>
-          <button style={s.btnClose} onClick={alCerrar} className="btn-close-hover">
-            <FiX size={20} />
+          <button type="button" className="btn-cerrar-circular" style={s.btnClose} onClick={alCerrar} aria-label="Cerrar">
+            <FiX size={17} />
           </button>
         </div>
 
@@ -214,11 +214,7 @@ const ModalDetalleAsistenciaDia = ({ estaAbierto, alCerrar, fecha, alumnos, hist
           from { opacity: 0; transform: scale(0.9) translateY(20px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .btn-close-hover:hover {
-          background-color: var(--accent-red) !important;
-          color: #fff !important;
-          transform: rotate(90deg);
-        }
+
         .student-row-hover:hover {
           transform: translateX(4px);
           background-color: var(--bg-tertiary) !important;

@@ -43,7 +43,7 @@ function Avatar({ alumno, size = 38 }) {
       color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.36, fontWeight: 700,
-      boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)',
+      boxShadow: 'none',
     }}>
       {iniciales}
     </div>
@@ -309,27 +309,14 @@ export default function ModalRegistrar({ onCerrar, onGuardado }) {
             <p style={s.subtitulo}>Pase de lista diario</p>
           </div>
           <button
+            type="button"
+            className="btn-cerrar-circular"
             style={{ ...s.btnCerrar, opacity: guardando ? 0.4 : 1, cursor: guardando ? 'not-allowed' : 'pointer' }}
             onClick={guardando ? undefined : onCerrar}
             disabled={guardando}
-            onMouseEnter={e => {
-              if (!guardando) {
-                e.currentTarget.style.background = 'var(--bg-tertiary)'
-                e.currentTarget.style.borderColor = 'var(--border-hover)'
-                e.currentTarget.style.color = 'var(--text-primary)'
-                e.currentTarget.style.transform = 'translateY(-1px)'
-              }
-            }}
-            onMouseLeave={e => {
-              if (!guardando) {
-                e.currentTarget.style.background = 'var(--bg-secondary)'
-                e.currentTarget.style.borderColor = 'var(--border)'
-                e.currentTarget.style.color = 'var(--text-muted)'
-                e.currentTarget.style.transform = 'none'
-              }
-            }}
+            aria-label="Cerrar"
           >
-            <FiX size={18} />
+            <FiX size={17} />
           </button>
         </div>
 
@@ -577,7 +564,7 @@ const s = {
   modal: {
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border)',
-    borderRadius: 20, width: '100%', maxWidth: 580,
+    borderRadius: 20, width: '100%', maxWidth: 640,
     maxHeight: 'calc(100vh - 40px)',
     display: 'flex', flexDirection: 'column',
     animation: 'modalEnterUp 0.3s cubic-bezier(0.34,1.56,0.64,1)',
@@ -587,7 +574,6 @@ const s = {
     display: 'flex', alignItems: 'center', gap: 14,
     padding: '20px 22px 16px',
     borderBottom: '1px solid var(--border)',
-    background: 'linear-gradient(to right, var(--bg-tertiary), transparent)',
     position: 'relative', flexShrink: 0,
   },
   iconBox: {
@@ -599,11 +585,11 @@ const s = {
   subtitulo: { fontSize: 12, color: 'var(--text-muted)', margin: 0 },
   btnCerrar: {
     position: 'absolute', top: 14, right: 14,
-    width: 32, height: 32, borderRadius: 8,
-    border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+    width: 34, height: 34, borderRadius: '50%',
+    border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', color: 'var(--text-muted)',
-    transition: 'all 0.2s ease',
+    cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0,
+    zIndex: 10,
   },
   controles: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',

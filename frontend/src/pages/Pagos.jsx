@@ -1033,12 +1033,12 @@ export default function Pagos() {
                 <div style={{ ...s.derecha, width: isMobile ? '200px' : '260px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px' }}>
                     {!pagado && submodulo === 'mensualidades' && (
-                      <button style={{ ...s.btnWhatsApp, transition: 'all 0.2s' }} onClick={(e) => { e.stopPropagation(); enviarWhatsApp(a); }} title="Recordar por WhatsApp"
+                      <button style={{ ...s.btnWhatsApp, transition: 'all 0.2s ease' }} onClick={(e) => { e.stopPropagation(); enviarWhatsApp(a); }} title="Recordar por WhatsApp"
                         onMouseOver={e => {
                           e.currentTarget.style.background = '#22c55e';
                           e.currentTarget.style.color = '#fff';
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 4px 10px rgba(34, 197, 94, 0.3)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                          e.currentTarget.style.boxShadow = 'none';
                         }}
                         onMouseOut={e => {
                           e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
@@ -1066,7 +1066,7 @@ export default function Pagos() {
                               e.currentTarget.style.background = '#ef4444';
                               e.currentTarget.style.color = '#fff';
                               e.currentTarget.style.transform = 'translateY(-2px)';
-                              e.currentTarget.style.boxShadow = '0 4px 10px rgba(239, 68, 68, 0.3)';
+                              e.currentTarget.style.boxShadow = 'none';
                             }}
                             onMouseOut={e => {
                               e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
@@ -1090,7 +1090,7 @@ export default function Pagos() {
                             e.currentTarget.style.background = 'var(--accent-blue)';
                             e.currentTarget.style.color = '#fff';
                             e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 4px 10px rgba(59, 130, 246, 0.3)';
+                            e.currentTarget.style.boxShadow = 'none';
                           }}
                           onMouseOut={e => {
                             e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
@@ -1106,14 +1106,14 @@ export default function Pagos() {
                           </svg>
                         </button>
                         <button
-                          style={{ ...s.btnIconGreenSmall, transition: 'all 0.2s' }}
+                          style={{ ...s.btnIconGreenSmall, transition: 'all 0.2s ease' }}
                           onClick={(e) => { e.stopPropagation(); enviarComprobanteWhatsApp(a.pagoActivo, a); }}
                           title="Enviar por WhatsApp"
                           onMouseOver={e => {
                             e.currentTarget.style.background = '#22c55e';
                             e.currentTarget.style.color = '#fff';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 4px 10px rgba(34, 197, 94, 0.3)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.boxShadow = 'none';
                           }}
                           onMouseOut={e => {
                             e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
@@ -1129,13 +1129,15 @@ export default function Pagos() {
                       </div>
                     )}
 
-                    <button style={{ ...s.btnPagarSmall, transition: 'all 0.2s' }} onClick={(e) => abrirModalPago(a, e)} title={pagado ? "Registrar otro pago" : "Registrar pago"}
+                    <button style={{ ...s.btnPagarSmall, transition: 'all 0.2s ease' }} onClick={(e) => abrirModalPago(a, e)} title={pagado ? "Registrar otro pago" : "Registrar pago"}
                       onMouseOver={e => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 15px rgba(59, 130, 246, 0.6)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.filter = 'brightness(1.15)';
+                        e.currentTarget.style.boxShadow = 'none';
                       }}
                       onMouseOut={e => {
                         e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.filter = 'none';
                         e.currentTarget.style.boxShadow = 'none';
                       }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -1171,15 +1173,14 @@ export default function Pagos() {
                 <h3 style={s.modalTitulo}>{pagoAEditar ? 'Editar Pago' : 'Registrar Pago'}</h3>
                 <p style={s.modalSub}>{modalPago.nombre} {modalPago.apellido_paterno} {modalPago.apellido_materno}</p>
               </div>
-              <button style={{ ...s.btnCerrar, transition: 'all 0.2s' }} onClick={() => setModalPago(null)}
-                onMouseOver={e => {
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'scale(1.2)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}><FiX size={18} /></button>
+              <button
+                type="button"
+                className="btn-cerrar-circular"
+                onClick={() => setModalPago(null)}
+                aria-label="Cerrar modal"
+              >
+                <FiX size={17} />
+              </button>
             </div>
 
             <div style={s.grid2} className="mobile-grid-1">
@@ -1266,12 +1267,14 @@ export default function Pagos() {
                 disabled={guardandoPago}
                 onMouseOver={e => {
                   if (guardandoPago) return;
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 15px rgba(16, 185, 129, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.filter = 'brightness(1.08)';
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
                 onMouseOut={e => {
                   if (guardandoPago) return;
                   e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.filter = 'none';
                   e.currentTarget.style.boxShadow = 'none';
                 }}>
                 <FiCheck size={16} />
@@ -1318,15 +1321,14 @@ export default function Pagos() {
                     <div style={s.drawerSub}>Día de corte: <strong>{String(historialAlumno.dia_pago || 1).padStart(2, '0')}</strong> de cada mes</div>
                   </div>
                 </div>
-                <button style={{ ...s.btnCerrar, transition: 'all 0.2s' }} onClick={cerrarHistorial}
-                  onMouseOver={e => {
-                    e.currentTarget.style.color = '#ffffff';
-                    e.currentTarget.style.transform = 'scale(1.2)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.color = 'var(--text-muted)';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}><FiX size={18} /></button>
+                <button
+                  type="button"
+                  className="btn-cerrar-circular"
+                  onClick={cerrarHistorial}
+                  aria-label="Cerrar modal"
+                >
+                  <FiX size={17} />
+                </button>
               </div>
 
               <div style={s.drawerContent}>
@@ -1460,12 +1462,14 @@ export default function Pagos() {
                                     onMouseOver={e => {
                                       e.currentTarget.style.background = '#22c55e';
                                       e.currentTarget.style.color = '#fff';
-                                      e.currentTarget.style.transform = 'translateY(-2px)';
+                                      e.currentTarget.style.transform = 'translateY(-1px)';
+                                      e.currentTarget.style.boxShadow = 'none';
                                     }}
                                     onMouseOut={e => {
                                       e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
                                       e.currentTarget.style.color = '#22c55e';
                                       e.currentTarget.style.transform = 'translateY(0)';
+                                      e.currentTarget.style.boxShadow = 'none';
                                     }}
                                   >
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
@@ -1565,14 +1569,23 @@ export default function Pagos() {
 
                     {/* Registrar pago */}
                     <button
-                      style={{ ...s.btnConfirmar, width: '100%', justifyContent: 'center', display: 'flex', gap: 8, transition: 'all 0.2s' }}
+                      style={{
+                        ...s.btnConfirmar,
+                        width: '100%',
+                        justifyContent: 'center',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
                       onClick={(e) => { cerrarHistorial(); setTimeout(() => abrirModalPago(historialAlumno, e), 100) }}
                       onMouseOver={e => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 15px rgba(16, 185, 129, 0.4)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.filter = 'brightness(1.08)';
+                        e.currentTarget.style.boxShadow = 'none';
                       }}
                       onMouseOut={e => {
                         e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.filter = 'none';
                         e.currentTarget.style.boxShadow = 'none';
                       }}
                     >
@@ -1891,7 +1904,7 @@ const s = {
   card: { display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px 18px', cursor: 'pointer', transition: 'all 0.2s' },
   avatar: { flexShrink: 0 },
   avatarImg: { width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover' },
-  avatarInicial: { width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)' },
+  avatarInicial: { width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', boxShadow: 'none' },
   info: { flex: 1, minWidth: 0 },
   nombre: { fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   periodo: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
@@ -1899,7 +1912,7 @@ const s = {
   badgePagado: { background: 'var(--accent-green-bg)', color: 'var(--accent-green)', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' },
   badgeInscrito: { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' },
   montoInfo: { fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' },
-  btnPagarSmall: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-glow-blue)', padding: 0 },
+  btnPagarSmall: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: 'none', padding: 0 },
   btnIconTrash: { background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', border: 'none', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', padding: 0 },
   btnIconEdit: { background: 'rgba(96, 165, 250, 0.1)', color: 'var(--accent-blue)', border: 'none', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', padding: 0 },
   btnIconBlueSmall: { background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-blue)', border: 'none', borderRadius: '6px', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', padding: 0 },
@@ -1922,13 +1935,13 @@ const s = {
   select: { width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' },
   modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '22px', borderTop: '1px solid var(--border)', paddingTop: '18px' },
   btnCerrar: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer', lineHeight: 1 },
-  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 18px', cursor: 'pointer', fontWeight: '600' },
-  btnConfirmar: { background: 'var(--accent-green)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' },
+  btnSecondary: { background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 20px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', fontFamily: 'inherit', letterSpacing: '0.2px', transition: 'all 0.2s ease' },
+  btnConfirmar: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 20px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px', fontFamily: 'inherit', letterSpacing: '0.2px', boxShadow: 'none', transition: 'all 0.2s ease' },
   drawer: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', width: '520px', maxWidth: '95vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' },
   drawerHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '24px 24px 16px', borderBottom: '1px solid var(--border)' },
   drawerTituloRow: { display: 'flex', alignItems: 'center', gap: '14px' },
   avatarSm: { flexShrink: 0 },
-  avatarInicialSm: { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)' },
+  avatarInicialSm: { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px', boxShadow: 'none' },
   drawerNombre: { fontWeight: '800', color: 'var(--text-primary)', fontSize: '17px' },
   drawerSub: { fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' },
   drawerContent: { flex: 1, overflowY: 'auto', padding: '16px 24px 24px' },

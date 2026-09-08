@@ -48,7 +48,7 @@ function Avatar({ alumno, size = 38 }) {
       color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.35, fontWeight: 700,
-      boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)',
+      boxShadow: 'none',
     }}>
       {iniciales}
     </div>

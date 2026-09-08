@@ -108,17 +108,16 @@ const ModalDetalleAsistencia = ({ estaAbierto, alCerrar, alumno, historial = [] 
       position: 'absolute',
       top: '16px',
       right: '16px',
-      width: '36px',
-      height: '36px',
-      borderRadius: 'var(--radius-md)',
+      width: '34px',
+      height: '34px',
+      borderRadius: '50%',
       border: '1px solid var(--border)',
-      background: 'var(--bg-secondary)',
+      background: 'var(--bg-tertiary)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       cursor: 'pointer',
       color: 'var(--text-muted)',
-      transition: 'all 0.2s',
       zIndex: 10,
     },
     cabecera: {
@@ -138,7 +137,7 @@ const ModalDetalleAsistencia = ({ estaAbierto, alCerrar, alumno, historial = [] 
       color: '#fff',
       fontSize: '20px',
       fontWeight: '700',
-      boxShadow: '0 8px 12px -3px rgba(0, 0, 0, 0.2)',
+      boxShadow: 'none',
     },
     contenedorNombre: {
       display: 'flex',
@@ -311,8 +310,8 @@ const ModalDetalleAsistencia = ({ estaAbierto, alCerrar, alumno, historial = [] 
   return (
     <div style={s.overlay} onClick={alCerrar}>
       <div className="attendance-modal-content" style={s.modal} onClick={e => e.stopPropagation()}>
-        <button style={s.btnCerrar} onClick={alCerrar}>
-          <FiX size={20} />
+        <button type="button" className="btn-cerrar-circular" style={s.btnCerrar} onClick={alCerrar} aria-label="Cerrar">
+          <FiX size={17} />
         </button>
 
         <div style={s.cabecera}>

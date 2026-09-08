@@ -30,7 +30,7 @@ function Avatar({ alumno, size = 36 }) {
       color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.35, fontWeight: 700,
-      boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)',
+      boxShadow: 'none',
     }}>
       {iniciales}
     </div>
@@ -173,8 +173,8 @@ export default function ModalDia({ fecha, onCerrar }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 style={s.titulo}>{fechaFormateada}</h2>
           </div>
-          <button style={s.btnCerrar} onClick={onCerrar}>
-            <FiX size={18} />
+          <button type="button" className="btn-cerrar-circular" style={s.btnCerrar} onClick={onCerrar} aria-label="Cerrar">
+            <FiX size={17} />
           </button>
         </div>
 
@@ -330,10 +330,11 @@ const s = {
   },
   btnCerrar: {
     position: 'absolute', top: 14, right: 14,
-    width: 32, height: 32, borderRadius: 8,
-    border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+    width: 34, height: 34, borderRadius: '50%',
+    border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0,
+    zIndex: 10,
   },
   statsGrid: {
     display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',

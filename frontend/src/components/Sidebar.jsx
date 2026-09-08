@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
+import ModalFotoPreview from './Common/ModalFotoPreview';
 
 const menu = [
   { path: '/', label: 'Dashboard', icon: <FiGrid size={18} /> },
@@ -483,161 +484,28 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
         </div>
       )}
 
-      {/* MODAL LIGHTBOX VER FOTO */}
+      {/* ── MODAL FOTO / AVATAR EXPANDIDO ── */}
       {modalFoto && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(8px)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-          }}
-          onClick={() => setModalFoto(null)}
-        >
-          <div
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
-              borderRadius: '24px',
-              padding: '28px',
-              maxWidth: '380px',
-              width: '100%',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              position: 'relative',
-              boxSizing: 'border-box',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Botón X Cerrar */}
-            <button
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border)',
-                borderRadius: '50%',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onClick={() => setModalFoto(null)}
-              onMouseEnter={e => e.currentTarget.style.background = '#ef4444'}
-              onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-            >
-              <FiX size={16} />
-            </button>
-
-            <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', textAlign: 'center' }}>
-              {modalFoto.titulo}
-            </h3>
-            <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
-              {modalFoto.sub}
-            </p>
-
-            {/* Imagen ampliada */}
-            <div
-              style={{
-                width: '220px',
-                height: '220px',
-                borderRadius: modalFoto.isAvatar ? '50%' : '20px',
-                overflow: 'hidden',
-                border: '4px solid var(--accent-blue)',
-                boxShadow: '0 10px 30px rgba(59, 130, 246, 0.35)',
-                background: 'var(--bg-tertiary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '24px',
-                flexShrink: 0,
-              }}
-            >
-              {modalFoto.url ? (
-                <img
-                  src={modalFoto.url}
-                  alt="Vista previa"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : modalFoto.isAvatar ? (
-                <div style={{ fontSize: '72px', fontWeight: '800', color: 'var(--accent-blue)' }}>
-                  {user?.name?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-              ) : (
-                <div style={{ color: 'var(--accent-blue)' }}>
-                  <FiShield size={72} />
-                </div>
-              )}
-            </div>
-
-            {/* Botones de acción */}
-            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-              {(modalFoto.isAvatar || modalFoto.isLogo) && (
-                <button
-                  style={{
-                    flex: 1,
-                    padding: '11px 16px',
-                    background: 'var(--accent-blue)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '12px',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
-                  }}
-                  onClick={() => {
-                    const isSchoolLogo = modalFoto.isLogo;
-                    setModalFoto(null);
-                    if (isSchoolLogo) {
-                      logoInputRef.current?.click();
-                    } else {
-                      avatarInputRef.current?.click();
-                    }
-                  }}
-                >
-                  <FiCamera size={16} />
-                  Cambiar foto
-                </button>
-              )}
-              <button
-                style={{
-                  flex: 1,
-                  padding: '11px 16px',
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                }}
-                onClick={() => setModalFoto(null)}
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModalFotoPreview
+          isOpen={!!modalFoto}
+          onClose={() => setModalFoto(null)}
+          titulo={modalFoto.titulo}
+          subtitulo={modalFoto.sub}
+          url={modalFoto.url}
+          isAvatar={modalFoto.isAvatar}
+          isLogo={modalFoto.isLogo}
+          iniciales={user?.name?.charAt(0)?.toUpperCase() || '?'}
+          onCambiarFotoClick={(modalFoto.isAvatar || modalFoto.isLogo) ? () => {
+            const isSchoolLogo = modalFoto.isLogo;
+            setModalFoto(null);
+            if (isSchoolLogo) {
+              logoInputRef.current?.click();
+            } else {
+              avatarInputRef.current?.click();
+            }
+          } : null}
+          subiendo={uploadingAvatar || uploadingLogo}
+        />
       )}
 
       {/* Mobile bottom navigation */}
