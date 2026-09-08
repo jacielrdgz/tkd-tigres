@@ -627,7 +627,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   /* Normalizar inputs dentro del modal en móvil */
   .mobile-fullscreen-modal input,
   .mobile-fullscreen-modal select,
-  .mobile-fullscreen-modal button:not(.btn-cerrar-circular) {
+  .mobile-fullscreen-modal button:not(.btn-cerrar-circular):not(.btn-action-tile):not(.btn-historial-icon) {
     font-size: 13.5px !important;
     min-height: 38px !important;
     height: 38px !important;
@@ -779,6 +779,7 @@ body.swal2-height-auto {
 }
 
 .swal2-container {
+  z-index: 10000 !important;
   overflow-y: auto !important;
   scrollbar-gutter: stable !important;
 }
@@ -789,3 +790,95 @@ body.swal2-height-auto {
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6) !important;
   padding: 28px 24px !important;
 }
+
+/* ============================================================
+   Botones de acción tipo Tile (Editar, PDF, WhatsApp, Eliminar)
+   ============================================================ */
+.btn-action-tile {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  max-width: 22px !important;
+  max-height: 22px !important;
+  border-radius: 5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: all 0.18s ease !important;
+  box-shadow: none !important;
+  outline: none !important;
+  flex-shrink: 0 !important;
+}
+
+.btn-action-tile:active {
+  transform: scale(0.92) !important;
+}
+
+.btn-action-tile-blue {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  color: var(--accent-blue) !important;
+}
+.btn-action-tile-blue:hover {
+  background: var(--accent-blue) !important;
+  border-color: var(--accent-blue) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-action-tile-green {
+  background: rgba(34, 197, 94, 0.12) !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+  color: #22c55e !important;
+}
+.btn-action-tile-green:hover {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-action-tile-red {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: var(--accent-red) !important;
+}
+.btn-action-tile-red:hover {
+  background: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Scrollbar sutil para listas compactas */
+.custom-scroll::-webkit-scrollbar {
+  width: 3.5px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* Botones de acción dentro del historial */
+.btn-historial-icon {
+  border-radius: 5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  border: 1px solid var(--border) !important;
+  outline: none !important;
+  transition: all 0.15s ease !important;
+}
+.btn-historial-icon:active {
+  transform: scale(0.92) !important;
+}
+
+

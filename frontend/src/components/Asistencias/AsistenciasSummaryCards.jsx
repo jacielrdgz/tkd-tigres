@@ -6,35 +6,46 @@ import { FiUsers, FiTrendingUp, FiAlertTriangle, FiCalendar } from 'react-icons/
  * tab='alumno' → Total activos / % promedio / Baja asistencia
  * tab='fecha'  → Clases en el mes / Promedio diario / Días baja asistencia
  */
-export default function AsistenciasSummaryCards({ tab, resumen, cargando }) {
+export default function AsistenciasSummaryCards({ tab, resumen, cargando, isMobile: isMobileProp }) {
+  const isMobile = isMobileProp !== undefined ? isMobileProp : (typeof window !== 'undefined' && window.innerWidth <= 768)
+
   if (tab === 'alumno') {
     return (
-      <div style={s.grid}>
+      <div style={{
+        ...s.grid,
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+        gap: isMobile ? '10px' : '16px',
+        marginBottom: isMobile ? '18px' : '28px'
+      }}>
         <Card
           cargando={cargando}
-          icon={<FiUsers size={22} />}
+          icon={<FiUsers size={isMobile ? 18 : 22} />}
           iconColor="#3b82f6"
           label="Total Alumnos Activos"
           value={resumen?.total_alumnos ?? '—'}
           valueColor="var(--text-primary)"
+          isMobile={isMobile}
         />
         <Card
           cargando={cargando}
-          icon={<FiTrendingUp size={22} />}
+          icon={<FiTrendingUp size={isMobile ? 18 : 22} />}
           iconColor={pctColor(resumen?.pct_promedio)}
-          label="Asistencia Promedio del Mes"
+          label="Asistencia Promedio"
           value={resumen?.pct_promedio !== undefined ? `${resumen.pct_promedio}%` : '—'}
           valueColor={pctColor(resumen?.pct_promedio)}
           bar={resumen?.pct_promedio}
+          isMobile={isMobile}
         />
         <Card
           cargando={cargando}
-          icon={<FiAlertTriangle size={22} />}
+          icon={<FiAlertTriangle size={isMobile ? 18 : 22} />}
           iconColor="#ef4444"
           label="Alumnos con Asistencia Baja"
           sublabel="< 60% de asistencia"
           value={resumen?.baja_asistencia ?? '—'}
           valueColor={resumen?.baja_asistencia > 0 ? '#ef4444' : 'var(--accent-green)'}
+          spanFull={true}
+          isMobile={isMobile}
         />
       </div>
     )
@@ -42,50 +53,71 @@ export default function AsistenciasSummaryCards({ tab, resumen, cargando }) {
 
   // tab === 'fecha'
   return (
-    <div style={s.grid}>
+    <div style={{
+      ...s.grid,
+      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+      gap: isMobile ? '10px' : '16px',
+      marginBottom: isMobile ? '18px' : '28px'
+    }}>
       <Card
         cargando={cargando}
-        icon={<FiCalendar size={22} />}
+        icon={<FiCalendar size={isMobile ? 18 : 22} />}
         iconColor="#3b82f6"
         label="Clases en el Mes"
         value={resumen?.clases_en_mes ?? '—'}
         valueColor="var(--text-primary)"
+        isMobile={isMobile}
       />
       <Card
         cargando={cargando}
-        icon={<FiTrendingUp size={22} />}
+        icon={<FiTrendingUp size={isMobile ? 18 : 22} />}
         iconColor={pctColor(resumen?.promedio_diario)}
-        label="Promedio Asistencia Diaria"
+        label="Promedio Diario"
         value={resumen?.promedio_diario !== undefined ? `${resumen.promedio_diario}%` : '—'}
         valueColor={pctColor(resumen?.promedio_diario)}
         bar={resumen?.promedio_diario}
+        isMobile={isMobile}
       />
       <Card
         cargando={cargando}
-        icon={<FiAlertTriangle size={22} />}
+        icon={<FiAlertTriangle size={isMobile ? 18 : 22} />}
         iconColor="#ef4444"
         label="Días con Baja Asistencia"
         sublabel="< 80% de asistencia"
         value={resumen?.dias_baja ?? '—'}
         valueColor={resumen?.dias_baja > 0 ? '#ef4444' : 'var(--accent-green)'}
+        spanFull={true}
+        isMobile={isMobile}
       />
     </div>
   )
 }
 
-function Card({ icon, iconColor, label, sublabel, value, valueColor, bar, cargando }) {
+function Card({ icon, iconColor, label, sublabel, value, valueColor, bar, cargando, spanFull, isMobile }) {
   return (
-    <div style={s.card}>
-      <div style={{ ...s.iconBox, background: `${iconColor}18`, color: iconColor }}>
+    <div style={{
+      ...s.card,
+      gridColumn: (isMobile && spanFull) ? 'span 2' : 'auto',
+      padding: isMobile ? '12px 14px' : '20px 22px',
+      gap: isMobile ? '12px' : '16px'
+    }}>
+      <div style={{
+        ...s.iconBox,
+        background: `${iconColor}18`,
+        color: iconColor,
+        width: isMobile ? '38px' : '46px',
+        height: isMobile ? '38px' : '46px',
+        borderRadius: isMobile ? '10px' : '12px'
+      }}>
         {icon}
       </div>
       <div style={s.info}>
-        <span style={s.label}>{label}</span>
-        {sublabel && <span style={s.sublabel}>{sublabel}</span>}
+        <span style={{ ...s.label, fontSize: isMobile ? '10.5px' : '12px' }}>{label}</span>
+        {sublabel && <span style={{ ...s.sublabel, fontSize: isMobile ? '10px' : '11px' }}>{sublabel}</span>}
         {cargando ? (
           <div style={s.skeleton} />
         ) : (
-          <span style={{ ...s.value, color: valueColor }}>{value}</span>
+          <span style={{ ...s.value, color: valueColor, fontSize: isMobile ? '22px' : '28px' }}>{value}</span>
         )}
         {bar !== undefined && !cargando && (
           <div style={s.barBg}>

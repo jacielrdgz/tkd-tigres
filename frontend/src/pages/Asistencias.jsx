@@ -34,8 +34,15 @@ const formatHora = (hora) => {
 
 export default function Asistencias() {
   const { user } = useAuth()
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
   const [tab, setTab] = useState('alumno')        // 'alumno' | 'fecha'
   const [mes, setMes] = useState(mesActual)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Datos
   const [resumen, setResumen] = useState(() => getCache(`asistencias_resumen_${mesActual}`)?.data || null)
@@ -295,28 +302,36 @@ export default function Asistencias() {
   const totalActivos = resumen?.total_alumnos ?? 0
 
   return (
-    <div style={s.page}>
+    <div style={{ ...s.page, padding: isMobile ? '12px 14px 40px' : '0 0 40px' }}>
       {/* Topbar */}
       <AsistenciasTopbar
         mesActual={mes}
         totalActivos={totalActivos}
         onExportar={handleExportar}
         onRegistrar={() => setModalRegistrar(true)}
+        isMobile={isMobile}
       />
 
       {/* Tabs de navegación */}
-      <div style={s.tabsNav}>
+      <div style={{
+        ...s.tabsNav,
+        width: isMobile ? '100%' : 'fit-content',
+        boxSizing: 'border-box',
+        marginBottom: isMobile ? 16 : 24,
+      }}>
         <TabButton
           active={tab === 'alumno'}
           onClick={() => setTab('alumno')}
           icon={<FiUser size={14} />}
           label="Por Alumno"
+          isMobile={isMobile}
         />
         <TabButton
           active={tab === 'fecha'}
           onClick={() => setTab('fecha')}
           icon={<FiCalendar size={14} />}
           label="Por Fecha"
+          isMobile={isMobile}
         />
       </div>
 
@@ -325,6 +340,7 @@ export default function Asistencias() {
         tab={tab}
         resumen={tab === 'alumno' ? resumen : resumenFecha}
         cargando={tab === 'alumno' ? cargandoResumen : cargandoFecha}
+        isMobile={isMobile}
       />
 
       {/* Contenido según tab */}
@@ -337,6 +353,7 @@ export default function Asistencias() {
             onCambiarMes={setMes}
             onVerAlumno={setAlumnoSeleccionado}
             onFiltradosChange={setListaFiltrada}
+            isMobile={isMobile}
           />
         ) : (
           <TabPorFecha
@@ -345,6 +362,7 @@ export default function Asistencias() {
             datosPorFecha={datosPorFecha}
             cargando={cargandoFecha}
             onDiaClick={setFechaSeleccionada}
+            isMobile={isMobile}
           />
         )}
       </div>
@@ -400,17 +418,18 @@ export default function Asistencias() {
   )
 }
 
-function TabButton({ active, onClick, icon, label }) {
+function TabButton({ active, onClick, icon, label, isMobile }) {
   return (
     <button
       style={{
-        display: 'flex', alignItems: 'center', gap: 7,
-        padding: '9px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+        padding: isMobile ? '8px 12px' : '9px 20px',
+        flex: isMobile ? 1 : 'initial',
         borderRadius: 10,
         border: 'none',
         background: active ? 'var(--accent-blue)' : 'transparent',
         color: active ? '#fff' : 'var(--text-muted)',
-        fontSize: 13, fontWeight: active ? 700 : 600,
+        fontSize: isMobile ? 12.5 : 13, fontWeight: active ? 700 : 600,
         cursor: 'pointer',
         boxShadow: active ? 'var(--shadow-glow-blue)' : 'none',
         transition: 'all 0.2s',

@@ -83,6 +83,23 @@ class PagoController extends Controller
         }
         $validated['tenant_id'] = $tenantId;
 
+        // Candado anti-ráfaga / prevención de doble clic accidental:
+        // Si se registró un pago idéntico (mismo alumno, tipo, monto y período) en los últimos 5 segundos
+        $pagoReciente = Pago::where('alumno_id', $validated['alumno_id'])
+            ->where('tipo', $validated['tipo'])
+            ->where('monto', $validated['monto'])
+            ->where('fecha_inicio', $validated['fecha_inicio'] ?? null)
+            ->where('created_at', '>=', now()->subSeconds(5))
+            ->first();
+
+        if ($pagoReciente) {
+            return response()->json([
+                'message' => 'Se detectó un pago idéntico procesado hace unos segundos. Espera 5 segundos antes de intentar registrar otro.',
+                'duplicado' => true,
+                'pago' => $pagoReciente->load('alumno')
+            ], 422);
+        }
+
         try {
             $pago = Pago::create($validated);
             return response()->json($pago->load('alumno'), 201);
