@@ -344,28 +344,10 @@ export default function InstructorManager() {
                   {getCintaLabel(inst)}
                 </div>
               </div>
-              <div style={{ ...s.instActions, gap: isMobile ? '6px' : '8px' }}>
+              <div style={{ ...s.instActions, gap: '8px' }}>
                 <button
-                  style={{
-                    ...s.btnIcon,
-                    width: isMobile ? '32px' : '36px',
-                    height: isMobile ? '32px' : '36px',
-                    borderRadius: '8px',
-                    background: 'rgba(168,85,247,0.1)',
-                    border: '1px solid rgba(168,85,247,0.3)',
-                    color: '#a855f7',
-                  }}
+                  className="btn-action-icon btn-action-view"
                   onClick={() => openCredencial(inst)}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = '#a855f7';
-                    e.currentTarget.style.color = 'white';
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = 'rgba(168,85,247,0.1)';
-                    e.currentTarget.style.color = '#a855f7';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
                   title="Ver Credencial"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -376,26 +358,8 @@ export default function InstructorManager() {
                   </svg>
                 </button>
                 <button
-                  style={{
-                    ...s.btnIcon,
-                    width: isMobile ? '32px' : '36px',
-                    height: isMobile ? '32px' : '36px',
-                    borderRadius: '8px',
-                    background: 'rgba(59,130,246,0.1)',
-                    border: '1px solid rgba(59,130,246,0.3)',
-                    color: '#3b82f6',
-                  }}
+                  className="btn-action-icon btn-action-edit"
                   onClick={() => handleOpenModal(inst)}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = '#3b82f6';
-                    e.currentTarget.style.color = 'white';
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = 'rgba(59,130,246,0.1)';
-                    e.currentTarget.style.color = '#3b82f6';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
                   title="Editar"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -404,26 +368,8 @@ export default function InstructorManager() {
                   </svg>
                 </button>
                 <button
-                  style={{
-                    ...s.btnIcon,
-                    width: isMobile ? '32px' : '36px',
-                    height: isMobile ? '32px' : '36px',
-                    borderRadius: '8px',
-                    background: 'rgba(239,68,68,0.1)',
-                    border: '1px solid rgba(239,68,68,0.3)',
-                    color: '#ef4444',
-                  }}
+                  className="btn-action-icon btn-action-del"
                   onClick={() => handleDelete(inst)}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = '#ef4444';
-                    e.currentTarget.style.color = 'white';
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
-                    e.currentTarget.style.color = '#ef4444';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
                   title="Eliminar"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

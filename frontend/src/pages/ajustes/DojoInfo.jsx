@@ -202,7 +202,7 @@ export default function DojoInfo() {
               <FiShield size={18} style={{ marginRight: '8px', color: 'var(--accent-blue)', verticalAlign: 'middle' }} />
               Identidad de la Academia
             </h3>
-            <div style={{ ...s.grid2, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={s.grid2}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Nombre de la Escuela</label>
                 <input 
@@ -213,7 +213,7 @@ export default function DojoInfo() {
                 />
               </div>
               <div style={s.inputGroup}>
-                <label style={s.label}>Nombre del Titular / Director</label>
+                <label style={s.label}>Nombre del Titular</label>
                 <input 
                   style={s.input} 
                   value={escuela.titular} 
@@ -222,7 +222,7 @@ export default function DojoInfo() {
                 />
               </div>
             </div>
-            <div style={{ ...s.grid2, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={s.grid2}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Eslogan o Lema</label>
                 <input 
@@ -233,7 +233,7 @@ export default function DojoInfo() {
                 />
               </div>
               <div style={s.inputGroup}>
-                <label style={s.label}>Disciplina Principal</label>
+                <label style={s.label}>Disciplina</label>
                 <select 
                   style={s.input} 
                   value={escuela.disciplina} 
@@ -265,7 +265,7 @@ export default function DojoInfo() {
               <FiPhone size={18} style={{ marginRight: '8px', color: 'var(--accent-blue)', verticalAlign: 'middle' }} />
               Contacto y Redes Sociales
             </h3>
-            <div style={{ ...s.grid2, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={s.grid2}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Teléfono</label>
                 <input 
@@ -285,29 +285,32 @@ export default function DojoInfo() {
                 />
               </div>
             </div>
-            <div style={{ ...s.grid3, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={s.grid3}>
               <div style={s.inputGroup}>
-                <label style={s.label}>WhatsApp (ID o Link)</label>
+                <label style={s.label}>WhatsApp</label>
                 <input 
                   style={s.input} 
                   value={escuela.redes_sociales.whatsapp} 
                   onChange={e => setEscuela({...escuela, redes_sociales: {...escuela.redes_sociales, whatsapp: e.target.value}})} 
+                  placeholder="Número o enlace"
                 />
               </div>
               <div style={s.inputGroup}>
-                <label style={s.label}>Instagram (@usuario)</label>
+                <label style={s.label}>Instagram</label>
                 <input 
                   style={s.input} 
                   value={escuela.redes_sociales.instagram} 
                   onChange={e => setEscuela({...escuela, redes_sociales: {...escuela.redes_sociales, instagram: e.target.value}})} 
+                  placeholder="@usuario"
                 />
               </div>
               <div style={s.inputGroup}>
-                <label style={s.label}>Facebook (Página)</label>
+                <label style={s.label}>Facebook</label>
                 <input 
                   style={s.input} 
                   value={escuela.redes_sociales.facebook} 
                   onChange={e => setEscuela({...escuela, redes_sociales: {...escuela.redes_sociales, facebook: e.target.value}})} 
+                  placeholder="Página"
                 />
               </div>
             </div>
@@ -319,31 +322,34 @@ export default function DojoInfo() {
               <FiMapPin size={18} style={{ marginRight: '8px', color: 'var(--accent-blue)', verticalAlign: 'middle' }} />
               Ubicación Física
             </h3>
-            <div style={{ ...s.grid2, flexDirection: isMobile ? 'column' : 'row' }}>
-              <div style={{...s.inputGroup, flex: 2}}>
+            <div style={s.grid2}>
+              <div style={s.inputGroup}>
                 <label style={s.label}>Calle</label>
                 <input 
                   style={s.input} 
                   value={escuela.direccion.calle} 
                   onChange={e => setEscuela({...escuela, direccion: {...escuela.direccion, calle: e.target.value}})} 
+                  placeholder="Ej. Calle Morelos"
                 />
               </div>
-              <div style={{...s.inputGroup, flex: 1}}>
+              <div style={s.inputGroup}>
                 <label style={s.label}>Num. Ext.</label>
                 <input 
                   style={s.input} 
                   value={escuela.direccion.numero_exterior} 
                   onChange={e => setEscuela({...escuela, direccion: {...escuela.direccion, numero_exterior: e.target.value}})} 
+                  placeholder="Ej. 123"
                 />
               </div>
             </div>
-            <div style={{ ...s.grid3, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={s.grid2}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Colonia</label>
                 <input 
                   style={s.input} 
                   value={escuela.direccion.colonia} 
                   onChange={e => setEscuela({...escuela, direccion: {...escuela.direccion, colonia: e.target.value}})} 
+                  placeholder="Ej. Centro"
                 />
               </div>
               <div style={s.inputGroup}>
@@ -352,25 +358,29 @@ export default function DojoInfo() {
                   style={s.input} 
                   value={escuela.direccion.ciudad} 
                   onChange={e => setEscuela({...escuela, direccion: {...escuela.direccion, ciudad: e.target.value}})} 
+                  placeholder="Ej. Cuauhtémoc"
                 />
               </div>
+            </div>
+            <div style={s.grid2}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Estado</label>
                 <input 
                   style={s.input} 
                   value={escuela.direccion.estado} 
                   onChange={e => setEscuela({...escuela, direccion: {...escuela.direccion, estado: e.target.value}})} 
+                  placeholder="Ej. Chihuahua"
                 />
               </div>
-            </div>
-            <div style={s.inputGroup}>
-              <label style={s.label}>Referencias de llegada</label>
-              <input 
-                style={s.input} 
-                value={escuela.direccion.referencias} 
-                onChange={e => setEscuela({...escuela, direccion: {...escuela.direccion, referencias: e.target.value}})} 
-                placeholder="Ej. Frente al parque central, local azul..."
-              />
+              <div style={s.inputGroup}>
+                <label style={s.label}>Referencias de llegada</label>
+                <input 
+                  style={s.input} 
+                  value={escuela.direccion.referencias} 
+                  onChange={e => setEscuela({...escuela, direccion: {...escuela.direccion, referencias: e.target.value}})} 
+                  placeholder="Ej. Frente al parque central..."
+                />
+              </div>
             </div>
           </section>
 
@@ -434,11 +444,11 @@ const s = {
   formSection: { flex: 1, minWidth: '400px', display: 'flex', flexDirection: 'column', gap: '32px' },
   section: { display: 'flex', flexDirection: 'column', gap: '20px' },
   sectionTitle: { fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', borderBottom: '1px solid var(--border)', paddingBottom: '12px', margin: 0 },
-  grid2: { display: 'flex', gap: '16px' },
-  grid3: { display: 'flex', gap: '12px' },
-  inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 },
-  label: { fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  input: { width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', transition: '0.2s focus', borderFocus: '1px solid var(--accent-blue)' },
+  grid2: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '14px' },
+  grid3: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 },
+  label: { fontSize: '11.5px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  input: { width: '100%', minWidth: 0, boxSizing: 'border-box', padding: '11px 14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13.5px', outline: 'none', transition: 'border-color 0.2s', borderFocus: '1px solid var(--accent-blue)' },
   actions: { marginTop: '16px', display: 'flex', justifyContent: 'flex-end' },
   btnSave: { minWidth: '200px', background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '14px', padding: '16px 32px', fontWeight: '800', cursor: 'pointer', fontSize: '16px', boxShadow: 'none', transition: 'all 0.2s ease' }
 }
