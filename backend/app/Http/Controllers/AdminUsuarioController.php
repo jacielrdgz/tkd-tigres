@@ -13,6 +13,12 @@ class AdminUsuarioController extends Controller
      */
     public function index(Request $request)
     {
+        $request->validate([
+            'role'      => 'nullable|in:owner,instructor,secretario',
+            'tenant_id' => 'nullable|integer|exists:tenants,id',
+            'estado'    => 'nullable|in:activo,suspendido',
+        ]);
+
         $query = User::withoutGlobalScopes()->with('tenant');
 
         if ($request->filled('role')) {

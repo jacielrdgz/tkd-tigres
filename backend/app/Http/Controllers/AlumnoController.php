@@ -47,17 +47,26 @@ class AlumnoController extends Controller
     {
         Gate::authorize('viewAny', Alumno::class);
 
+        $request->validate([
+            'search'           => 'nullable|string|max:100',
+            'estatus'          => 'nullable|in:activo,inactivo',
+            'horario'          => 'nullable|string|max:100',
+            'simple'           => 'nullable|boolean',
+            'para_inscripcion' => 'nullable|boolean',
+        ]);
+
         if ($request->boolean('simple') || $request->boolean('para_inscripcion')) {
             $query = Alumno::with(['cintaConfig']);
             if ($request->filled('estatus')) {
                 $query->where('estatus', $request->estatus);
             }
             if ($request->filled('search')) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('nombre', 'like', "%$search%")
-                      ->orWhere('apellido_paterno', 'like', "%$search%")
-                      ->orWhere('apellido_materno', 'like', "%$search%");
+                $rawSearch = trim((string) $request->search);
+                $escapedSearch = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $rawSearch);
+                $query->where(function ($q) use ($escapedSearch) {
+                    $q->where('nombre', 'like', "%{$escapedSearch}%")
+                      ->orWhere('apellido_paterno', 'like', "%{$escapedSearch}%")
+                      ->orWhere('apellido_materno', 'like', "%{$escapedSearch}%");
                 });
             }
             $alumnos = $query->select([
@@ -71,11 +80,12 @@ class AlumnoController extends Controller
         $query = Alumno::with(['cintaConfig', 'ultimoPago', 'horarioConfig']);
 
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nombre', 'like', "%$search%")
-                  ->orWhere('apellido_paterno', 'like', "%$search%")
-                  ->orWhere('apellido_materno', 'like', "%$search%");
+            $rawSearch = trim((string) $request->search);
+            $escapedSearch = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $rawSearch);
+            $query->where(function ($q) use ($escapedSearch) {
+                $q->where('nombre', 'like', "%{$escapedSearch}%")
+                  ->orWhere('apellido_paterno', 'like', "%{$escapedSearch}%")
+                  ->orWhere('apellido_materno', 'like', "%{$escapedSearch}%");
             });
         }
 

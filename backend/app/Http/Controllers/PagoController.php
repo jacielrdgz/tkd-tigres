@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Alumno;
 use App\Models\Pago;
+use App\Http\Requests\StorePagoRequest;
+use App\Http\Requests\UpdatePagoRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -14,6 +16,13 @@ class PagoController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('viewAny', Pago::class);
+
+        $request->validate([
+            'alumno_id'    => 'nullable|integer|exists:alumnos,id',
+            'estado'       => 'nullable|in:pagado,pendiente,vencido',
+            'tipo'         => 'nullable|in:mensualidad,inscripcion',
+            'fecha_inicio' => 'nullable|date_format:Y-m-d',
+        ]);
 
         $query = Pago::with('alumno');
 
@@ -53,20 +62,11 @@ class PagoController extends Controller
         return response()->json($pagos);
     }
 
-    public function store(Request $request)
+    public function store(StorePagoRequest $request)
     {
         Gate::authorize('create', Pago::class);
 
-        $validated = $request->validate([
-            'alumno_id'   => 'required|exists:alumnos,id',
-            'tipo'        => 'nullable|in:mensualidad,inscripcion',
-            'fecha_inicio' => 'nullable|required_if:tipo,mensualidad|date',
-            'fecha_fin'   => 'nullable|required_if:tipo,mensualidad|date|after:fecha_inicio',
-            'monto'       => 'required|numeric|min:0',
-            'metodo_pago' => 'required|in:efectivo,transferencia,tarjeta',
-            'estado'      => 'required|in:pagado,pendiente,vencido',
-            'fecha_pago'  => 'nullable|date',
-        ]);
+        $validated = $request->validated();
 
         $validated['tipo'] = $validated['tipo'] ?? 'mensualidad';
 
@@ -121,19 +121,11 @@ class PagoController extends Controller
         return response()->json($pago->load('alumno'));
     }
 
-    public function update(Request $request, Pago $pago)
+    public function update(UpdatePagoRequest $request, Pago $pago)
     {
         Gate::authorize('update', $pago);
 
-        $validated = $request->validate([
-            'tipo'         => 'sometimes|in:mensualidad,inscripcion',
-            'fecha_inicio' => 'sometimes|nullable|date',
-            'fecha_fin'   => 'sometimes|nullable|date',
-            'monto'       => 'sometimes|numeric|min:0',
-            'metodo_pago' => 'sometimes|in:efectivo,transferencia,tarjeta',
-            'estado'      => 'sometimes|in:pagado,pendiente,vencido',
-            'fecha_pago'  => 'nullable|date',
-        ]);
+        $validated = $request->validated();
 
         if (isset($validated['fecha_inicio'])) {
             $validated['mes'] = Carbon::parse($validated['fecha_inicio'])->format('Y-m');

@@ -93,11 +93,11 @@ class EscuelaController extends Controller
                 'titular'           => 'nullable|string|max:255',
                 'disciplina'        => 'nullable|string|max:255',
                 'eslogan'           => 'nullable|string|max:255',
-                'descripcion'       => 'nullable|string',
-                'telefono_contacto' => 'nullable|string|max:50',
-                'email_contacto'    => 'nullable|email|max:255',
+                'descripcion'       => 'nullable|string|max:1000',
+                'telefono_contacto' => ['nullable', 'string', 'max:50', 'regex:/^[0-9+\s()-]+$/'],
+                'email_contacto'    => 'nullable|string|email|max:255',
                 'redes_sociales'    => 'nullable|array',
-                'foto'              => 'nullable',
+                'foto'              => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,svg', 'max:5120'],
                 
                 // Campos de dirección
                 'calle'             => 'nullable|string|max:255',

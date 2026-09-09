@@ -82,7 +82,7 @@ export default function Topbar({ onToggleSidebar }) {
           title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
           aria-label="Cambiar tema"
         >
-          {theme === 'dark' ? <FiSun size={18} color="#f59e0b" /> : <FiMoon size={18} color="var(--text-secondary)" />}
+          {theme === 'dark' ? <FiSun size={18} color="var(--text-secondary)" /> : <FiMoon size={18} color="var(--text-secondary)" />}
         </button>
       </div>
     </header>

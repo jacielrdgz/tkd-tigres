@@ -1,9 +1,17 @@
+import { useState, useEffect } from 'react'
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom'
 import { FiShield, FiUsers, FiClock, FiAward } from 'react-icons/fi'
 
 export default function AjustesEscuela() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const tabs = [
     { id: 'general', label: 'Datos del Dojang', icon: <FiShield size={18} />, path: '/ajustes/configuracion/general' },
@@ -15,7 +23,7 @@ export default function AjustesEscuela() {
   const activeTab = tabs.find(t => location.pathname === t.path)?.id || 'general'
 
   return (
-    <div style={s.container}>
+    <div style={{ ...s.container, paddingBottom: isMobile ? '85px' : '40px' }}>
       <button
         style={s.btnBack}
         onClick={() => navigate('/ajustes')}
@@ -47,6 +55,8 @@ export default function AjustesEscuela() {
             to={tab.path}
             style={{
               ...s.tabBtn,
+              padding: isMobile ? '8px 12px' : '12px 24px',
+              fontSize: isMobile ? '12.5px' : '14px',
               textDecoration: 'none',
               ...(activeTab === tab.id ? s.tabBtnActive : {})
             }}
@@ -63,7 +73,7 @@ export default function AjustesEscuela() {
               }
             }}
           >
-            <span style={s.tabIcon}>{tab.icon}</span>
+            <span style={{ ...s.tabIcon, fontSize: isMobile ? '16px' : '18px' }}>{tab.icon}</span>
             {tab.label}
           </Link>
         ))}
@@ -78,11 +88,21 @@ export default function AjustesEscuela() {
 
 const s = {
   container: { paddingBottom: '40px', width: '100%', boxSizing: 'border-box' },
-  btnBack: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginBottom: '24px' },
-  header: { marginBottom: '28px' },
+  btnBack: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginBottom: '20px' },
+  header: { marginBottom: '24px' },
   title: { fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
   subtitle: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '500' },
-  tabsContainer: { display: 'flex', gap: '10px', borderBottom: '1px solid var(--border)', marginBottom: '30px', paddingBottom: '2px', overflowX: 'auto' },
+  tabsContainer: { 
+    display: 'flex', 
+    gap: '8px', 
+    borderBottom: '1px solid var(--border)', 
+    marginBottom: '24px', 
+    paddingBottom: '2px', 
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none'
+  },
   tabBtn: { 
     padding: '12px 24px', 
     background: 'none', 
@@ -96,7 +116,8 @@ const s = {
     alignItems: 'center', 
     gap: '8px',
     transition: '0.2s',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap',
+    flexShrink: 0
   },
   tabBtnActive: { color: 'var(--accent-blue)', borderBottomColor: 'var(--accent-blue)' },
   tabIcon: { fontSize: '18px' },

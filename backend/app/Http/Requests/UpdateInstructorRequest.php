@@ -17,14 +17,14 @@ class UpdateInstructorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nombre'                 => 'sometimes|string|max:100',
-            'apellido_paterno'       => 'sometimes|string|max:100',
-            'apellido_materno'       => 'nullable|string|max:100',
-            'fecha_nacimiento'       => 'nullable|date',
-            'telefono'               => 'nullable|string|max:20',
-            'foto'                   => 'nullable|max:10240',
-            'eliminar_foto'          => 'sometimes|boolean',
-            'configuracion_cinta_id' => 'nullable|exists:configuraciones_cintas,id',
+            'nombre'                 => ['sometimes', 'string', 'max:100'],
+            'apellido_paterno'       => ['sometimes', 'string', 'max:100'],
+            'apellido_materno'       => ['nullable', 'string', 'max:100'],
+            'fecha_nacimiento'       => ['nullable', 'date', 'before:today', 'after:1920-01-01'],
+            'telefono'               => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s()-]+$/'],
+            'foto'                   => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'eliminar_foto'          => ['sometimes', 'boolean'],
+            'configuracion_cinta_id' => ['nullable', 'integer', 'exists:configuraciones_cintas,id'],
         ];
     }
 

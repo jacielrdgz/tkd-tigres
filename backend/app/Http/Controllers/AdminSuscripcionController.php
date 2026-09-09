@@ -15,6 +15,11 @@ class AdminSuscripcionController extends Controller
      */
     public function index(Request $request)
     {
+        $request->validate([
+            'estado'          => 'nullable|in:activa,trial,cancelada,suspendida',
+            'mes_vencimiento' => 'nullable|integer|min:1|max:12',
+        ]);
+
         $query = Tenant::with('escuela');
 
         if ($request->filled('estado')) {

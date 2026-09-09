@@ -13,12 +13,13 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required'
+        $validated = $request->validate([
+            'email'    => 'required|string|email|max:150',
+            'password' => 'required|string|max:255',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $email = mb_strtolower(trim($validated['email']), 'UTF-8');
+        $user = User::where('email', $email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([

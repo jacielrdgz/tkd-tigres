@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { sanitizeObject, sanitizeParams } from '../utils/sanitizer'
 
 const api = axios.create({
   baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api',
@@ -9,12 +10,23 @@ const api = axios.create({
   withCredentials: true, // Mantenlo si usas cookies de sesión o Sanctum
 })
 
-// Interceptor: agregar token de auth automáticamente
+// Interceptor: agregar token de auth automáticamente y sanitizar inputs
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  // Sanitizar query params
+  if (config.params && typeof config.params === 'object') {
+    config.params = sanitizeParams(config.params)
+  }
+
+  // Sanitizar body de requests (si es objeto JSON, no FormData)
+  if (config.data && typeof config.data === 'object' && !(config.data instanceof FormData)) {
+    config.data = sanitizeObject(config.data)
+  }
+
   return config
 })
 

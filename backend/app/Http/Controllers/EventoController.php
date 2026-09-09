@@ -13,6 +13,11 @@ class EventoController extends Controller
     {
         Gate::authorize('viewAny', Evento::class);
 
+        $request->validate([
+            'tipo'    => 'nullable|in:examen,torneo,demostracion,seminario',
+            'excluir' => 'nullable|in:examen,torneo,demostracion,seminario',
+        ]);
+
         $query = Evento::orderBy('fecha', 'asc');
 
         if ($request->has('tipo') && $request->tipo) {
@@ -35,12 +40,12 @@ class EventoController extends Controller
         }
 
         $validated = $request->validate([
-            'nombre'      => 'required|string|max:150',
-            'tipo'        => 'required|in:examen,torneo,demostracion,seminario',
-            'fecha'       => 'required|date',
-            'lugar'       => 'nullable|string|max:200',
-            'descripcion' => 'nullable|string',
-            'costo'       => 'nullable|numeric|min:0',
+            'nombre'         => 'required|string|max:150',
+            'tipo'           => 'required|in:examen,torneo,demostracion,seminario',
+            'fecha'          => 'required|date',
+            'lugar'          => 'nullable|string|max:200',
+            'descripcion'    => 'nullable|string|max:1000',
+            'costo'          => 'nullable|numeric|min:0|max:999999.99',
             'precios_cintas' => 'nullable|array',
         ]);
 
@@ -86,12 +91,12 @@ class EventoController extends Controller
         }
 
         $validated = $request->validate([
-            'nombre'      => 'sometimes|string|max:150',
-            'tipo'        => 'sometimes|in:examen,torneo,demostracion,seminario',
-            'fecha'       => 'sometimes|date',
-            'lugar'       => 'nullable|string|max:200',
-            'descripcion' => 'nullable|string',
-            'costo'       => 'nullable|numeric|min:0',
+            'nombre'         => 'sometimes|string|max:150',
+            'tipo'           => 'sometimes|in:examen,torneo,demostracion,seminario',
+            'fecha'          => 'sometimes|date',
+            'lugar'          => 'nullable|string|max:200',
+            'descripcion'    => 'nullable|string|max:1000',
+            'costo'          => 'nullable|numeric|min:0|max:999999.99',
             'precios_cintas' => 'nullable|array',
         ]);
 

@@ -9,13 +9,31 @@ use Carbon\Carbon;
 
 class AsistenciaController extends Controller
 {
+    private function validateAndSanitizeMes(?string $mes): string
+    {
+        if ($mes && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $mes)) {
+            return $mes;
+        }
+        return Carbon::now()->format('Y-m');
+    }
+
+    private function validateAndSanitizeFecha(?string $fecha): string
+    {
+        if ($fecha && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+            try {
+                return Carbon::parse($fecha)->toDateString();
+            } catch (\Throwable $e) {}
+        }
+        return Carbon::today()->toDateString();
+    }
+
     // -------------------------------------------------------------------------
     // GET /api/asistencias/resumen?mes=2026-05
     // { total_alumnos, pct_promedio, baja_asistencia }
     // -------------------------------------------------------------------------
     public function resumen(Request $request)
     {
-        $mes = $request->get('mes', Carbon::now()->format('Y-m'));
+        $mes = $this->validateAndSanitizeMes($request->get('mes'));
 
         $alumnos = Alumno::where('estatus', 'activo')
             ->with(['horarioConfig'])
@@ -79,7 +97,7 @@ class AsistenciaController extends Controller
     // -------------------------------------------------------------------------
     public function porAlumno(Request $request)
     {
-        $mes = $request->get('mes', Carbon::now()->format('Y-m'));
+        $mes = $this->validateAndSanitizeMes($request->get('mes'));
 
         $alumnos = Alumno::where('estatus', 'activo')
             ->with(['cintaConfig', 'horarioConfig'])
@@ -167,7 +185,12 @@ class AsistenciaController extends Controller
     // -------------------------------------------------------------------------
     public function alumno(Request $request, $alumnoId)
     {
-        $mes = $request->get('mes', Carbon::now()->format('Y-m'));
+        $alumnoId = filter_var($alumnoId, FILTER_VALIDATE_INT);
+        if (!$alumnoId) {
+            return response()->json(['message' => 'ID de alumno no válido'], 404);
+        }
+
+        $mes = $this->validateAndSanitizeMes($request->get('mes'));
 
         $alumno = Alumno::with(['cintaConfig', 'horarioConfig'])->findOrFail($alumnoId);
 
@@ -275,7 +298,7 @@ class AsistenciaController extends Controller
     // -------------------------------------------------------------------------
     public function porFecha(Request $request)
     {
-        $mes = $request->get('mes', Carbon::now()->format('Y-m'));
+        $mes = $this->validateAndSanitizeMes($request->get('mes'));
 
         $alumnos = Alumno::where('estatus', 'activo')
             ->with('horarioConfig')
@@ -328,6 +351,7 @@ class AsistenciaController extends Controller
     // -------------------------------------------------------------------------
     public function dia(Request $request, string $fecha)
     {
+        $fecha = $this->validateAndSanitizeFecha($fecha);
         $fechaCarbon = Carbon::parse($fecha);
         $diaSemana = $fechaCarbon->dayOfWeek;
         $esFinDeSemana = in_array($diaSemana, [0, 6]);
@@ -463,7 +487,7 @@ class AsistenciaController extends Controller
     // -------------------------------------------------------------------------
     public function index(Request $request)
     {
-        $fecha = $request->get('fecha', Carbon::today()->toDateString());
+        $fecha = $this->validateAndSanitizeFecha($request->get('fecha'));
 
         $alumnos = Alumno::where('estatus', 'activo')
             ->with(['cintaConfig', 'horarioConfig'])
@@ -495,10 +519,10 @@ class AsistenciaController extends Controller
     // -------------------------------------------------------------------------
     public function registrarDia(Request $request)
     {
-        $request->validate([
-            'fecha'                       => 'required|date',
-            'asistencias'                 => 'required|array',
-            'asistencias.*.alumno_id'     => 'required|exists:alumnos,id',
+        $validated = $request->validate([
+            'fecha'                       => 'required|date_format:Y-m-d',
+            'asistencias'                 => 'required|array|max:500',
+            'asistencias.*.alumno_id'     => 'required|integer|exists:alumnos,id',
             'asistencias.*.presente'      => 'required|boolean',
         ]);
 

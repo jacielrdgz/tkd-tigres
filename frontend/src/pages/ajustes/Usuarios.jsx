@@ -4,17 +4,34 @@ import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { getCache, setCache, invalidateCache, TTL_STATIC } from '../../utils/cacheManager'
 import { FiShield, FiUserPlus } from 'react-icons/fi'
 
 export default function Usuarios() {
   const navigate = useNavigate()
   const { user: currentUser } = useAuth()
-  const [usuarios, setUsuarios] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
+  const [usuarios, setUsuarios] = useState(() => {
+    const cached = getCache('usuarios_lista')
+    return cached?.data || []
+  })
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('usuarios_lista')
+    return !cached?.data
+  })
   const [showModal, setShowModal] = useState(false)
   const [selected, setSelected] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [tenants, setTenants] = useState([])
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  const [tenants, setTenants] = useState(() => {
+    const cached = getCache('admin_academias_lista')
+    return cached?.data || []
+  })
 
   const [form, setForm] = useState({
     name: '',
@@ -24,20 +41,36 @@ export default function Usuarios() {
     tenant_id: ''
   })
 
-  const fetchUsuarios = async () => {
-    setLoading(true)
+  const fetchUsuarios = async (silent = false) => {
+    const cached = getCache('usuarios_lista')
+    if (cached && cached.data && !silent) {
+      setUsuarios(cached.data)
+      setLoading(false)
+    } else if (!silent && (!usuarios || usuarios.length === 0)) {
+      setLoading(true)
+    }
+
     try {
       const { data } = await api.get('/users')
-      setUsuarios(data)
-    } catch { toast.error('Error al cargar usuarios') }
-    setLoading(false)
+      const list = Array.isArray(data) ? data : (data?.data || [])
+      setUsuarios(list)
+      setCache('usuarios_lista', list, TTL_STATIC)
+    } catch {
+      if (!cached?.data) toast.error('Error al cargar usuarios')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
     fetchUsuarios()
     if (currentUser?.is_superadmin) {
       api.get('/admin/academias')
-        .then(res => setTenants(res.data))
+        .then(res => {
+          const list = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+          setTenants(list)
+          setCache('admin_academias_lista', list, TTL_STATIC)
+        })
         .catch(err => console.error('Error al cargar escuelas', err))
     }
   }, [currentUser])
@@ -87,8 +120,9 @@ export default function Usuarios() {
         await api.post('/users', form)
         toast.success('Usuario creado correctamente')
       }
+      invalidateCache('usuarios_lista')
       setShowModal(false)
-      fetchUsuarios()
+      fetchUsuarios(true)
     } catch (err) {
       const msg = err.response?.data?.message || 'Error al procesar'
       toast.error(msg)
@@ -112,7 +146,8 @@ export default function Usuarios() {
         try {
           const res = await api.post(`/users/${user.id}/toggle-suspension`);
           toast.success(res.data.message || `Usuario actualizado correctamente`);
-          fetchUsuarios();
+          invalidateCache('usuarios_lista')
+          fetchUsuarios(true);
         } catch (err) {
           toast.error(err.response?.data?.message || 'Error al cambiar estado de suspensión');
         }
@@ -134,7 +169,8 @@ export default function Usuarios() {
         try {
           await api.delete(`/users/${user.id}`)
           toast.success('Acceso eliminado')
-          fetchUsuarios()
+          invalidateCache('usuarios_lista')
+          fetchUsuarios(true)
         } catch (err) {
           toast.error(err.response?.data?.message || 'No se pudo eliminar')
         }
@@ -153,7 +189,7 @@ export default function Usuarios() {
   }
 
   return (
-    <div style={s.page}>
+    <div style={{ ...s.page, paddingBottom: isMobile ? '85px' : '40px' }}>
       <button
         style={s.btnBack}
         onClick={() => navigate('/ajustes')}
@@ -173,13 +209,13 @@ export default function Usuarios() {
         ← Volver a ajustes
       </button>
       
-      <div style={s.header}>
+      <div style={{ ...s.header, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '16px' : '0', marginBottom: isMobile ? '24px' : '40px' }}>
         <div>
           <h2 style={s.title}>Usuarios y Roles</h2>
           <p style={s.subtitle}>Gestiona quién tiene acceso a tu academia y qué acciones puede realizar.</p>
         </div>
         <button
-          style={s.btnAdd}
+          style={{ ...s.btnAdd, width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
           onClick={() => handleOpenModal()}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-1px)'
@@ -198,9 +234,9 @@ export default function Usuarios() {
       </div>
 
       {loading ? <div style={s.loading}>Cargando equipo...</div> : (
-        <div style={s.grid}>
+        <div style={{ ...s.grid, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' }}>
           {usuarios.map(u => (
-            <div key={u.id} style={s.card}>
+            <div key={u.id} style={{ ...s.card, padding: isMobile ? '16px 14px' : '20px' }}>
               <div style={s.cardAvatar}>{u.name.charAt(0).toUpperCase()}</div>
               <div style={s.cardInfo}>
                 <div style={s.cardName}>{u.name}</div>

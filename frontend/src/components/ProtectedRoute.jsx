@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
  * Muestra un spinner mientras verifica el token.
  */
 export default function ProtectedRoute({ children, allowedRoles, requireSuperAdmin, requireTenant }) {
-  const { user, loading } = useAuth();
+  const { user = null, loading = true } = useAuth() || {};
 
   if (loading) {
     return (

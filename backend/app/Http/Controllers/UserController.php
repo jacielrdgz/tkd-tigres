@@ -38,21 +38,21 @@ class UserController extends Controller
         }
 
         $rules = [
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6',
+            'name'     => 'required|string|max:100',
+            'email'    => 'required|string|email|max:150|unique:users,email',
+            'password' => 'required|string|min:6|max:100',
             'role'     => 'required|string|in:owner,instructor,secretario',
         ];
 
         if ($isSuper) {
-            $rules['tenant_id'] = 'required|exists:tenants,id';
+            $rules['tenant_id'] = 'required|integer|exists:tenants,id';
         }
 
         $validated = $request->validate($rules);
 
         $user = User::create([
-            'name'      => $validated['name'],
-            'email'     => $validated['email'],
+            'name'      => trim($validated['name']),
+            'email'     => mb_strtolower(trim($validated['email']), 'UTF-8'),
             'password'  => Hash::make($validated['password']),
             'role'      => $validated['role'],
             'tenant_id' => $isSuper ? $validated['tenant_id'] : auth()->user()->tenant_id,
@@ -77,14 +77,14 @@ class UserController extends Controller
         }
 
         $rules = [
-            'name'     => 'sometimes|string|max:255',
-            'email'    => 'sometimes|email|unique:users,email,' . $user->id,
-            'password' => 'sometimes|nullable|string|min:6',
+            'name'     => 'sometimes|string|max:100',
+            'email'    => 'sometimes|string|email|max:150|unique:users,email,' . $user->id,
+            'password' => 'sometimes|nullable|string|min:6|max:100',
             'role'     => 'sometimes|string|in:owner,instructor,secretario',
         ];
 
         if ($isSuper) {
-            $rules['tenant_id'] = 'sometimes|exists:tenants,id';
+            $rules['tenant_id'] = 'sometimes|integer|exists:tenants,id';
         }
 
         $validated = $request->validate($rules);

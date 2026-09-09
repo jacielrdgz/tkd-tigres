@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { toast } from 'react-toastify'
+import { getCache, setCache, TTL_STATIC } from '../utils/cacheManager'
 import { FiUser, FiSun, FiMoon, FiShield, FiUsers, FiAward, FiSliders, FiCreditCard, FiSettings, FiGlobe, FiFileText } from 'react-icons/fi'
 
 export default function Ajustes() {
@@ -197,7 +198,7 @@ function CardMiPerfil() {
       </div>
 
       <div style={s.cardBody}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           {/* Avatar grande */}
           <div
             style={{
@@ -350,12 +351,28 @@ function CardMiPerfil() {
 }
 
 function CardConfigurarEscuela() {
-  const [escuela, setEscuela] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [escuela, setEscuela] = useState(() => {
+    const cached = getCache('configuracion_escuela')
+    return cached?.data || null
+  })
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('configuracion_escuela')
+    return !cached?.data
+  })
 
   useEffect(() => {
+    const cached = getCache('configuracion_escuela')
+    if (cached?.data) {
+      setEscuela(cached.data)
+      setLoading(false)
+    }
+
     api.get('/configuracion-escuela')
-      .then(res => setEscuela(res.data))
+      .then(res => {
+        setEscuela(res.data)
+        setCache('configuracion_escuela', res.data, TTL_STATIC)
+      })
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
@@ -748,24 +765,24 @@ function CardSuscripcionesGlobales() {
 }
 
 const s = {
-  container: { paddingBottom: '40px', width: '100%', boxSizing: 'border-box' },
-  headerMain: { marginBottom: '28px' },
+  container: { paddingBottom: '85px', width: '100%', boxSizing: 'border-box' },
+  headerMain: { marginBottom: '24px' },
   titleMain: { fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
   subtitleMain: { fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '500' },
-  gridCards: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '24px' },
+  gridCards: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: '20px' },
 
-  card: { background: 'var(--bg-secondary)', borderRadius: '24px', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-sm)' },
-  cardHeader: { padding: '24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  card: { background: 'var(--bg-secondary)', borderRadius: '20px', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-sm)', maxWidth: '100%', boxSizing: 'border-box' },
+  cardHeader: { padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   cardIcon: { fontSize: '18px', background: 'var(--bg-tertiary)', padding: '8px', borderRadius: '10px' },
   cardTitle: { fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
   btnLink: { background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontWeight: '700', cursor: 'pointer', fontSize: '13px' },
-  cardBody: { padding: '20px 24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' },
+  cardBody: { padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' },
   resumenRow: { display: 'flex', alignItems: 'center', gap: '14px' },
   dot: { width: '12px', height: '12px', borderRadius: '50%', flexShrink: 0 },
   resumenNombre: { fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', flex: 1 },
   resumenMeta: { fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' },
   cardEmpty: { padding: '20px', textAlign: 'center', color: 'var(--text-muted)' },
-  cardFooter: { padding: '20px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  cardFooter: { padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
   cardStats: { fontSize: '12px', color: 'var(--text-muted)' },
   btnAddQuick: {
     display: 'inline-flex',

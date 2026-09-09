@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
+import { getCache, setCache, invalidateCache, TTL_STATIC } from '../../utils/cacheManager'
 import { FiUser, FiCamera, FiUserPlus, FiX } from 'react-icons/fi'
 import { FaWhatsapp } from 'react-icons/fa'
 
@@ -100,13 +101,22 @@ const modalCredencialStyles = {
 }
 
 export default function InstructorManager() {
-  const [instructores, setInstructores] = useState([])
-  const [cintas, setCintas] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [instructores, setInstructores] = useState(() => {
+    const cached = getCache('instructores_lista')
+    return cached?.data || []
+  })
+  const [cintas, setCintas] = useState(() => {
+    const cached = getCache('cintas_config')
+    return cached?.data || []
+  })
+  const [loading, setLoading] = useState(() => {
+    const cachedInst = getCache('instructores_lista')
+    return !cachedInst?.data
+  })
   const [showModal, setShowModal] = useState(false)
   const [showCredencial, setShowCredencial] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
   
   const [selected, setSelected] = useState(null)
   const [form, setForm] = useState({
@@ -120,17 +130,30 @@ export default function InstructorManager() {
   })
   const [preview, setPreview] = useState(null)
 
-  const fetchData = async () => {
-    setLoading(true)
+  const fetchData = async (silent = false) => {
+    const cachedInst = getCache('instructores_lista')
+    const cachedCintas = getCache('cintas_config')
+    if (cachedInst?.data && !silent) {
+      setInstructores(cachedInst.data)
+      if (cachedCintas?.data) setCintas(cachedCintas.data)
+      setLoading(false)
+    } else if (!silent && (!instructores || instructores.length === 0)) {
+      setLoading(true)
+    }
+
     try {
       const [resInst, resCintas] = await Promise.all([
         api.get('/instructores'),
         api.get('/configuraciones-cintas')
       ])
-      setInstructores(resInst.data)
-      setCintas(resCintas.data)
+      const listInst = Array.isArray(resInst.data) ? resInst.data : (resInst.data?.data || [])
+      const listCintas = Array.isArray(resCintas.data) ? resCintas.data : (resCintas.data?.data || [])
+      setInstructores(listInst)
+      setCintas(listCintas)
+      setCache('instructores_lista', listInst, TTL_STATIC)
+      setCache('cintas_config', listCintas, TTL_STATIC)
     } catch {
-      toast.error('Error al cargar datos')
+      if (!cachedInst?.data) toast.error('Error al cargar datos')
     } finally {
       setLoading(false)
     }
@@ -139,7 +162,7 @@ export default function InstructorManager() {
   useEffect(() => { fetchData() }, [])
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 640)
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
@@ -210,8 +233,9 @@ export default function InstructorManager() {
         })
         toast.success('Instructor agregado')
       }
+      invalidateCache('instructores_lista')
       setShowModal(false)
-      await fetchData()
+      await fetchData(true)
     } catch (err) {
       console.error(err)
       const msg = err.response?.data?.message || Object.values(err.response?.data?.errors || {})[0]?.[0] || 'Error al guardar'
@@ -235,7 +259,8 @@ export default function InstructorManager() {
         try {
           await api.delete(`/instructores/${inst.id}`)
           toast.success('Eliminado')
-          fetchData()
+          invalidateCache('instructores_lista')
+          fetchData(true)
         } catch { toast.error('Error al eliminar') }
       }
     })
@@ -263,14 +288,14 @@ export default function InstructorManager() {
   }
 
   return (
-    <div style={s.container}>
-      <div style={s.headerRow}>
+    <div style={{ ...s.container, paddingBottom: isMobile ? '85px' : '40px' }}>
+      <div style={{ ...s.headerRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '16px' : '0' }}>
         <div>
           <h3 style={s.tabTitle}>Nuestros Instructores</h3>
           <p style={s.tabSubtitle}>Gestiona el equipo docente de tu academia.</p>
         </div>
         <button 
-          style={s.btnAdd} 
+          style={{ ...s.btnAdd, width: isMobile ? '100%' : 'auto', justifyContent: 'center' }} 
           onClick={() => handleOpenModal()}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-1px)'
@@ -289,10 +314,10 @@ export default function InstructorManager() {
       </div>
 
       {loading ? <div style={s.loading}>Cargando equipo...</div> : (
-        <div style={s.grid}>
+        <div style={{ ...s.grid, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' }}>
           {instructores.map(inst => (
-            <div key={inst.id} style={s.instCard}>
-              <div style={s.instPhoto}>
+            <div key={inst.id} style={{ ...s.instCard, padding: isMobile ? '14px' : '20px', gap: isMobile ? '12px' : '20px' }}>
+              <div style={{ ...s.instPhoto, width: isMobile ? '52px' : '70px', height: isMobile ? '52px' : '70px', borderRadius: isMobile ? '14px' : '18px' }}>
                 {inst.foto_url ? (
                   <img 
                     src={(inst.foto_url.startsWith('http') || inst.foto_url.startsWith('data:')) ? inst.foto_url : `${import.meta.env.VITE_API_URL || ''}/storage/${inst.foto_url}`} 
@@ -301,20 +326,31 @@ export default function InstructorManager() {
                   />
                 ) : (
                   <div style={s.photoPlaceholder}>
-                    <FiUser size={32} color="var(--text-muted)" />
+                    <FiUser size={isMobile ? 26 : 32} color="var(--text-muted)" />
                   </div>
                 )}
               </div>
               <div style={s.instInfo}>
-                <div style={s.instName}>{inst.nombre} {inst.apellido_paterno}</div>
+                <div style={{
+                  ...s.instName,
+                  fontSize: isMobile ? '15px' : '16px',
+                  whiteSpace: 'normal',
+                  lineHeight: '1.25',
+                  marginBottom: '4px'
+                }}>
+                  {inst.nombre} {inst.apellido_paterno}
+                </div>
                 <div style={{...s.instBadge, background: getCintaColor(inst)}}>
                   {getCintaLabel(inst)}
                 </div>
               </div>
-              <div style={s.instActions}>
+              <div style={{ ...s.instActions, gap: isMobile ? '6px' : '8px' }}>
                 <button
                   style={{
                     ...s.btnIcon,
+                    width: isMobile ? '32px' : '36px',
+                    height: isMobile ? '32px' : '36px',
+                    borderRadius: '8px',
                     background: 'rgba(168,85,247,0.1)',
                     border: '1px solid rgba(168,85,247,0.3)',
                     color: '#a855f7',
@@ -332,7 +368,7 @@ export default function InstructorManager() {
                   }}
                   title="Ver Credencial"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="4" width="18" height="16" rx="2" ry="2"/>
                     <line x1="7" y1="8" x2="17" y2="8"/>
                     <line x1="7" y1="12" x2="17" y2="12"/>
@@ -342,6 +378,9 @@ export default function InstructorManager() {
                 <button
                   style={{
                     ...s.btnIcon,
+                    width: isMobile ? '32px' : '36px',
+                    height: isMobile ? '32px' : '36px',
+                    borderRadius: '8px',
                     background: 'rgba(59,130,246,0.1)',
                     border: '1px solid rgba(59,130,246,0.3)',
                     color: '#3b82f6',
@@ -359,7 +398,7 @@ export default function InstructorManager() {
                   }}
                   title="Editar"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                   </svg>
@@ -367,6 +406,9 @@ export default function InstructorManager() {
                 <button
                   style={{
                     ...s.btnIcon,
+                    width: isMobile ? '32px' : '36px',
+                    height: isMobile ? '32px' : '36px',
+                    borderRadius: '8px',
                     background: 'rgba(239,68,68,0.1)',
                     border: '1px solid rgba(239,68,68,0.3)',
                     color: '#ef4444',
@@ -384,7 +426,7 @@ export default function InstructorManager() {
                   }}
                   title="Eliminar"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="3 6 5 6 21 6"/>
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                   </svg>
@@ -416,8 +458,8 @@ export default function InstructorManager() {
               >×</button>
             </div>
             
-            <div style={s.modalBody}>
-              <div style={s.modalPhotoSection}>
+            <div style={{ ...s.modalBody, ...(isMobile ? { flexDirection: 'column', alignItems: 'center', padding: '20px 16px', gap: '20px' } : {}) }}>
+              <div style={{ ...s.modalPhotoSection, ...(isMobile ? { width: '100%', display: 'flex', justifyContent: 'center' } : {}) }}>
                 <div style={s.modalPhotoFrame}>
                   {preview ? (
                     <img 
@@ -441,7 +483,7 @@ export default function InstructorManager() {
                 </div>
               </div>
 
-              <div style={s.modalForm}>
+              <div style={{ ...s.modalForm, ...(isMobile ? { width: '100%' } : {}) }}>
                 <div style={s.modalGrid}>
                   <div style={s.inputGroup}>
                     <label style={s.label}>Nombre(s)</label>

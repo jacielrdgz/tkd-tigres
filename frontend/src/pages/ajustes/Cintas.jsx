@@ -3,6 +3,7 @@ import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
 import { useNavigate } from 'react-router-dom'
+import { getCache, setCache, invalidateCache, TTL_STATIC } from '../../utils/cacheManager'
 import {
   FiAward,
   FiLayers,
@@ -27,8 +28,15 @@ const SUGGESTED_COLORS = [
 
 export default function Cintas({ isEmbedded = false }) {
   const navigate = useNavigate()
-  const [cintas, setCintas] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
+  const [cintas, setCintas] = useState(() => {
+    const cached = getCache('cintas_config')
+    return cached?.data || []
+  })
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('cintas_config')
+    return !cached?.data
+  })
   const [saving, setSaving] = useState(false)
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState({ nombre: '', bg: '#3b82f6', tx: '#ffffff' })
@@ -36,13 +44,31 @@ export default function Cintas({ isEmbedded = false }) {
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [hoveredRowId, setHoveredRowId] = useState(null)
 
-  const fetchCintas = async () => {
-    setLoading(true)
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const fetchCintas = async (silent = false) => {
+    const cached = getCache('cintas_config')
+    if (cached?.data && !silent) {
+      setCintas(cached.data)
+      setLoading(false)
+    } else if (!silent && (!cintas || cintas.length === 0)) {
+      setLoading(true)
+    }
+
     try {
       const { data } = await api.get('/configuraciones-cintas')
-      setCintas(data)
-    } catch { toast.error('Error al conectar') }
-    setLoading(false)
+      const list = Array.isArray(data) ? data : (data?.data || [])
+      setCintas(list)
+      setCache('cintas_config', list, TTL_STATIC)
+    } catch {
+      if (!cached?.data) toast.error('Error al conectar')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { fetchCintas() }, [])
@@ -66,7 +92,11 @@ export default function Cintas({ isEmbedded = false }) {
         await api.post('/configuraciones-cintas', { ...payload, orden })
         toast.success('Grado creado')
       }
-      setForm({ nombre: '', bg: '#3b82f6', tx: '#ffffff' }); setEditId(null); fetchCintas()
+      setForm({ nombre: '', bg: '#3b82f6', tx: '#ffffff' }); setEditId(null)
+      invalidateCache('cintas_config')
+      invalidateCache('pagos_main_data')
+      invalidateCache('instructores_lista')
+      fetchCintas(true)
     } catch (err) {
       toast.error('Error al procesar el cambio')
     } finally { setSaving(false) }
@@ -92,7 +122,10 @@ export default function Cintas({ isEmbedded = false }) {
         try {
           await api.delete(`/configuraciones-cintas/${c.id}`)
           toast.success('Cinta eliminada')
-          fetchCintas()
+          invalidateCache('cintas_config')
+          invalidateCache('pagos_main_data')
+          invalidateCache('instructores_lista')
+          fetchCintas(true)
         } catch { toast.error('No se pudo borrar') }
       }
     })
@@ -114,7 +147,12 @@ export default function Cintas({ isEmbedded = false }) {
         try {
           const { data } = await api.post('/configuraciones-cintas/reset-default')
           toast.success(data.message || 'Cintas restablecidas a los valores por defecto exitosamente.')
-          setCintas(data.cintas || [])
+          const defaultCintas = data.cintas || []
+          setCintas(defaultCintas)
+          setCache('cintas_config', defaultCintas, TTL_STATIC)
+          invalidateCache('cintas_config')
+          invalidateCache('pagos_main_data')
+          invalidateCache('instructores_lista')
           setEditId(null)
           setForm({ nombre: '', bg: '#3b82f6', tx: '#ffffff' })
         } catch {
@@ -143,6 +181,7 @@ export default function Cintas({ isEmbedded = false }) {
     const [moved] = updated.splice(dragIdx, 1)
     updated.splice(idx, 0, moved)
     setCintas(updated)
+    setCache('cintas_config', updated, TTL_STATIC)
     setDragIdx(null)
     setDragOverIdx(null)
 
@@ -151,9 +190,11 @@ export default function Cintas({ isEmbedded = false }) {
         orden: updated.map(c => c.id)
       })
       toast.success('Orden actualizado')
+      invalidateCache('cintas_config')
+      invalidateCache('pagos_main_data')
     } catch {
       toast.error('Error al guardar el orden')
-      fetchCintas()
+      fetchCintas(true)
     }
   }
 
@@ -169,14 +210,17 @@ export default function Cintas({ isEmbedded = false }) {
     const [moved] = updated.splice(fromIdx, 1)
     updated.splice(toIdx, 0, moved)
     setCintas(updated)
+    setCache('cintas_config', updated, TTL_STATIC)
 
     try {
       await api.post('/configuraciones-cintas/reorder', {
         orden: updated.map(c => c.id)
       })
+      invalidateCache('cintas_config')
+      invalidateCache('pagos_main_data')
     } catch {
       toast.error('Error al guardar el orden')
-      fetchCintas()
+      fetchCintas(true)
     }
   }
 
@@ -196,7 +240,7 @@ export default function Cintas({ isEmbedded = false }) {
   }
 
   return (
-    <div style={isEmbedded ? {} : s.pageTool}>
+    <div style={isEmbedded ? {} : { ...s.pageTool, paddingBottom: isMobile ? '85px' : '40px' }}>
       {!isEmbedded && (
         <>
           <button
@@ -226,9 +270,9 @@ export default function Cintas({ isEmbedded = false }) {
         </>
       )}
 
-      <div style={s.toolLayout}>
+      <div style={{ ...s.toolLayout, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '20px' : '32px' }}>
         {/* Editor Lateral */}
-        <div style={s.toolFormCard}>
+        <div style={{ ...s.toolFormCard, width: isMobile ? '100%' : '360px', position: isMobile ? 'static' : 'sticky', padding: isMobile ? '20px 16px' : '28px' }}>
           <div style={s.cardHeaderGlow} />
           <h4 style={s.toolLabel}>
             <FiAward size={16} style={{ marginRight: '6px' }} />
@@ -444,20 +488,24 @@ export default function Cintas({ isEmbedded = false }) {
                       ? '0 6px 16px rgba(0, 0, 0, 0.2)'
                       : '0 2px 4px rgba(0, 0, 0, 0.05)',
                     background: hoveredRowId === c.id ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+                    padding: isMobile ? '10px 12px' : '12px 20px',
+                    gap: isMobile ? '8px' : '12px'
                   }}
                 >
-                  <div style={s.toolRowLeft}>
-                    <span style={s.toolDragHandle} title="Arrastra para reordenar">⠿</span>
+                  <div style={{ ...s.toolRowLeft, gap: isMobile ? '8px' : '14px' }}>
+                    {!isMobile && <span style={s.toolDragHandle} title="Arrastra para reordenar">⠿</span>}
                     <span style={s.toolOrder}>#{i + 1}</span>
                     <div style={{
                       ...s.rowBeltPreview,
+                      minWidth: isMobile ? '70px' : '150px',
+                      padding: isMobile ? '6px 12px' : '8px 18px',
                       backgroundColor: c.color_hex,
                       color: c.color_texto,
                       boxShadow: `inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 4px ${c.color_hex}25`
                     }}>
-                      <span style={{ position: 'relative', zIndex: 3 }}>{c.nombre_nivel}</span>
+                      <span style={{ position: 'relative', zIndex: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre_nivel}</span>
                     </div>
-                    <span style={s.toolHex}>{c.color_hex.toUpperCase()}</span>
+                    {!isMobile && <span style={s.toolHex}>{c.color_hex.toUpperCase()}</span>}
                   </div>
                   <div style={s.toolActions}>
                     <button style={{ ...s.btnIcon, ...s.btnMove }} onClick={() => moveItem(i, -1)} disabled={i === 0} title="Subir">

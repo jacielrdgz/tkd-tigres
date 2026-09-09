@@ -70,7 +70,12 @@ export function precargarTodosLosModulos(user) {
     })
     .catch(() => {})
 
-  // 4. Asistencias (Mes actual)
+  // 4. Asistencias (Mes actual y lista de hoy)
+  const hoyStr = hoy.toLocaleDateString('sv-SE')
+  api.get('/asistencias', { params: { fecha: hoyStr } })
+    .then(res => setCache(`asistencias_dia_${hoyStr}`, res.data, 15 * 60 * 1000))
+    .catch(() => {})
+
   api.get('/asistencias/resumen', { params: { mes: mesActual } })
     .then(res => setCache(`asistencias_resumen_${mesActual}`, res.data))
     .catch(() => {})
@@ -105,6 +110,32 @@ export function precargarTodosLosModulos(user) {
       const soloExamenes = [...rawList]
       soloExamenes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
       setCache('examenes_lista', soloExamenes)
+    })
+    .catch(() => {})
+
+  // 6. Ajustes: Usuarios, Instructores y Academias
+  if (user.role === 'owner' || user.is_superadmin) {
+    api.get('/users')
+      .then(res => {
+        const list = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+        setCache('usuarios_lista', list)
+      })
+      .catch(() => {})
+  }
+
+  if (user.is_superadmin) {
+    api.get('/admin/academias')
+      .then(res => {
+        const list = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+        setCache('admin_academias_lista', list)
+      })
+      .catch(() => {})
+  }
+
+  api.get('/instructores')
+    .then(res => {
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+      setCache('instructores_lista', list)
     })
     .catch(() => {})
 }

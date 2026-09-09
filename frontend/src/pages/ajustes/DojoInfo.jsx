@@ -1,58 +1,107 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import { useAuth } from '../../context/AuthContext'
+import { getCache, setCache, invalidateCache, TTL_STATIC } from '../../utils/cacheManager'
 import { FiShield, FiCamera, FiPhone, FiMapPin, FiSave, FiLoader, FiAward } from 'react-icons/fi'
+
+const DEFAULT_ESCUELA = {
+  nombre: '',
+  titular: '',
+  disciplina: 'taekwondo',
+  eslogan: '',
+  descripcion: '',
+  telefono_contacto: '',
+  email_contacto: '',
+  redes_sociales: { facebook: '', instagram: '', whatsapp: '' },
+  logo_url: '',
+  direccion: {
+    calle: '',
+    numero_exterior: '',
+    numero_interior: '',
+    colonia: '',
+    ciudad: '',
+    estado: '',
+    codigo_postal: '',
+    referencias: ''
+  }
+}
+
+const getFormattedEscuela = (data) => {
+  if (!data) return DEFAULT_ESCUELA
+  return {
+    ...DEFAULT_ESCUELA,
+    ...data,
+    redes_sociales: data.redes_sociales || { facebook: '', instagram: '', whatsapp: '' },
+    direccion: data.direccion || {
+      calle: '', numero_exterior: '', numero_interior: '',
+      colonia: '', ciudad: '', estado: '', codigo_postal: '', referencias: ''
+    }
+  }
+}
+
+const getLogoUrl = (data) => {
+  if (!data?.logo_url && !data?.logo_base64) return null
+  const url = data.logo_url || data.logo_base64
+  return (url.startsWith('data:') || url.startsWith('http'))
+    ? url
+    : `${import.meta.env.VITE_API_URL || ''}/storage/${url}`
+}
 
 export default function DojoInfo() {
   const { refreshUser } = useAuth()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [escuela, setEscuela] = useState({
-    nombre: '',
-    titular: '',
-    disciplina: 'taekwondo',
-    eslogan: '',
-    descripcion: '',
-    telefono_contacto: '',
-    email_contacto: '',
-    redes_sociales: { facebook: '', instagram: '', whatsapp: '' },
-    logo_url: '',
-    direccion: {
-      calle: '',
-      numero_exterior: '',
-      numero_interior: '',
-      colonia: '',
-      ciudad: '',
-      estado: '',
-      codigo_postal: '',
-      referencias: ''
-    }
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
+  const [escuela, setEscuela] = useState(() => {
+    const cached = getCache('configuracion_escuela')
+    return getFormattedEscuela(cached?.data)
   })
-  const [fotoPreview, setFotoPreview] = useState(null)
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('configuracion_escuela')
+    return !cached?.data
+  })
+  const [saving, setSaving] = useState(false)
+  const [fotoPreview, setFotoPreview] = useState(() => {
+    const cached = getCache('configuracion_escuela')
+    return getLogoUrl(cached?.data)
+  })
   const [fotoFile, setFotoFile] = useState(null)
 
   useEffect(() => {
-    api.get('/configuracion-escuela')
-      .then(res => {
-        const data = res.data
-        setEscuela({
-          ...data,
-          redes_sociales: data.redes_sociales || { facebook: '', instagram: '', whatsapp: '' },
-          direccion: data.direccion || {
-            calle: '', numero_exterior: '', numero_interior: '',
-            colonia: '', ciudad: '', estado: '', codigo_postal: '', referencias: ''
-          }
-        })
-        if (data.logo_url) {
-          const url = (data.logo_url.startsWith('data:') || data.logo_url.startsWith('http')) 
-            ? data.logo_url 
-            : `${import.meta.env.VITE_API_URL || ''}/storage/${data.logo_url}`
-          setFotoPreview(url)
-        }
-      })
-      .finally(() => setLoading(false))
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  const applyData = useCallback((data) => {
+    setEscuela(getFormattedEscuela(data))
+    const url = getLogoUrl(data)
+    if (url) setFotoPreview(url)
+  }, [])
+
+  const fetchEscuela = useCallback(async (silent = false) => {
+    const cached = getCache('configuracion_escuela')
+    if (cached?.data && !silent) {
+      applyData(cached.data)
+      setLoading(false)
+    } else if (!silent && !escuela.nombre) {
+      setLoading(true)
+    }
+
+    try {
+      const res = await api.get('/configuracion-escuela')
+      const data = res.data
+      applyData(data)
+      setCache('configuracion_escuela', data, TTL_STATIC)
+    } catch {
+      if (!cached?.data) toast.error('Error al cargar datos de la escuela')
+    } finally {
+      setLoading(false)
+    }
+  }, [applyData, escuela.nombre])
+
+  useEffect(() => {
+    fetchEscuela()
+  }, [fetchEscuela])
 
   const handleFileChange = (e) => {
     const file = e.target.files[0]
@@ -91,17 +140,10 @@ export default function DojoInfo() {
       const { data } = await api.post('/configuracion-escuela', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      setEscuela({
-        ...data,
-        redes_sociales: data.redes_sociales || { facebook: '', instagram: '', whatsapp: '' },
-        direccion: data.direccion || {
-          calle: '', numero_exterior: '', numero_interior: '',
-          colonia: '', ciudad: '', estado: '', codigo_postal: '', referencias: ''
-        }
-      })
-      if (data.logo_url || data.logo_base64) {
-        setFotoPreview(data.logo_url || data.logo_base64)
-      }
+      applyData(data)
+      setCache('configuracion_escuela', data, TTL_STATIC)
+      invalidateCache('configuracion_escuela')
+      invalidateCache('pagos_main_data')
       setFotoFile(null)
       await refreshUser()
       toast.success('Información actualizada correctamente')
@@ -117,10 +159,10 @@ export default function DojoInfo() {
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando datos...</div>
 
   return (
-    <div style={s.card}>
-      <div style={s.layout}>
+    <div style={{ ...s.card, ...(isMobile ? { padding: '20px 14px 90px 14px', borderRadius: '18px' } : {}) }}>
+      <div style={{ ...s.layout, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '24px' : '48px' }}>
         {/* LADO IZQUIERDO: LOGO Y RESUMEN */}
-        <div style={s.photoSection}>
+        <div style={{ ...s.photoSection, minWidth: isMobile ? '100%' : '240px', width: isMobile ? '100%' : 'auto' }}>
           <div style={s.photoFrame}>
             {fotoPreview ? (
               <img 
@@ -152,7 +194,7 @@ export default function DojoInfo() {
         </div>
 
         {/* LADO DERECHO: FORMULARIO DETALLADO */}
-        <div style={s.formSection}>
+        <div style={{ ...s.formSection, minWidth: 0, width: '100%' }}>
           
           {/* SECCIÓN 1: IDENTIDAD */}
           <section style={s.section}>
@@ -160,7 +202,7 @@ export default function DojoInfo() {
               <FiShield size={18} style={{ marginRight: '8px', color: 'var(--accent-blue)', verticalAlign: 'middle' }} />
               Identidad de la Academia
             </h3>
-            <div style={s.grid2}>
+            <div style={{ ...s.grid2, flexDirection: isMobile ? 'column' : 'row' }}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Nombre de la Escuela</label>
                 <input 
@@ -180,7 +222,7 @@ export default function DojoInfo() {
                 />
               </div>
             </div>
-            <div style={s.grid2}>
+            <div style={{ ...s.grid2, flexDirection: isMobile ? 'column' : 'row' }}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Eslogan o Lema</label>
                 <input 
@@ -223,7 +265,7 @@ export default function DojoInfo() {
               <FiPhone size={18} style={{ marginRight: '8px', color: 'var(--accent-blue)', verticalAlign: 'middle' }} />
               Contacto y Redes Sociales
             </h3>
-            <div style={s.grid2}>
+            <div style={{ ...s.grid2, flexDirection: isMobile ? 'column' : 'row' }}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Teléfono</label>
                 <input 
@@ -243,7 +285,7 @@ export default function DojoInfo() {
                 />
               </div>
             </div>
-            <div style={s.grid3}>
+            <div style={{ ...s.grid3, flexDirection: isMobile ? 'column' : 'row' }}>
               <div style={s.inputGroup}>
                 <label style={s.label}>WhatsApp (ID o Link)</label>
                 <input 
@@ -277,7 +319,7 @@ export default function DojoInfo() {
               <FiMapPin size={18} style={{ marginRight: '8px', color: 'var(--accent-blue)', verticalAlign: 'middle' }} />
               Ubicación Física
             </h3>
-            <div style={s.grid2}>
+            <div style={{ ...s.grid2, flexDirection: isMobile ? 'column' : 'row' }}>
               <div style={{...s.inputGroup, flex: 2}}>
                 <label style={s.label}>Calle</label>
                 <input 
@@ -295,7 +337,7 @@ export default function DojoInfo() {
                 />
               </div>
             </div>
-            <div style={s.grid3}>
+            <div style={{ ...s.grid3, flexDirection: isMobile ? 'column' : 'row' }}>
               <div style={s.inputGroup}>
                 <label style={s.label}>Colonia</label>
                 <input 
@@ -332,9 +374,17 @@ export default function DojoInfo() {
             </div>
           </section>
 
-          <div style={s.actions}>
+          <div style={{ ...s.actions, justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
             <button 
-              style={{ ...s.btnSave, opacity: saving ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} 
+              style={{ 
+                ...s.btnSave, 
+                opacity: saving ? 0.7 : 1, 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                width: isMobile ? '100%' : 'auto',
+                minWidth: isMobile ? 'auto' : '200px'
+              }} 
               onClick={handleSave} 
               disabled={saving}
               onMouseEnter={e => {

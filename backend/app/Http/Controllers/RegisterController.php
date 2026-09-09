@@ -14,11 +14,11 @@ class RegisterController extends Controller
      */
     public function register(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name'     => 'required|string|max:100',
-            'email'    => 'required|email|unique:users,email',
-            'telefono' => 'nullable|string|max:25',
-            'password' => 'required|string|min:6|confirmed',
+            'email'    => 'required|string|email|max:150|unique:users,email',
+            'telefono' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s()-]+$/'],
+            'password' => 'required|string|min:6|max:100|confirmed',
             'escuela'  => 'required|string|max:150',
         ], [
             'email.unique'        => 'Este correo electrónico ya está registrado. Si ya tienes cuenta, inicia sesión.',
@@ -28,19 +28,22 @@ class RegisterController extends Controller
             'password.required'   => 'La contraseña es obligatoria.',
             'password.min'        => 'La contraseña debe tener al menos 6 caracteres.',
             'password.confirmed'  => 'Las contraseñas no coinciden.',
+            'telefono.regex'      => 'El formato del teléfono no es válido.',
             'escuela.required'    => 'El nombre de tu escuela / academia es obligatorio.',
         ]);
+
+        $emailClean = mb_strtolower(trim($validated['email']), 'UTF-8');
 
         // Guardar el nombre de la escuela solicitada en el campo escuela_solicitada
         // El tenant_id queda NULL — el admin lo asigna manualmente
         $user = User::create([
-            'name'               => $request->name,
-            'email'              => $request->email,
-            'telefono'           => $request->telefono,
-            'password'           => Hash::make($request->password),
+            'name'               => trim($validated['name']),
+            'email'              => $emailClean,
+            'telefono'           => !empty($validated['telefono']) ? trim($validated['telefono']) : null,
+            'password'           => Hash::make($validated['password']),
             'role'               => 'secretario', // Rol inicial con mínimos privilegios
             'tenant_id'          => null, // Pendiente de aprobación
-            'escuela_solicitada' => $request->escuela,
+            'escuela_solicitada' => trim($validated['escuela']),
         ]);
 
         return response()->json([

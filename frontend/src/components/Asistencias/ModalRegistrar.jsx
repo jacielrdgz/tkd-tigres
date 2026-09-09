@@ -330,15 +330,18 @@ export default function ModalRegistrar({ onCerrar, onGuardado, isMobile: propIsM
       })
       setCache(key, nuevaLista)
 
-      // 2. Cerrar modal de inmediato y notificar a la vista padre
-      toast.success(`Guardado: ${presentesCount} presentes.`, {
-        position: "top-right",
-        autoClose: 2000,
-      })
-      onGuardado?.(fecha)
-      onCerrar()
+      // 2. Invalidar caché para que las vistas muestren datos actualizados
+      invalidateCache('asistencias_resumen')
+      invalidateCache('asistencias_alumno')
+      invalidateCache('asistencias_fecha')
 
-      // 3. Persistir en backend en segundo plano
+      // 3. Cerrar modal de inmediato y disparar confirmación
+      onCerrar()
+      setTimeout(() => {
+        onGuardado?.(fecha)
+      }, 100)
+
+      // 4. Persistir en backend en segundo plano
       api.post('/asistencias/registrar-dia', { fecha, asistencias: lista })
         .then(() => {
           invalidateCache('asistencias_resumen')

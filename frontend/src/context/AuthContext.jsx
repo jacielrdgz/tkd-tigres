@@ -1,7 +1,19 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/axios';
 
-const AuthContext = createContext();
+const defaultAuth = {
+  user: null,
+  loading: true,
+  login: async () => {},
+  logout: async () => {},
+  setUserDirect: () => {},
+  refreshUser: async () => {},
+  isOwner: false,
+  isSecretario: false,
+  isInstructor: false,
+};
+
+const AuthContext = createContext(defaultAuth);
 
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
@@ -80,4 +92,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  return context || defaultAuth;
+};

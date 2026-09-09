@@ -86,11 +86,11 @@ class ConfiguracionCintaController extends Controller
     {
         try {
             $validated = $request->validate([
-                'nombre_nivel'    => 'required|string|max:100',
-                'color_hex'       => 'required|string|max:7',
-                'color_texto'     => 'required|string|max:7',
-                'orden'           => 'nullable|integer',
-                'categoria_label' => 'nullable|string|max:50',
+                'nombre_nivel'    => ['required', 'string', 'max:100'],
+                'color_hex'       => ['required', 'string', 'regex:/^#([a-fA-F0-9]{3}|[a-fA-F0-9]{6})$/'],
+                'color_texto'     => ['required', 'string', 'regex:/^#([a-fA-F0-9]{3}|[a-fA-F0-9]{6})$/'],
+                'orden'           => ['nullable', 'integer', 'min:0', 'max:1000'],
+                'categoria_label' => ['nullable', 'string', 'max:50'],
             ]);
 
             $tenantId = $this->getTenantId();
@@ -155,11 +155,11 @@ class ConfiguracionCintaController extends Controller
             }
 
             $validated = $request->validate([
-                'nombre_nivel'    => 'sometimes|string|max:100',
-                'color_hex'       => 'sometimes|string|max:7',
-                'color_texto'     => 'sometimes|string|max:7',
-                'orden'           => 'sometimes|integer',
-                'categoria_label' => 'sometimes|string|max:50',
+                'nombre_nivel'    => ['sometimes', 'string', 'max:100'],
+                'color_hex'       => ['sometimes', 'string', 'regex:/^#([a-fA-F0-9]{3}|[a-fA-F0-9]{6})$/'],
+                'color_texto'     => ['sometimes', 'string', 'regex:/^#([a-fA-F0-9]{3}|[a-fA-F0-9]{6})$/'],
+                'orden'           => ['sometimes', 'integer', 'min:0', 'max:1000'],
+                'categoria_label' => ['sometimes', 'string', 'max:50'],
             ]);
 
             $targetCinta->update($validated);

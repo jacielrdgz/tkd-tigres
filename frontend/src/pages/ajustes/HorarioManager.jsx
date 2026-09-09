@@ -2,13 +2,27 @@ import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import { toast } from 'react-toastify'
 import Swal from 'sweetalert2'
+import { getCache, setCache, invalidateCache, TTL_STATIC } from '../../utils/cacheManager'
 import { FiClock } from 'react-icons/fi'
 
 export default function HorarioManager() {
-  const [horarios, setHorarios] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
+  const [horarios, setHorarios] = useState(() => {
+    const cached = getCache('horarios_lista')
+    return cached?.data || []
+  })
+  const [loading, setLoading] = useState(() => {
+    const cached = getCache('horarios_lista')
+    return !cached?.data
+  })
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
   
   const [selected, setSelected] = useState(null)
   const [form, setForm] = useState({
@@ -30,11 +44,25 @@ export default function HorarioManager() {
     return `${hStr}:${m} ${ampm}`
   }
 
-  const fetchHorarios = () => {
-    setLoading(true)
-    api.get('/horarios')
-      .then(res => setHorarios(res.data))
-      .finally(() => setLoading(false))
+  const fetchHorarios = async (silent = false) => {
+    const cached = getCache('horarios_lista')
+    if (cached?.data && !silent) {
+      setHorarios(cached.data)
+      setLoading(false)
+    } else if (!silent && (!horarios || horarios.length === 0)) {
+      setLoading(true)
+    }
+
+    try {
+      const res = await api.get('/horarios')
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+      setHorarios(list)
+      setCache('horarios_lista', list, TTL_STATIC)
+    } catch {
+      if (!cached?.data) toast.error('Error al cargar horarios')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { fetchHorarios() }, [])
@@ -86,8 +114,10 @@ export default function HorarioManager() {
         await api.post('/horarios', form)
         toast.success('Horario creado')
       }
+      invalidateCache('horarios_lista')
+      invalidateCache('pagos_main_data')
       setShowModal(false)
-      fetchHorarios()
+      fetchHorarios(true)
     } catch (err) {
       toast.error('Error al guardar')
     } finally {
@@ -109,21 +139,34 @@ export default function HorarioManager() {
         try {
           await api.delete(`/horarios/${h.id}`)
           toast.success('Eliminado')
-          fetchHorarios()
+          invalidateCache('horarios_lista')
+          invalidateCache('pagos_main_data')
+          fetchHorarios(true)
         } catch { toast.error('Error al eliminar') }
       }
     })
   }
 
   return (
-    <div style={s.container}>
-      <div style={s.headerRow}>
+    <div style={{ ...s.container, paddingBottom: isMobile ? '80px' : '40px' }}>
+      <div style={{
+        ...s.headerRow,
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? '16px' : '0',
+        marginBottom: isMobile ? '20px' : '32px'
+      }}>
         <div>
           <h3 style={s.tabTitle}>Nuestros Horarios</h3>
           <p style={s.tabSubtitle}>Administra las clases, días y horarios de entrenamiento.</p>
         </div>
         <button
-          style={s.btnAdd}
+          style={{
+            ...s.btnAdd,
+            width: isMobile ? '100%' : 'auto',
+            justifyContent: 'center',
+            padding: isMobile ? '12px 20px' : '10px 18px',
+          }}
           onClick={() => handleOpenModal()}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-1px)'
@@ -141,7 +184,59 @@ export default function HorarioManager() {
         </button>
       </div>
 
-      {loading ? <div style={s.loading}>Cargando horarios...</div> : (
+      {loading ? (
+        <div style={s.loading}>Cargando horarios...</div>
+      ) : isMobile ? (
+        /* VISTA MÓVIL: TARJETAS RESPONSIVAS (MISMOS ESTILOS DOJO CLOUD) */
+        <div style={s.mobileList}>
+          {horarios.map(h => (
+            <div key={h.id} style={s.mobileCard}>
+              <div style={s.mobileCardHeader}>
+                <span style={s.mobileCardTitle}>{h.nombre}</span>
+                <div style={s.mobileCardActions}>
+                  <button 
+                    style={s.btnIconEdit} 
+                    onClick={() => handleOpenModal(h)}
+                    title="Editar"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                  <button 
+                    style={s.btnIconDel} 
+                    onClick={() => handleDelete(h)}
+                    title="Eliminar"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div style={s.mobileTimeBadge}>
+                <FiClock size={13} style={{ marginRight: '6px', flexShrink: 0 }} />
+                <span>{formatHora(h.hora_inicio)} - {formatHora(h.hora_fin)}</span>
+              </div>
+
+              {h.dias && (
+                <div style={s.mobileDaysContainer}>
+                  {h.dias.split(',').map((dia, idx) => (
+                    <span key={idx} style={s.mobileDayBadge}>
+                      {dia.trim()}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          {horarios.length === 0 && <div style={s.empty}>No hay horarios configurados.</div>}
+        </div>
+      ) : (
+        /* VISTA ESCRITORIO: TABLA COMPLETA */
         <div style={s.list}>
           <div style={s.listHeader}>
             <span style={{ width: '280px' }}>Nombre / Grupo</span>
@@ -210,7 +305,7 @@ export default function HorarioManager() {
 
       {showModal && (
         <div style={s.overlay}>
-          <div style={s.modal}>
+          <div style={{ ...s.modal, width: isMobile ? '92vw' : '450px' }}>
             <div style={s.modalHeader}>
               <h4 style={s.modalTitle}>{selected ? 'Editar Horario' : 'Nuevo Horario'}</h4>
               <button style={s.btnClose} onClick={() => setShowModal(false)}>×</button>
@@ -222,7 +317,7 @@ export default function HorarioManager() {
                 <input style={s.input} value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} placeholder="Ej. Infantiles Principiantes" />
               </div>
               
-              <div style={s.grid}>
+              <div style={{ ...s.grid, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
                 <div style={s.inputGroup}>
                   <label style={s.label}>Hora Inicio</label>
                   <input type="time" style={s.input} value={form.hora_inicio} onChange={e => setForm({...form, hora_inicio: e.target.value})} />
@@ -296,9 +391,48 @@ const s = {
   empty: { padding: '40px', textAlign: 'center', color: 'var(--text-muted)' },
   btnIconEdit: { background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' },
   btnIconDel: { background: 'var(--accent-red-bg)', color: 'var(--accent-red)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' },
+
+  // Estilos móviles de tarjetas de horario
+  mobileList: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  mobileCard: {
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '18px',
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    boxShadow: 'var(--shadow-sm)',
+    transition: 'all 0.2s ease'
+  },
+  mobileCardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' },
+  mobileCardTitle: { fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
+  mobileCardActions: { display: 'flex', gap: '8px', flexShrink: 0 },
+  mobileTimeBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    padding: '5px 12px',
+    borderRadius: '10px',
+    background: 'var(--accent-blue-bg)',
+    color: 'var(--accent-blue)',
+    fontSize: '13px',
+    fontWeight: '700',
+    letterSpacing: '0.2px'
+  },
+  mobileDaysContainer: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
+  mobileDayBadge: {
+    padding: '4px 10px',
+    borderRadius: '8px',
+    background: 'var(--bg-tertiary)',
+    color: 'var(--text-secondary)',
+    fontSize: '12px',
+    fontWeight: '600',
+    border: '1px solid var(--border)'
+  },
   
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
-  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', width: '450px', maxWidth: '95vw', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' },
+  modal: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', width: '450px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' },
   modalHeader: { padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   modalTitle: { margin: 0, fontSize: '18px', fontWeight: '800' },
   btnClose: { background: 'none', border: 'none', fontSize: '24px', color: 'var(--text-muted)', cursor: 'pointer' },

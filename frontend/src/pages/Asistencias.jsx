@@ -18,10 +18,10 @@ import { useAuth } from '../context/AuthContext'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, formatearPeriodoOMes, guardarODescargarPDF } from '../utils/pdfHelper'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
 
-function mesActual() {
+const MES_ACTUAL = (() => {
   const hoy = new Date()
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
-}
+})()
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -36,7 +36,7 @@ export default function Asistencias() {
   const { user } = useAuth()
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
   const [tab, setTab] = useState('alumno')        // 'alumno' | 'fecha'
-  const [mes, setMes] = useState(mesActual)
+  const [mes, setMes] = useState(MES_ACTUAL)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768)
@@ -45,32 +45,30 @@ export default function Asistencias() {
   }, [])
 
   // Datos
-  const [resumen, setResumen] = useState(() => getCache(`asistencias_resumen_${mesActual}`)?.data || null)
+  const [resumen, setResumen] = useState(() => getCache(`asistencias_resumen_${MES_ACTUAL}`)?.data || null)
   const [listaAlumnos, setListaAlumnos] = useState(() => {
-    const c = getCache(`asistencias_alumno_${mesActual}`)?.data
+    const c = getCache(`asistencias_alumno_${MES_ACTUAL}`)?.data
     return Array.isArray(c) ? c : []
   })
   const [datosPorFecha, setDatosPorFecha] = useState(() => {
-    const c = getCache(`asistencias_fecha_${mesActual}`)?.data
+    const c = getCache(`asistencias_fecha_${MES_ACTUAL}`)?.data
     return typeof c === 'object' && c !== null ? c : {}
   })
-  const [cargandoAlumnos, setCargandoAlumnos] = useState(() => !getCache(`asistencias_alumno_${mesActual}`)?.data)
+  const [cargandoAlumnos, setCargandoAlumnos] = useState(() => !getCache(`asistencias_alumno_${MES_ACTUAL}`)?.data)
   const [listaFiltrada, setListaFiltrada] = useState([])
-  const [cargandoFecha, setCargandoFecha] = useState(() => !getCache(`asistencias_fecha_${mesActual}`)?.data)
-  const [cargandoResumen, setCargandoResumen] = useState(() => !getCache(`asistencias_resumen_${mesActual}`)?.data)
+  const [cargandoFecha, setCargandoFecha] = useState(() => !getCache(`asistencias_fecha_${MES_ACTUAL}`)?.data)
+  const [cargandoResumen, setCargandoResumen] = useState(() => !getCache(`asistencias_resumen_${MES_ACTUAL}`)?.data)
 
   // Modales
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState(null)
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null)
   const [modalRegistrar, setModalRegistrar] = useState(false)
-  const [haGuardadoEnModal, setHaGuardadoEnModal] = useState(false)
-  const [fechaRegistroGuardada, setFechaRegistroGuardada] = useState('')
 
   // ── Cargar resumen (común a ambos tabs) ──────────────────────────────────
   const cargarResumen = useCallback(async (force = false) => {
     const key = `asistencias_resumen_${mes}`
     const cached = getCache(key)
-    if (cached && cached.data) {
+    if (!force && cached && cached.data) {
       setResumen(cached.data)
       setCargandoResumen(false)
     } else if (!resumen) {
@@ -95,7 +93,7 @@ export default function Asistencias() {
   const cargarPorAlumno = useCallback(async (force = false) => {
     const key = `asistencias_alumno_${mes}`
     const cached = getCache(key)
-    if (cached && cached.data) {
+    if (!force && cached && cached.data) {
       const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
       setListaAlumnos(cachedList)
       setCargandoAlumnos(false)
@@ -122,7 +120,7 @@ export default function Asistencias() {
   const cargarPorFecha = useCallback(async (force = false) => {
     const key = `asistencias_fecha_${mes}`
     const cached = getCache(key)
-    if (cached && cached.data) {
+    if (!force && cached && cached.data) {
       setDatosPorFecha(typeof cached.data === 'object' && cached.data !== null ? cached.data : {})
       setCargandoFecha(false)
     } else if (Object.keys(datosPorFecha).length === 0) {
@@ -386,33 +384,27 @@ export default function Asistencias() {
       {modalRegistrar && (
         <ModalRegistrar
           isMobile={isMobile}
-          onCerrar={() => {
-            setModalRegistrar(false)
-            if (haGuardadoEnModal) {
-              const fechaFormateada = fechaRegistroGuardada
-                ? new Date(fechaRegistroGuardada + 'T12:00:00')
-                    .toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
-                : ''
-
-              Swal.fire({
-                icon: 'success',
-                title: '¡Asistencia Guardada!',
-                html: `Asistencias registradas correctamente para el día:<br/><br/><strong>${fechaFormateada}</strong>`,
-                timer: 2000,
-                showConfirmButton: false,
-                background: 'var(--bg-secondary)',
-                color: 'var(--text-primary)',
-                iconColor: 'var(--accent-green)',
-              })
-              setHaGuardadoEnModal(false)
-            }
-          }}
+          onCerrar={() => setModalRegistrar(false)}
           onGuardado={(fechaReg) => {
-            setHaGuardadoEnModal(true)
-            setFechaRegistroGuardada(fechaReg)
-            cargarResumen(false)
-            if (tab === 'alumno') cargarPorAlumno(false)
-            else cargarPorFecha(false)
+            cargarResumen(true)
+            if (tab === 'alumno') cargarPorAlumno(true)
+            else cargarPorFecha(true)
+
+            const fechaFormateada = fechaReg
+              ? new Date(fechaReg + 'T12:00:00')
+                  .toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
+              : ''
+
+            Swal.fire({
+              icon: 'success',
+              title: '¡Asistencia Guardada!',
+              html: `Asistencias registradas correctamente para el día:<br/><br/><strong>${fechaFormateada}</strong>`,
+              timer: 2200,
+              showConfirmButton: false,
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              iconColor: 'var(--accent-green)',
+            })
           }}
         />
       )}

@@ -17,10 +17,10 @@ class HorarioController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'hora_inicio' => 'required',
-            'hora_fin' => 'required',
-            'dias' => 'nullable|string',
+            'nombre'      => ['required', 'string', 'max:100'],
+            'hora_inicio' => ['required', 'string', 'regex:/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/'],
+            'hora_fin'    => ['required', 'string', 'regex:/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/'],
+            'dias'        => ['nullable', 'string', 'max:100'],
         ]);
 
         $horario = Horario::create($validated);
@@ -31,10 +31,10 @@ class HorarioController extends Controller
     public function update(Request $request, Horario $horario)
     {
         $validated = $request->validate([
-            'nombre' => 'sometimes|string|max:255',
-            'hora_inicio' => 'sometimes',
-            'hora_fin' => 'sometimes',
-            'dias' => 'nullable|string',
+            'nombre'      => ['sometimes', 'string', 'max:100'],
+            'hora_inicio' => ['sometimes', 'string', 'regex:/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/'],
+            'hora_fin'    => ['sometimes', 'string', 'regex:/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/'],
+            'dias'        => ['nullable', 'string', 'max:100'],
         ]);
 
         $horario->update($validated);

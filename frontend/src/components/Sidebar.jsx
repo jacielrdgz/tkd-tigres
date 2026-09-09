@@ -16,8 +16,11 @@ import {
   FiEye,
   FiCamera,
   FiX,
+  FiSun,
+  FiMoon,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
 import ModalFotoPreview from './Common/ModalFotoPreview';
@@ -60,6 +63,7 @@ const menuSuperAdmin = [
 
 export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: propSetMobileOpen }) {
   const { user, logout, refreshUser } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [localMobileOpen, setLocalMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -226,9 +230,48 @@ export default function Sidebar({ mobileOpen: propMobileOpen, setMobileOpen: pro
           />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={styles.logoTitle}>{tenantName}</div>
-            <div style={styles.logoSub}>{fechaHoy}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+              <span style={styles.logoSub}>{fechaHoy}</span>
+              {!isSuperAdmin && <span style={styles.planBadge}>{planLabel}</span>}
+            </div>
           </div>
-          {!isSuperAdmin && <span style={styles.planBadge}>{planLabel}</span>}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTheme();
+            }}
+            style={{
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              width: '34px',
+              height: '34px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              color: 'var(--text-secondary)',
+              transition: 'all 0.15s ease',
+            }}
+            title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            aria-label="Cambiar tema"
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.borderColor = 'var(--accent-blue)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+              e.currentTarget.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.2)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            {theme === 'dark' ? <FiSun size={17} /> : <FiMoon size={17} />}
+          </button>
         </div>
 
         {/* Navigation */}
