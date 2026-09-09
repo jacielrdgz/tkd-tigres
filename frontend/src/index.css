@@ -666,8 +666,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 13.5px !important;
     height: 38px !important;
     min-height: 38px !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
     display: block !important;
   }
 
@@ -692,7 +690,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    z-index: 1050 !important;
+    z-index: 1050;
+  }
+
+  .mobile-fullscreen-overlay.modal-top {
+    z-index: 2500 !important;
   }
 
   /* Ocultar botones de exportar u otras acciones secundarias en el header del contenido */

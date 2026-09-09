@@ -118,36 +118,69 @@ function Card({ icon, iconColor, label, sublabel, value, valueColor, bar, cargan
     <div style={{
       ...s.card,
       gridColumn: (isMobile && spanFull) ? 'span 2' : 'auto',
-      padding: isMobile ? '12px 14px' : '20px 22px',
-      gap: isMobile ? '12px' : '16px',
-      minHeight: isMobile ? 'auto' : '122px',
+      padding: isMobile ? '12px 12px' : '20px 22px',
+      gap: isMobile ? '10px' : '16px',
+      minHeight: isMobile ? (spanFull ? '94px' : '116px') : '122px',
+      height: '100%',
+      boxSizing: 'border-box',
     }}>
       <div style={{
         ...s.iconBox,
         background: `${iconColor}18`,
         color: iconColor,
-        width: isMobile ? '38px' : '46px',
-        height: isMobile ? '38px' : '46px',
+        width: isMobile ? '36px' : '46px',
+        height: isMobile ? '36px' : '46px',
         borderRadius: isMobile ? '10px' : '12px'
       }}>
         {icon}
       </div>
-      <div style={s.info}>
-        <span style={{ ...s.label, fontSize: isMobile ? '10.5px' : '12px' }}>{label}</span>
-        <span style={{ ...s.sublabel, fontSize: isMobile ? '10px' : '11px' }}>{sublabel || '\u00A0'}</span>
-        {cargando ? (
-          <div style={{ ...s.skeleton, height: isMobile ? '24px' : '28px' }} />
-        ) : (
-          <span style={{ ...s.value, color: valueColor, fontSize: isMobile ? '20px' : '28px', minHeight: isMobile ? '24px' : '32px' }}>{value}</span>
-        )}
-        <div style={s.barContainer}>
-          {bar !== undefined && !cargando ? (
-            <div style={s.barBg}>
-              <div style={{ ...s.barFill, width: `${bar}%`, background: pctColor(bar) }} />
-            </div>
+      <div style={{ ...s.info, height: '100%', justifyContent: 'space-between' }}>
+        <div>
+          <span style={{
+            ...s.label,
+            fontSize: isMobile ? '10px' : '12px',
+            lineHeight: isMobile ? '13px' : '16px',
+            minHeight: isMobile ? (spanFull ? 'auto' : '26px') : 'auto',
+            display: 'flex',
+            alignItems: 'center',
+          }}>
+            {label}
+          </span>
+          <span style={{
+            ...s.sublabel,
+            fontSize: isMobile ? '9.5px' : '11px',
+            lineHeight: isMobile ? '14px' : '16px',
+            minHeight: isMobile ? '14px' : '16px',
+          }}>
+            {sublabel || '\u00A0'}
+          </span>
+        </div>
+
+        <div>
+          {cargando ? (
+            <div style={{ ...s.skeleton, height: isMobile ? '22px' : '28px', marginTop: '2px' }} />
           ) : (
-            <div style={s.barPlaceholder} />
+            <span style={{
+              ...s.value,
+              color: valueColor,
+              fontSize: isMobile ? (value && String(value).length > 6 ? '18px' : '21px') : '28px',
+              minHeight: isMobile ? '24px' : '32px',
+              lineHeight: 1.1,
+              marginTop: '2px',
+            }}>
+              {value}
+            </span>
           )}
+
+          <div style={{ minHeight: isMobile ? '10px' : '12px' }}>
+            {bar !== undefined && !cargando ? (
+              <div style={s.barBg}>
+                <div style={{ ...s.barFill, width: `${bar}%`, background: pctColor(bar) }} />
+              </div>
+            ) : (
+              <div style={s.barPlaceholder} />
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagin
 import CustomDropdown from '../components/Common/CustomDropdown'
 import BotonExportar from '../components/Common/BotonExportar'
 import { getCache, setCache, invalidateCache } from '../utils/cacheManager'
-import { FiCalendar, FiUserPlus, FiTag, FiCheck, FiX, FiCheckCircle, FiAlertCircle, FiClock, FiLoader } from 'react-icons/fi'
+import { FiCalendar, FiUserPlus, FiTag, FiCheck, FiX, FiCheckCircle, FiAlertCircle, FiClock, FiLoader, FiSearch } from 'react-icons/fi'
 import PagosSummaryCards from '../components/Pagos/PagosSummaryCards'
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -618,14 +618,16 @@ export default function Pagos() {
     })
   }
 
-  const abrirModalEdicion = (pago) => {
+  const abrirModalEdicion = (pago, alumnoContexto = null) => {
+    const alumno = alumnoContexto || historialAlumno
+    if (!alumno) return
     setPagoAEditar(pago)
-    setModalPago(historialAlumno) // Usamos el alumno actual del historial
+    setModalPago(alumno)
     setFormPago({
       monto: pago.monto,
       metodo_pago: pago.metodo_pago || 'efectivo',
-      fecha_pago: pago.fecha_pago,
-      mes_periodo: pago.fecha_inicio ? `${new Date(pago.fecha_inicio + 'T12:00:00').getFullYear()}-${String(new Date(pago.fecha_inicio + 'T12:00:00').getMonth() + 1).padStart(2, '0')}` : '',
+      fecha_pago: pago.fecha_pago ? String(pago.fecha_pago).slice(0, 10) : new Date().toISOString().slice(0, 10),
+      mes_periodo: pago.fecha_inicio ? `${new Date(pago.fecha_inicio + 'T12:00:00').getFullYear()}-${String(new Date(pago.fecha_inicio + 'T12:00:00').getMonth() + 1).padStart(2, '0')}` : (filtroMes || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`),
       tipo: pago.tipo || 'mensualidad'
     })
   }
@@ -936,16 +938,37 @@ export default function Pagos() {
         alignItems: isMobile ? 'stretch' : 'center',
         gap: isMobile ? '10px' : '16px',
       }}>
-        <input
-          style={{
-            ...s.search,
-            maxWidth: isMobile ? '100%' : '380px',
-            width: isMobile ? '100%' : 'auto',
-          }}
-          placeholder="Buscar alumno..."
-          value={busquedaInput}
-          onChange={e => setBusquedaInput(e.target.value)}
-        />
+        <div style={{
+          position: 'relative',
+          flex: 1,
+          maxWidth: isMobile ? '100%' : '380px',
+          width: isMobile ? '100%' : 'auto',
+        }}>
+          <FiSearch
+            size={15}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)',
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            style={{
+              ...s.search,
+              width: '100%',
+              maxWidth: '100%',
+              height: '36px',
+              paddingLeft: '34px',
+              fontSize: isMobile ? '12.5px' : '13px',
+            }}
+            placeholder="Buscar alumno..."
+            value={busquedaInput}
+            onChange={e => setBusquedaInput(e.target.value)}
+          />
+        </div>
 
         <div style={{
           ...s.tabs,
@@ -1265,6 +1288,17 @@ export default function Pagos() {
                           )}
 
                           <button
+                            style={{ ...s.btnIconEdit, width: '32px', height: '32px', borderRadius: '8px' }}
+                            onClick={(e) => { e.stopPropagation(); abrirModalEdicion(a.pagoActivo, a); }}
+                            title="Editar Pago"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
+
+                          <button
                             style={{ ...s.btnIconBlueSmall, width: '32px', height: '32px', borderRadius: '8px' }}
                             onClick={(e) => { e.stopPropagation(); generarRecibo(a.pagoActivo, a); }}
                             title="Descargar Recibo"
@@ -1418,6 +1452,30 @@ export default function Pagos() {
                           </button>
                         )}
 
+                        {/* Botón de editar pago */}
+                        <button
+                          style={{ ...s.btnIconEdit, width: '28px', height: '28px', transition: 'all 0.2s' }}
+                          onClick={(e) => { e.stopPropagation(); abrirModalEdicion(a.pagoActivo, a); }}
+                          title="Editar Pago"
+                          onMouseOver={e => {
+                            e.currentTarget.style.background = 'var(--accent-blue)';
+                            e.currentTarget.style.color = '#fff';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.background = 'rgba(96, 165, 250, 0.1)';
+                            e.currentTarget.style.color = 'var(--accent-blue)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                        </button>
+
                         {/* Botones de recibo rápido */}
                         <button
                           style={{ ...s.btnIconBlueSmall, transition: 'all 0.2s' }}
@@ -1526,140 +1584,7 @@ export default function Pagos() {
         </div>
       )}
 
-      {/* ── MODAL RÁPIDO DE PAGO ── */}
-      {modalPago && (
-        <div style={s.overlayModal} className="mobile-fullscreen-overlay" onClick={() => { setModalPago(null); setPagoAEditar(null); }}>
-          <div style={s.modal} className="mobile-fullscreen-modal" onClick={e => e.stopPropagation()}>
-            <div style={s.modalHeader}>
-              <div>
-                <h3 style={s.modalTitulo}>{pagoAEditar ? 'Editar Pago' : 'Registrar Pago'}</h3>
-                <p style={s.modalSub}>{modalPago.nombre} {modalPago.apellido_paterno} {modalPago.apellido_materno}</p>
-              </div>
-              <button
-                type="button"
-                className="btn-cerrar-circular"
-                onClick={() => setModalPago(null)}
-                aria-label="Cerrar modal"
-              >
-                <FiX size={17} />
-              </button>
-            </div>
 
-            <div style={s.grid2} className="mobile-grid-1">
-              {formPago.tipo === 'mensualidad' && (
-                <div style={{ gridColumn: '1/-1' }}>
-                  <label style={s.label}>Mes del periodo (Inicio)</label>
-                  <input
-                    style={s.input}
-                    type="month"
-                    value={formPago.mes_periodo}
-                    onChange={e => setFormPago({ ...formPago, mes_periodo: e.target.value })}
-                  />
-                  <div style={{ ...s.periodoBadge, marginTop: '8px', marginBottom: 0, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <FiCalendar size={14} />
-                    {calcularPeriodo(modalPago.dia_pago || 1, new Date(formPago.mes_periodo + '-01T12:00:00')).label}
-                  </div>
-                </div>
-              )}
-              
-              {formPago.tipo === 'inscripcion' && (
-                 <div style={{ gridColumn: '1/-1' }}>
-                    <div style={{ ...s.periodoBadge, marginBottom: '12px', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                      <FiTag size={14} />
-                      Concepto: Inscripción {user?.tenant?.nombre || 'Escuela'}
-                    </div>
-                 </div>
-              )}
-              <div>
-                <label style={s.label}>Monto ($)</label>
-                <input style={s.input} type="number" placeholder="0.00" autoFocus
-                  value={formPago.monto} onChange={e => setFormPago({ ...formPago, monto: e.target.value })} />
-              </div>
-              <div>
-                <label style={s.label}>Método de pago</label>
-                <select style={s.select} value={formPago.metodo_pago}
-                  onChange={e => setFormPago({ ...formPago, metodo_pago: e.target.value })}>
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="tarjeta">Tarjeta</option>
-                </select>
-              </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={s.label}>Fecha en que se recibe el pago</label>
-                <input style={s.input} type="date" value={formPago.fecha_pago}
-                  onChange={e => setFormPago({ ...formPago, fecha_pago: e.target.value })} />
-              </div>
-            </div>
-
-            <div style={s.modalFooter}>
-              <button
-                style={{
-                  ...s.btnSecondary,
-                  transition: 'all 0.2s',
-                  opacity: guardandoPago ? 0.6 : 1,
-                  cursor: guardandoPago ? 'not-allowed' : 'pointer'
-                }}
-                onClick={guardandoPago ? undefined : () => { setModalPago(null); setPagoAEditar(null); }}
-                disabled={guardandoPago}
-                onMouseOver={e => {
-                  if (guardandoPago) return;
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseOut={e => {
-                  if (guardandoPago) return;
-                  e.currentTarget.style.background = 'var(--bg-tertiary)';
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}>Cancelar</button>
-              <button
-                style={{
-                  ...s.btnConfirmar,
-                  transition: 'all 0.2s',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  opacity: (guardandoPago || cooldownSegundos > 0) ? 0.75 : 1,
-                  cursor: (guardandoPago || cooldownSegundos > 0) ? 'not-allowed' : 'pointer',
-                  pointerEvents: (guardandoPago || cooldownSegundos > 0) ? 'none' : 'auto'
-                }}
-                onClick={(guardandoPago || cooldownSegundos > 0) ? undefined : confirmarPago}
-                disabled={guardandoPago || cooldownSegundos > 0}
-                onMouseOver={e => {
-                  if (guardandoPago || cooldownSegundos > 0) return;
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.filter = 'brightness(1.08)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-                onMouseOut={e => {
-                  if (guardandoPago || cooldownSegundos > 0) return;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.filter = 'none';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}>
-                {guardandoPago ? (
-                  <>
-                    <FiLoader className="spin" size={16} />
-                    <span>Guardando...</span>
-                  </>
-                ) : cooldownSegundos > 0 ? (
-                  <>
-                    <FiClock size={16} />
-                    <span>Espera ({cooldownSegundos}s)</span>
-                  </>
-                ) : (
-                  <>
-                    <FiCheck size={16} />
-                    <span>{pagoAEditar ? 'Guardar Cambios' : 'Confirmar Pago'}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── PANEL DE HISTORIAL (GRILLA DE MESES) ── */}
       {historialAlumno && (() => {
@@ -1717,22 +1642,22 @@ export default function Pagos() {
                     {/* Resumen general */}
                     <div style={s.resumenHistorial}>
                       <div style={s.resumenHistItem}>
-                        <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--accent-green)' }}>{mesesPagados}</span>
+                        <span style={{ fontSize: isMobile ? '15px' : '18px', fontWeight: '800', color: 'var(--accent-green)' }}>{mesesPagados}</span>
                         <span style={s.resumenLabel}>Meses pagados</span>
                       </div>
                       <div style={s.resumenHistItem}>
-                        <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--accent-green)' }}>${totalGeneral.toFixed(2)}</span>
+                        <span style={{ fontSize: isMobile ? '15px' : '18px', fontWeight: '800', color: 'var(--accent-green)' }}>${totalGeneral.toFixed(2)}</span>
                         <span style={s.resumenLabel}>Total pagado</span>
                       </div>
                       <div style={s.resumenHistItem}>
-                        <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--accent-blue)' }}>${totalPagadoAnio.toFixed(2)}</span>
+                        <span style={{ fontSize: isMobile ? '15px' : '18px', fontWeight: '800', color: 'var(--accent-blue)' }}>${totalPagadoAnio.toFixed(2)}</span>
                         <span style={s.resumenLabel}>Pagado en {anioHistorial}</span>
                       </div>
                     </div>
 
                     {/* Selector de año */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Año {anioHistorial}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'nowrap', gap: 6 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Año {anioHistorial}</span>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => { setAnioHistorial(y => y - 1); setModalAbonosMes(null); }} style={{ ...s.btnNavAnio, transition: 'all 0.2s' }}
                           onMouseOver={e => {
@@ -1883,11 +1808,11 @@ export default function Pagos() {
                                       <div style={{ fontSize: 9.5, color: 'var(--text-muted)', textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {pago.metodo_pago} · {fmtFecha(pago.fecha_pago)}
                                       </div>
-                                      <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                                      <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                                         <button
                                           type="button"
                                           className="btn-historial-icon"
-                                          style={{ ...s.btnIconEdit, width: 24, height: 24 }}
+                                          style={{ ...s.btnIconEdit, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                                           onClick={() => abrirModalEdicion(pago)}
                                           title="Editar"
                                           onMouseOver={e => {
@@ -1901,12 +1826,12 @@ export default function Pagos() {
                                             e.currentTarget.style.transform = 'translateY(0)';
                                           }}
                                         >
-                                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                          <svg width={isMobile ? 14 : 11} height={isMobile ? 14 : 11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                         </button>
                                         <button
                                           type="button"
                                           className="btn-historial-icon"
-                                          style={{ ...s.btnIconBlueSmall, width: 24, height: 24 }}
+                                          style={{ ...s.btnIconBlueSmall, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                                           onClick={() => generarRecibo(pago, historialAlumno)}
                                           title="Recibo PDF"
                                           onMouseOver={e => {
@@ -1920,12 +1845,12 @@ export default function Pagos() {
                                             e.currentTarget.style.transform = 'translateY(0)';
                                           }}
                                         >
-                                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                          <svg width={isMobile ? 14 : 11} height={isMobile ? 14 : 11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                         </button>
                                         <button
                                           type="button"
                                           className="btn-historial-icon"
-                                          style={{ ...s.btnIconGreenSmall, width: 24, height: 24 }}
+                                          style={{ ...s.btnIconGreenSmall, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                                           onClick={() => enviarComprobanteWhatsApp(pago, historialAlumno)}
                                           title="WhatsApp"
                                           onMouseOver={e => {
@@ -1939,13 +1864,13 @@ export default function Pagos() {
                                             e.currentTarget.style.transform = 'translateY(0)';
                                           }}
                                         >
-                                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
+                                          <svg width={isMobile ? 14 : 11} height={isMobile ? 14 : 11} viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
                                         </button>
                                         {user?.role === 'owner' && (
                                           <button
                                             type="button"
                                             className="btn-historial-icon"
-                                            style={{ ...s.btnIconTrash, width: 24, height: 24 }}
+                                            style={{ ...s.btnIconTrash, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                                             onClick={(e) => eliminarPago(pago.id, e)}
                                             title="Eliminar"
                                             onMouseOver={e => {
@@ -1959,7 +1884,7 @@ export default function Pagos() {
                                               e.currentTarget.style.transform = 'translateY(0)';
                                             }}
                                           >
-                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                            <svg width={isMobile ? 14 : 11} height={isMobile ? 14 : 11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                                           </button>
                                         )}
                                       </div>
@@ -1994,7 +1919,7 @@ export default function Pagos() {
                                 <button
                                   type="button"
                                   className="btn-historial-icon"
-                                  style={{ ...s.btnIconEdit, width: 24, height: 24 }}
+                                  style={{ ...s.btnIconEdit, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                                   onClick={() => abrirModalEdicion(p)}
                                   title="Editar"
                                   onMouseOver={e => {
@@ -2008,12 +1933,12 @@ export default function Pagos() {
                                     e.currentTarget.style.transform = 'translateY(0)';
                                   }}
                                 >
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                  <svg width={isMobile ? 14 : 11} height={isMobile ? 14 : 11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
                                 <button
                                   type="button"
                                   className="btn-historial-icon"
-                                  style={{ ...s.btnIconBlueSmall, width: 24, height: 24 }}
+                                  style={{ ...s.btnIconBlueSmall, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                                   onClick={() => generarRecibo(p, historialAlumno)}
                                   title="Recibo PDF"
                                   onMouseOver={e => {
@@ -2027,12 +1952,12 @@ export default function Pagos() {
                                     e.currentTarget.style.transform = 'translateY(0)';
                                   }}
                                 >
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                  <svg width={isMobile ? 14 : 11} height={isMobile ? 14 : 11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 </button>
                                 <button
                                   type="button"
                                   className="btn-historial-icon"
-                                  style={{ ...s.btnIconGreenSmall, width: 24, height: 24 }}
+                                  style={{ ...s.btnIconGreenSmall, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                                   onClick={() => enviarComprobanteWhatsApp(p, historialAlumno)}
                                   title="WhatsApp"
                                   onMouseOver={e => {
@@ -2046,13 +1971,13 @@ export default function Pagos() {
                                     e.currentTarget.style.transform = 'translateY(0)';
                                   }}
                                 >
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
+                                  <svg width={isMobile ? 14 : 11} height={isMobile ? 14 : 11} viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
                                 </button>
                                 {user?.role === 'owner' && (
                                   <button
                                     type="button"
                                     className="btn-historial-icon"
-                                    style={{ ...s.btnIconTrash, width: 24, height: 24 }}
+                                    style={{ ...s.btnIconTrash, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                                     onClick={(e) => eliminarPago(p.id, e)}
                                     title="Eliminar"
                                     onMouseOver={e => {
@@ -2066,7 +1991,7 @@ export default function Pagos() {
                                       e.currentTarget.style.transform = 'translateY(0)';
                                     }}
                                   >
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                    <svg width={isMobile ? 14 : 11} height={isMobile ? 14 : 11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                                   </button>
                                 )}
                               </div>
@@ -2278,11 +2203,11 @@ export default function Pagos() {
                           </div>
 
                           {/* Botones de acción */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             <button
                               type="button"
                               className="btn-historial-icon"
-                              style={{ ...s.btnIconEdit, width: 26, height: 26 }}
+                              style={{ ...s.btnIconEdit, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                               onClick={() => abrirModalEdicion(pago)}
                               title="Editar abono"
                               onMouseOver={e => {
@@ -2296,12 +2221,12 @@ export default function Pagos() {
                                 e.currentTarget.style.transform = 'translateY(0)';
                               }}
                             >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                              <svg width={isMobile ? 14 : 12} height={isMobile ? 14 : 12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
                             <button
                               type="button"
                               className="btn-historial-icon"
-                              style={{ ...s.btnIconBlueSmall, width: 26, height: 26 }}
+                              style={{ ...s.btnIconBlueSmall, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                               onClick={() => generarRecibo(pago, historialAlumno)}
                               title="Descargar Recibo PDF"
                               onMouseOver={e => {
@@ -2315,12 +2240,12 @@ export default function Pagos() {
                                 e.currentTarget.style.transform = 'translateY(0)';
                               }}
                             >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                              <svg width={isMobile ? 14 : 12} height={isMobile ? 14 : 12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                             </button>
                             <button
                               type="button"
                               className="btn-historial-icon"
-                              style={{ ...s.btnIconGreenSmall, width: 26, height: 26 }}
+                              style={{ ...s.btnIconGreenSmall, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                               onClick={() => enviarComprobanteWhatsApp(pago, historialAlumno)}
                               title="Enviar WhatsApp"
                               onMouseOver={e => {
@@ -2334,13 +2259,13 @@ export default function Pagos() {
                                 e.currentTarget.style.transform = 'translateY(0)';
                               }}
                             >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
+                              <svg width={isMobile ? 14 : 12} height={isMobile ? 14 : 12} viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/></svg>
                             </button>
                             {user?.role === 'owner' && (
                               <button
                                 type="button"
                                 className="btn-historial-icon"
-                                style={{ ...s.btnIconTrash, width: 26, height: 26 }}
+                                style={{ ...s.btnIconTrash, width: isMobile ? 32 : 26, height: isMobile ? 32 : 26 }}
                                 onClick={(e) => eliminarPago(pago.id, e)}
                                 title="Eliminar abono"
                                 onMouseOver={e => {
@@ -2354,7 +2279,7 @@ export default function Pagos() {
                                   e.currentTarget.style.transform = 'translateY(0)';
                                 }}
                               >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                <svg width={isMobile ? 14 : 12} height={isMobile ? 14 : 12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                               </button>
                             )}
                           </div>
@@ -2395,6 +2320,141 @@ export default function Pagos() {
         </>
       )
       })()}
+
+      {/* ── MODAL RÁPIDO DE PAGO / EDICIÓN ── */}
+      {modalPago && (
+        <div style={{ ...s.overlayModal, zIndex: 2500 }} className="mobile-fullscreen-overlay modal-top" onClick={() => { setModalPago(null); setPagoAEditar(null); }}>
+          <div style={s.modal} className="mobile-fullscreen-modal" onClick={e => e.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <div>
+                <h3 style={s.modalTitulo}>{pagoAEditar ? 'Editar Pago' : 'Registrar Pago'}</h3>
+                <p style={s.modalSub}>{modalPago.nombre} {modalPago.apellido_paterno} {modalPago.apellido_materno}</p>
+              </div>
+              <button
+                type="button"
+                className="btn-cerrar-circular"
+                onClick={() => { setModalPago(null); setPagoAEditar(null); }}
+                aria-label="Cerrar modal"
+              >
+                <FiX size={17} />
+              </button>
+            </div>
+
+            <div style={s.grid2} className="mobile-grid-1">
+              {formPago.tipo === 'mensualidad' && (
+                <div style={{ gridColumn: '1/-1' }}>
+                  <label style={s.label}>Mes del periodo (Inicio)</label>
+                  <input
+                    style={s.input}
+                    type="month"
+                    value={formPago.mes_periodo}
+                    onChange={e => setFormPago({ ...formPago, mes_periodo: e.target.value })}
+                  />
+                  <div style={{ ...s.periodoBadge, marginTop: '8px', marginBottom: 0, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <FiCalendar size={14} />
+                    {calcularPeriodo(modalPago.dia_pago || 1, new Date(formPago.mes_periodo + '-01T12:00:00')).label}
+                  </div>
+                </div>
+              )}
+              
+              {formPago.tipo === 'inscripcion' && (
+                 <div style={{ gridColumn: '1/-1' }}>
+                    <div style={{ ...s.periodoBadge, marginBottom: '12px', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <FiTag size={14} />
+                      Concepto: Inscripción {user?.tenant?.nombre || 'Escuela'}
+                    </div>
+                 </div>
+              )}
+              <div>
+                <label style={s.label}>Monto ($)</label>
+                <input style={s.input} type="number" placeholder="0.00" autoFocus
+                  value={formPago.monto} onChange={e => setFormPago({ ...formPago, monto: e.target.value })} />
+              </div>
+              <div>
+                <label style={s.label}>Método de pago</label>
+                <select style={s.select} value={formPago.metodo_pago}
+                  onChange={e => setFormPago({ ...formPago, metodo_pago: e.target.value })}>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="tarjeta">Tarjeta</option>
+                </select>
+              </div>
+              <div style={{ gridColumn: '1/-1' }}>
+                <label style={s.label}>Fecha en que se recibe el pago</label>
+                <input style={s.input} type="date" value={formPago.fecha_pago}
+                  onChange={e => setFormPago({ ...formPago, fecha_pago: e.target.value })} />
+              </div>
+            </div>
+
+            <div style={s.modalFooter}>
+              <button
+                style={{
+                  ...s.btnSecondary,
+                  transition: 'all 0.2s',
+                  opacity: guardandoPago ? 0.6 : 1,
+                  cursor: guardandoPago ? 'not-allowed' : 'pointer'
+                }}
+                onClick={guardandoPago ? undefined : () => { setModalPago(null); setPagoAEditar(null); }}
+                disabled={guardandoPago}
+                onMouseOver={e => {
+                  if (guardandoPago) return;
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={e => {
+                  if (guardandoPago) return;
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>Cancelar</button>
+              <button
+                style={{
+                  ...s.btnConfirmar,
+                  transition: 'all 0.2s',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  opacity: (guardandoPago || cooldownSegundos > 0) ? 0.75 : 1,
+                  cursor: (guardandoPago || cooldownSegundos > 0) ? 'not-allowed' : 'pointer',
+                  pointerEvents: (guardandoPago || cooldownSegundos > 0) ? 'none' : 'auto'
+                }}
+                onClick={(guardandoPago || cooldownSegundos > 0) ? undefined : confirmarPago}
+                disabled={guardandoPago || cooldownSegundos > 0}
+                onMouseOver={e => {
+                  if (guardandoPago || cooldownSegundos > 0) return;
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.filter = 'brightness(1.08)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+                onMouseOut={e => {
+                  if (guardandoPago || cooldownSegundos > 0) return;
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.filter = 'none';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}>
+                {guardandoPago ? (
+                  <>
+                    <FiLoader className="spin" size={16} />
+                    <span>Guardando...</span>
+                  </>
+                ) : cooldownSegundos > 0 ? (
+                  <>
+                    <FiClock size={16} />
+                    <span>Espera ({cooldownSegundos}s)</span>
+                  </>
+                ) : (
+                  <>
+                    <FiCheck size={16} />
+                    <span>{pagoAEditar ? 'Guardar Cambios' : 'Confirmar Pago'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2428,6 +2488,27 @@ function TabButton({ active, onClick, icon, label, isMobile }) {
   )
 }
 
+const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+function formatMesLabel(val) {
+  if (!val) return 'Seleccionar mes'
+  const parts = val.split('-')
+  if (parts.length < 2) return val
+  const y = parts[0]
+  const m = parseInt(parts[1], 10) - 1
+  return `${MESES_CORTOS[m] || parts[1]} ${y}`
+}
+
+function formatFechaLabel(val) {
+  if (!val) return ''
+  const parts = val.split('-')
+  if (parts.length < 3) return val
+  const y = parts[0]
+  const m = parseInt(parts[1], 10) - 1
+  const d = parseInt(parts[2], 10)
+  return `${d} ${MESES_CORTOS[m] || parts[1]} ${y}`
+}
+
 function CampoFiltroMes({ value, onChange, isMobile }) {
   const inputRef = useRef(null)
 
@@ -2435,10 +2516,10 @@ function CampoFiltroMes({ value, onChange, isMobile }) {
     <div
       style={{
         position: 'relative',
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
         width: '100%',
-        minWidth: isMobile ? '0' : '210px',
+        minWidth: isMobile ? '0' : '190px',
         height: '38px',
         flexShrink: 0,
         background: 'var(--bg-secondary)',
@@ -2446,66 +2527,56 @@ function CampoFiltroMes({ value, onChange, isMobile }) {
         borderRadius: '10px',
         boxSizing: 'border-box',
         boxShadow: 'var(--shadow-sm)',
-        transition: 'border-color 0.2s',
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        padding: isMobile ? '0 10px' : '0 12px',
+        gap: '8px',
+      }}
+      onClick={() => {
+        try {
+          inputRef.current?.showPicker?.()
+        } catch {
+          inputRef.current?.focus?.()
+        }
       }}
       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-blue)'}
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
     >
+      <FiCalendar size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+      
+      <span style={{
+        flex: 1,
+        minWidth: 0,
+        fontSize: isMobile ? '12px' : '13px',
+        fontWeight: 600,
+        color: value ? 'var(--text-primary)' : 'var(--text-muted)',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}>
+        {formatMesLabel(value)}
+      </span>
+
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+
       <input
         ref={inputRef}
         type="month"
-        className="hide-native-picker"
         value={value || ''}
         onChange={e => onChange(e.target.value)}
-        style={{
-          width: '100%',
-          height: '100%',
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          padding: isMobile ? '0 28px 0 10px' : '0 32px 0 12px',
-          color: 'var(--text-secondary)',
-          fontSize: isMobile ? '12px' : '13px',
-          fontWeight: 600,
-          fontFamily: 'inherit',
-          colorScheme: 'dark',
-          cursor: 'text',
-          boxSizing: 'border-box',
-        }}
-      />
-      <button
-        type="button"
         tabIndex={-1}
-        onClick={(e) => {
-          e.preventDefault()
-          try {
-            inputRef.current?.showPicker?.()
-          } catch {
-            inputRef.current?.focus?.()
-          }
-        }}
-        title="Abrir calendario"
         style={{
           position: 'absolute',
-          right: isMobile ? '4px' : '8px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          background: 'transparent',
-          border: 'none',
-          padding: '4px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          opacity: 0,
           cursor: 'pointer',
-          color: 'var(--text-muted)',
-          borderRadius: '6px',
-          transition: 'color 0.15s',
+          zIndex: 2,
         }}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-      >
-        <FiCalendar size={15} />
-      </button>
+      />
     </div>
   )
 }
@@ -2517,19 +2588,28 @@ function CampoFiltroFecha({ value, onChange, isMobile }) {
     <div
       style={{
         position: 'relative',
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
         width: '100%',
-        minWidth: isMobile ? '0' : '160px',
+        minWidth: isMobile ? '0' : '170px',
         height: '38px',
         flexShrink: 0,
         background: 'var(--bg-secondary)',
-        border: '1px solid',
-        borderColor: value ? 'var(--accent-blue)' : 'var(--border)',
+        border: `1px solid ${value ? 'var(--accent-blue)' : 'var(--border)'}`,
         borderRadius: '10px',
         boxSizing: 'border-box',
         boxShadow: 'var(--shadow-sm)',
-        transition: 'border-color 0.2s',
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        padding: isMobile ? '0 8px 0 10px' : '0 10px 0 12px',
+        gap: '8px',
+      }}
+      onClick={() => {
+        try {
+          inputRef.current?.showPicker?.()
+        } catch {
+          inputRef.current?.focus?.()
+        }
       }}
       onMouseEnter={e => {
         if (!value) e.currentTarget.style.borderColor = 'var(--accent-blue)'
@@ -2538,97 +2618,71 @@ function CampoFiltroFecha({ value, onChange, isMobile }) {
         if (!value) e.currentTarget.style.borderColor = 'var(--border)'
       }}
     >
-      <input
-        ref={inputRef}
-        type="date"
-        className="hide-native-picker"
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        style={{
-          width: '100%',
-          height: '100%',
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          padding: value ? (isMobile ? '0 46px 0 10px' : '0 52px 0 12px') : (isMobile ? '0 28px 0 10px' : '0 32px 0 12px'),
-          color: value ? 'var(--text-primary)' : 'var(--text-secondary)',
-          fontSize: isMobile ? '12px' : '13px',
-          fontWeight: 600,
-          fontFamily: 'inherit',
-          colorScheme: 'dark',
-          cursor: 'text',
-          boxSizing: 'border-box',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          right: isMobile ? '4px' : '8px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '3px',
-        }}
-      >
-        {value ? (
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={(e) => {
-              e.preventDefault()
-              onChange('')
-            }}
-            title="Quitar filtro de fecha"
-            style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '18px',
-              height: '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: 'var(--accent-red)',
-              fontSize: '11px',
-              fontWeight: 700,
-              padding: 0,
-            }}
-          >
-            <FiX size={11} strokeWidth={2.5} />
-          </button>
-        ) : null}
+      <FiCalendar size={15} style={{ color: value ? 'var(--accent-blue)' : 'var(--text-muted)', flexShrink: 0 }} />
+
+      <span style={{
+        flex: 1,
+        minWidth: 0,
+        fontSize: isMobile ? '12px' : '13px',
+        fontWeight: value ? 600 : 500,
+        color: value ? 'var(--text-primary)' : 'var(--text-muted)',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}>
+        {value ? formatFechaLabel(value) : 'Filtrar por día'}
+      </span>
+
+      {value ? (
         <button
           type="button"
           tabIndex={-1}
           onClick={(e) => {
-            e.preventDefault()
-            try {
-              inputRef.current?.showPicker?.()
-            } catch {
-              inputRef.current?.focus?.()
-            }
+            e.stopPropagation()
+            onChange('')
           }}
-          title="Abrir calendario"
+          title="Quitar filtro de fecha"
           style={{
-            background: 'transparent',
+            background: 'rgba(239, 68, 68, 0.15)',
             border: 'none',
-            padding: '4px',
+            borderRadius: '50%',
+            width: '20px',
+            height: '20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: value ? 'var(--accent-blue)' : 'var(--text-muted)',
-            borderRadius: '6px',
-            transition: 'color 0.15s',
+            color: 'var(--accent-red)',
+            flexShrink: 0,
+            zIndex: 10,
+            padding: 0,
           }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-          onMouseLeave={e => e.currentTarget.style.color = value ? 'var(--accent-blue)' : 'var(--text-muted)'}
         >
-          <FiCalendar size={15} />
+          <FiX size={12} strokeWidth={2.5} />
         </button>
-      </div>
+      ) : (
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      )}
+
+      <input
+        ref={inputRef}
+        type="date"
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        tabIndex={-1}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          right: value ? '32px' : 0,
+          width: value ? 'calc(100% - 32px)' : '100%',
+          height: '100%',
+          opacity: 0,
+          cursor: 'pointer',
+          zIndex: 2,
+        }}
+      />
     </div>
   )
 }
@@ -2744,10 +2798,10 @@ const s = {
   drawerNombre: { fontWeight: '800', color: 'var(--text-primary)', fontSize: '16px' },
   drawerSub: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' },
   drawerContent: { flex: 1, overflowY: 'auto', padding: '12px 20px 16px' },
-  resumenHistorial: { display: 'flex', gap: '10px', marginBottom: '12px' },
-  resumenHistItem: { flex: 1, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '8px 12px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '2px' },
+  resumenHistorial: { display: 'flex', gap: '8px', marginBottom: '12px' },
+  resumenHistItem: { flex: 1, minWidth: 0, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '6px 4px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center', justifyContent: 'center' },
   historialLista: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  resumenLabel: { fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  resumenLabel: { fontSize: '9px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' },
   resumenNum: { fontWeight: '800' },
   btnNavAnio: { padding: '4px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '11.5px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' },
   historialItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px' },
