@@ -91,13 +91,13 @@ export default function Pagos() {
   const [mostrarTodosInscripciones, setMostrarTodosInscripciones] = useState(false) // Toggle para mostrar históricos en inscripciones
   const [busquedaInput, setBusquedaInput] = useState('') // valor inmediato del input
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
-  const [isTablet, setIsTablet] = useState(window.innerWidth > 640 && window.innerWidth <= 1024)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false)
+  const [isTablet, setIsTablet] = useState(typeof window !== 'undefined' ? window.innerWidth > 768 && window.innerWidth <= 1024 : false)
 
   useEffect(() => {
     const check = () => {
-      setIsMobile(window.innerWidth <= 640)
-      setIsTablet(window.innerWidth > 640 && window.innerWidth <= 1024)
+      setIsMobile(window.innerWidth <= 768)
+      setIsTablet(window.innerWidth > 768 && window.innerWidth <= 1024)
     }
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
@@ -855,13 +855,30 @@ export default function Pagos() {
 
   function SkeletonPagos() {
     return (
-      <div style={{ ...s.card, opacity: 0.6, height: '82px', padding: isMobile ? '10px 14px' : '14px 18px', gap: isMobile ? '10px' : '16px', boxSizing: 'border-box' }}>
-        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-tertiary)', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ width: '60%', height: 14, background: 'var(--bg-tertiary)', borderRadius: 4, marginBottom: 8, animation: 'pulse 1.5s infinite' }} />
-          <div style={{ width: '40%', height: 10, background: 'var(--bg-tertiary)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} />
+      <div style={{
+        ...s.card,
+        opacity: 0.6,
+        height: isMobile ? 'auto' : '82px',
+        padding: isMobile ? '12px 14px' : '14px 18px',
+        gap: isMobile ? '10px' : '16px',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        boxSizing: 'border-box'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-tertiary)', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ width: '60%', height: 14, background: 'var(--bg-tertiary)', borderRadius: 4, marginBottom: 6, animation: 'pulse 1.5s infinite' }} />
+            <div style={{ width: '40%', height: 10, background: 'var(--bg-tertiary)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} />
+          </div>
+          <div style={{ width: 70, height: 22, background: 'var(--bg-tertiary)', borderRadius: 12, animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
         </div>
-        <div style={{ width: isMobile ? '200px' : '260px', height: 28, background: 'var(--bg-tertiary)', borderRadius: 20, animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+        {isMobile && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+            <div style={{ width: 100, height: 12, background: 'var(--bg-tertiary)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} />
+            <div style={{ width: 80, height: 28, background: 'var(--bg-tertiary)', borderRadius: 6, animation: 'pulse 1.5s infinite' }} />
+          </div>
+        )}
       </div>
     )
   }
@@ -877,18 +894,24 @@ export default function Pagos() {
       </div>
 
       {/* SUBMODULOS NAVIGATION */}
-      <div style={s.subnav}>
+      <div style={{
+        ...s.subnav,
+        width: isMobile ? '100%' : 'fit-content',
+        marginBottom: isMobile ? 16 : 24,
+      }}>
         <TabButton
           active={submodulo === 'mensualidades'}
           onClick={() => setSubmodulo('mensualidades')}
           icon={<FiCalendar size={14} />}
           label="Mensualidades"
+          isMobile={isMobile}
         />
         <TabButton
           active={submodulo === 'inscripciones'}
           onClick={() => setSubmodulo('inscripciones')}
           icon={<FiUserPlus size={14} />}
           label="Inscripciones"
+          isMobile={isMobile}
         />
       </div>
 
@@ -904,19 +927,38 @@ export default function Pagos() {
         totalInscritosMes={inscripcionesStats.total}
         inscripcionesPagadasMes={inscripcionesStats.pagados}
         inscripcionesPendientesMes={inscripcionesStats.pendientes}
+        isMobile={isMobile}
       />
 
-      <div style={s.barraAcciones}>
+      <div style={{
+        ...s.barraAcciones,
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? '10px' : '16px',
+      }}>
         <input
-          style={s.search}
+          style={{
+            ...s.search,
+            maxWidth: isMobile ? '100%' : '380px',
+            width: isMobile ? '100%' : 'auto',
+          }}
           placeholder="Buscar alumno..."
           value={busquedaInput}
           onChange={e => setBusquedaInput(e.target.value)}
         />
 
-        <div style={s.tabs}>
+        <div style={{
+          ...s.tabs,
+          width: isMobile ? '100%' : 'auto',
+          display: 'flex',
+        }}>
           <button
-            style={filtro === 'todos' ? s.tabActiveAzul : (tabHover === 'todos' ? s.tabHover : s.tab)}
+            style={{
+              ...(filtro === 'todos' ? s.tabActiveAzul : (tabHover === 'todos' ? s.tabHover : s.tab)),
+              flex: isMobile ? 1 : 'none',
+              padding: isMobile ? '0 6px' : '0 16px',
+              fontSize: isMobile ? '12px' : '13px',
+            }}
             onClick={() => setFiltro('todos')}
             onMouseEnter={() => setTabHover('todos')}
             onMouseLeave={() => setTabHover(null)}
@@ -924,7 +966,12 @@ export default function Pagos() {
             Todos ({alumnos.length})
           </button>
           <button
-            style={filtro === 'pagado' ? s.tabActiveVerde : (tabHover === 'pagado' ? s.tabHover : s.tab)}
+            style={{
+              ...(filtro === 'pagado' ? s.tabActiveVerde : (tabHover === 'pagado' ? s.tabHover : s.tab)),
+              flex: isMobile ? 1 : 'none',
+              padding: isMobile ? '0 6px' : '0 16px',
+              fontSize: isMobile ? '12px' : '13px',
+            }}
             onClick={() => setFiltro('pagado')}
             onMouseEnter={() => setTabHover('pagado')}
             onMouseLeave={() => setTabHover(null)}
@@ -932,7 +979,12 @@ export default function Pagos() {
             Pagado ({totalPagados})
           </button>
           <button
-            style={filtro === 'pendiente' ? s.tabActiveRojo : (tabHover === 'pendiente' ? s.tabHover : s.tab)}
+            style={{
+              ...(filtro === 'pendiente' ? s.tabActiveRojo : (tabHover === 'pendiente' ? s.tabHover : s.tab)),
+              flex: isMobile ? 1 : 'none',
+              padding: isMobile ? '0 6px' : '0 16px',
+              fontSize: isMobile ? '12px' : '13px',
+            }}
             onClick={() => setFiltro('pendiente')}
             onMouseEnter={() => setTabHover('pendiente')}
             onMouseLeave={() => setTabHover(null)}
@@ -942,48 +994,86 @@ export default function Pagos() {
         </div>
       </div>
 
-      <div style={s.filtrosSecundarios}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: isMobile ? 'wrap' : 'nowrap', alignItems: 'center', flexShrink: 0 }}>
-          <CustomDropdown
-            label="Todas las cintas"
-            options={[
-              { value: '', label: 'Todas las cintas' },
-              ...cintas.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
-            ]}
-            value={filtroCinta}
-            onChange={val => setFiltroCinta(val)}
-            minWidth={isMobile ? '100%' : '180px'}
-            isMobile={isMobile}
-          />
+      <div style={{
+        ...s.filtrosSecundarios,
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? '10px' : '12px',
+        marginBottom: isMobile ? '16px' : '24px',
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: '8px',
+          width: isMobile ? '100%' : 'auto',
+          alignItems: isMobile ? 'stretch' : 'center',
+          flex: 1,
+        }}>
+          {/* Fila 1 en móvil: Cintas y Horarios (50% y 50%) */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            width: isMobile ? '100%' : 'auto',
+          }}>
+            <div style={{ flex: isMobile ? 1 : 'none', minWidth: 0, width: isMobile ? '50%' : 'auto' }}>
+              <CustomDropdown
+                label="Todas las cintas"
+                options={[
+                  { value: '', label: 'Todas las cintas' },
+                  ...cintas.map(c => ({ value: String(c.id), label: c.nombre_nivel }))
+                ]}
+                value={filtroCinta}
+                onChange={val => setFiltroCinta(val)}
+                minWidth={isMobile ? '100%' : '180px'}
+                isMobile={isMobile}
+              />
+            </div>
 
-          <CustomDropdown
-            label="Todos los horarios"
-            options={[
-              { value: '', label: 'Todos los horarios' },
-              ...horarios.map(h => ({ value: String(h.id), label: h.nombre }))
-            ]}
-            value={filtroHorario}
-            onChange={val => setFiltroHorario(val)}
-            minWidth={isMobile ? '100%' : '185px'}
-            isMobile={isMobile}
-          />
+            <div style={{ flex: isMobile ? 1 : 'none', minWidth: 0, width: isMobile ? '50%' : 'auto' }}>
+              <CustomDropdown
+                label="Todos los horarios"
+                options={[
+                  { value: '', label: 'Todos los horarios' },
+                  ...horarios.map(h => ({ value: String(h.id), label: h.nombre }))
+                ]}
+                value={filtroHorario}
+                onChange={val => setFiltroHorario(val)}
+                minWidth={isMobile ? '100%' : '185px'}
+                isMobile={isMobile}
+              />
+            </div>
+          </div>
 
-          {/* Filtro por mes (editable a mano o clic en calendario) */}
-          <CampoFiltroMes
-            value={filtroMes}
-            onChange={setFiltroMes}
-            isMobile={isMobile}
-          />
+          {/* Fila 2 en móvil: Mes y Fecha (50% y 50%) */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            width: isMobile ? '100%' : 'auto',
+          }}>
+            <div style={{ flex: isMobile ? 1 : 'none', minWidth: 0, width: isMobile ? '50%' : 'auto' }}>
+              <CampoFiltroMes
+                value={filtroMes}
+                onChange={setFiltroMes}
+                isMobile={isMobile}
+              />
+            </div>
 
-          {/* Filtro por fecha exacta de pago (editable a mano o clic en calendario) */}
-          <CampoFiltroFecha
-            value={filtroFechaPago}
-            onChange={setFiltroFechaPago}
-            isMobile={isMobile}
-          />
+            <div style={{ flex: isMobile ? 1 : 'none', minWidth: 0, width: isMobile ? '50%' : 'auto' }}>
+              <CampoFiltroFecha
+                value={filtroFechaPago}
+                onChange={setFiltroFechaPago}
+                isMobile={isMobile}
+              />
+            </div>
+          </div>
 
           {submodulo === 'inscripciones' && (
-            <label style={{ ...s.checkboxLabel, flexShrink: 0 }}>
+            <label style={{
+              ...s.checkboxLabel,
+              flexShrink: 0,
+              width: isMobile ? '100%' : 'auto',
+              justifyContent: isMobile ? 'center' : 'flex-start',
+            }}>
               <input
                 type="checkbox"
                 checked={mostrarTodosInscripciones}
@@ -1009,10 +1099,241 @@ export default function Pagos() {
         <div style={s.lista}>
           {alumnosFiltrados.map(a => {
             const pagado = !!a.pagoActivo
-            return (
-              <div key={a.id} style={{ ...s.card, borderLeft: `4px solid ${pagado ? 'var(--accent-green)' : 'var(--accent-red)'}`, position: 'relative', height: '82px', padding: isMobile ? '10px 14px' : '14px 18px', gap: isMobile ? '10px' : '16px', boxSizing: 'border-box' }}
-                onClick={() => abrirHistorial(a)}>
 
+            if (isMobile) {
+              return (
+                <div
+                  key={a.id}
+                  style={{
+                    ...s.card,
+                    borderLeft: `4px solid ${pagado ? 'var(--accent-green)' : 'var(--accent-red)'}`,
+                    position: 'relative',
+                    padding: '12px 14px',
+                    gap: '10px',
+                    flexDirection: 'column',
+                    alignItems: 'stretch',
+                    boxSizing: 'border-box'
+                  }}
+                  onClick={() => abrirHistorial(a)}
+                >
+                  {/* Fila Superior: Avatar + Nombre y Periodo + Insignia de Estado */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+                    <div style={s.avatar}>
+                      {a.foto_url ? (
+                        <img src={a.foto_url} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>
+                          {a.nombre[0]}{a.apellido_paterno[0]}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontWeight: '700',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        lineHeight: 1.25,
+                        wordBreak: 'break-word',
+                      }}>
+                        {a.nombre} {a.apellido_paterno} {a.apellido_materno || ''}
+                      </div>
+                      <div style={{
+                        fontSize: '11.5px',
+                        color: 'var(--text-muted)',
+                        marginTop: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}>
+                        {submodulo === 'mensualidades' ? (
+                          <>
+                            <FiCalendar size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                            <span>{a.periodo.label}</span>
+                          </>
+                        ) : (
+                          <>
+                            <FiTag size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                            <span>Inscripción Anual</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Insignia de estado */}
+                    <div style={{ flexShrink: 0 }}>
+                      {pagado ? (
+                        <span style={{
+                          ...(submodulo === 'mensualidades' ? s.badgePagado : s.badgeInscrito),
+                          padding: '3px 10px',
+                          fontSize: '10.5px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}>
+                          <FiCheck size={12} />
+                          {submodulo === 'mensualidades' ? 'PAGADO' : 'INSCRITO'}
+                        </span>
+                      ) : (submodulo === 'mensualidades' && a.tieneDeudaAntigua) ? (
+                        <span style={{ ...s.badgeDeuda, fontSize: '9.5px', padding: '3px 8px' }} title="Debe periodos anteriores">
+                          DEUDA CRÍTICA
+                        </span>
+                      ) : (
+                        <span style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          color: 'var(--accent-red)',
+                          padding: '3px 10px',
+                          borderRadius: '20px',
+                          fontSize: '10.5px',
+                          fontWeight: '800',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}>
+                          PENDIENTE
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Fila Inferior: Detalles de Pago (izq) y Acciones Rápidas (der) */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                    paddingTop: '8px',
+                    borderTop: '1px solid var(--border)',
+                    width: '100%',
+                  }}>
+                    {/* Monto e info */}
+                    <div style={{ flex: 1, minWidth: 0, fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                      {pagado ? (
+                        a.pagosPeriodo && a.pagosPeriodo.length > 1 ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <strong style={{ color: 'var(--accent-green)', fontWeight: 800, fontSize: '12.5px' }}>
+                              ${a.totalPagadoPeriodo.toFixed(2)}
+                            </strong>
+                            <span style={{ color: 'var(--accent-blue)', fontWeight: 700, fontSize: '10.5px', background: 'rgba(59,130,246,0.12)', padding: '2px 6px', borderRadius: '4px' }}>
+                              {a.pagosPeriodo.length} abonos
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
+                              ${parseFloat(a.pagoActivo.monto).toFixed(2)}
+                            </strong>
+                            {' '}· {a.pagoActivo.metodo_pago}
+                            {a.pagoActivo.fecha_pago && (
+                              <span style={{ opacity: 0.75 }}> · {fmtFecha(a.pagoActivo.fecha_pago)}</span>
+                            )}
+                          </div>
+                        )
+                      ) : (
+                        <span style={{ color: 'var(--accent-red)', fontSize: '11px', fontWeight: 600 }}>
+                          Sin pago registrado
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Botones de acción táctiles */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      {!pagado && submodulo === 'mensualidades' && (
+                        <button
+                          style={{ ...s.btnWhatsApp, width: '32px', height: '32px', borderRadius: '8px' }}
+                          onClick={(e) => { e.stopPropagation(); enviarWhatsApp(a); }}
+                          title="Recordar por WhatsApp"
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z" />
+                          </svg>
+                        </button>
+                      )}
+
+                      {pagado && (
+                        <>
+                          {user?.role === 'owner' && (
+                            <button
+                              style={{ ...s.btnIconTrash, width: '32px', height: '32px', borderRadius: '8px' }}
+                              onClick={(e) => eliminarPago(a.pagoActivo.id, e)}
+                              title="Quitar registro"
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                              </svg>
+                            </button>
+                          )}
+
+                          <button
+                            style={{ ...s.btnIconBlueSmall, width: '32px', height: '32px', borderRadius: '8px' }}
+                            onClick={(e) => { e.stopPropagation(); generarRecibo(a.pagoActivo, a); }}
+                            title="Descargar Recibo"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                              <polyline points="7 10 12 15 17 10"></polyline>
+                              <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                          </button>
+
+                          <button
+                            style={{ ...s.btnIconGreenSmall, width: '32px', height: '32px', borderRadius: '8px' }}
+                            onClick={(e) => { e.stopPropagation(); enviarComprobanteWhatsApp(a.pagoActivo, a); }}
+                            title="Enviar por WhatsApp"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.554.92 3.14 1.407 4.793 1.408 5.432 0 9.854-4.422 9.856-9.856.002-5.433-4.419-9.853-9.853-9.853-5.435 0-9.856 4.422-9.858 9.854-.001 1.838.512 3.633 1.483 5.213l-1.103 4.025 4.128-1.082zm11.367-7.604c-.31-.155-1.836-.906-2.115-1.008-.28-.101-.483-.153-.686.154-.203.308-.787 1.008-.965 1.213-.177.205-.355.231-.665.077-.31-.155-1.307-.482-2.489-1.536-.919-.82-1.539-1.831-1.719-2.139-.18-.308-.02-.475.135-.629.14-.139.31-.36.465-.54.155-.181.206-.309.31-.515.103-.206.052-.386-.025-.54-.078-.155-.686-1.656-.941-2.261-.249-.59-.503-.51-.686-.519-.177-.008-.381-.01-.584-.01-.203 0-.533.077-.812.385-.279.308-1.066 1.044-1.066 2.545 0 1.501 1.091 2.951 1.243 3.156.153.205 2.146 3.276 5.198 4.59.726.313 1.293.499 1.734.639.73.232 1.393.199 1.918.121.585-.088 1.836-.751 2.09-1.474.254-.724.254-1.344.177-1.474-.076-.13-.279-.234-.589-.389z"/>
+                            </svg>
+                          </button>
+                        </>
+                      )}
+
+                      {/* Botón Pagar / Abono */}
+                      <button
+                        style={{
+                          ...s.btnPagarSmall,
+                          width: pagado ? '32px' : 'auto',
+                          height: '32px',
+                          padding: pagado ? 0 : '0 10px',
+                          borderRadius: '8px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          transition: 'all 0.2s ease',
+                          opacity: cooldownSegundos > 0 ? 0.6 : 1,
+                          cursor: cooldownSegundos > 0 ? 'not-allowed' : 'pointer'
+                        }}
+                        onClick={(e) => abrirModalPago(a, e)}
+                        title={cooldownSegundos > 0 ? `Espera (${cooldownSegundos}s)` : (pagado ? "Registrar otro pago / abono" : "Registrar pago")}
+                      >
+                        {cooldownSegundos > 0 ? (
+                          <span style={{ fontSize: '11px', fontWeight: '800' }}>{cooldownSegundos}s</span>
+                        ) : pagado ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                          </svg>
+                        ) : (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="12" y1="5" x2="12" y2="19"></line>
+                              <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span style={{ fontSize: '12px', fontWeight: '700' }}>Pagar</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+
+            // Desktop layout
+            return (
+              <div key={a.id} style={{ ...s.card, borderLeft: `4px solid ${pagado ? 'var(--accent-green)' : 'var(--accent-red)'}`, position: 'relative', height: '82px', padding: '14px 18px', gap: '16px', boxSizing: 'border-box' }}
+                onClick={() => abrirHistorial(a)}>
 
                 {/* Avatar */}
                 <div style={s.avatar}>
@@ -1046,8 +1367,8 @@ export default function Pagos() {
                 </div>
 
                 {/* Estado y acción */}
-                <div style={{ ...s.derecha, width: isMobile ? '200px' : '260px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px' }}>
+                <div style={{ ...s.derecha, width: '260px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {!pagado && submodulo === 'mensualidades' && (
                       <button style={{ ...s.btnWhatsApp, transition: 'all 0.2s ease' }} onClick={(e) => { e.stopPropagation(); enviarWhatsApp(a); }} title="Recordar por WhatsApp"
                         onMouseOver={e => {
@@ -2078,24 +2399,26 @@ export default function Pagos() {
   )
 }
 
-function TabButton({ active, onClick, icon, label }) {
+function TabButton({ active, onClick, icon, label, isMobile }) {
   return (
     <button
       style={{
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 7,
-        padding: '9px 20px',
+        padding: isMobile ? '9px 12px' : '9px 20px',
         borderRadius: 10,
         border: 'none',
         background: active ? 'var(--accent-blue)' : 'transparent',
         color: active ? '#fff' : 'var(--text-muted)',
-        fontSize: 13,
+        fontSize: isMobile ? 12.5 : 13,
         fontWeight: active ? 700 : 600,
         cursor: 'pointer',
         boxShadow: active ? 'var(--shadow-glow-blue)' : 'none',
         transition: 'all 0.2s',
         fontFamily: 'inherit',
+        flex: isMobile ? 1 : 'none',
       }}
       onClick={onClick}
     >
@@ -2114,8 +2437,8 @@ function CampoFiltroMes({ value, onChange, isMobile }) {
         position: 'relative',
         display: 'inline-flex',
         alignItems: 'center',
-        width: isMobile ? '100%' : '210px',
-        minWidth: isMobile ? '100%' : '210px',
+        width: '100%',
+        minWidth: isMobile ? '0' : '210px',
         height: '38px',
         flexShrink: 0,
         background: 'var(--bg-secondary)',
@@ -2140,9 +2463,9 @@ function CampoFiltroMes({ value, onChange, isMobile }) {
           background: 'transparent',
           border: 'none',
           outline: 'none',
-          padding: '0 32px 0 12px',
+          padding: isMobile ? '0 28px 0 10px' : '0 32px 0 12px',
           color: 'var(--text-secondary)',
-          fontSize: '13px',
+          fontSize: isMobile ? '12px' : '13px',
           fontWeight: 600,
           fontFamily: 'inherit',
           colorScheme: 'dark',
@@ -2164,7 +2487,7 @@ function CampoFiltroMes({ value, onChange, isMobile }) {
         title="Abrir calendario"
         style={{
           position: 'absolute',
-          right: '8px',
+          right: isMobile ? '4px' : '8px',
           top: '50%',
           transform: 'translateY(-50%)',
           background: 'transparent',
@@ -2196,8 +2519,8 @@ function CampoFiltroFecha({ value, onChange, isMobile }) {
         position: 'relative',
         display: 'inline-flex',
         alignItems: 'center',
-        width: isMobile ? '100%' : '160px',
-        minWidth: isMobile ? '100%' : '160px',
+        width: '100%',
+        minWidth: isMobile ? '0' : '160px',
         height: '38px',
         flexShrink: 0,
         background: 'var(--bg-secondary)',
@@ -2227,9 +2550,9 @@ function CampoFiltroFecha({ value, onChange, isMobile }) {
           background: 'transparent',
           border: 'none',
           outline: 'none',
-          padding: value ? '0 52px 0 12px' : '0 32px 0 12px',
+          padding: value ? (isMobile ? '0 46px 0 10px' : '0 52px 0 12px') : (isMobile ? '0 28px 0 10px' : '0 32px 0 12px'),
           color: value ? 'var(--text-primary)' : 'var(--text-secondary)',
-          fontSize: '13px',
+          fontSize: isMobile ? '12px' : '13px',
           fontWeight: 600,
           fontFamily: 'inherit',
           colorScheme: 'dark',
@@ -2240,12 +2563,12 @@ function CampoFiltroFecha({ value, onChange, isMobile }) {
       <div
         style={{
           position: 'absolute',
-          right: '8px',
+          right: isMobile ? '4px' : '8px',
           top: '50%',
           transform: 'translateY(-50%)',
           display: 'flex',
           alignItems: 'center',
-          gap: '4px',
+          gap: '3px',
         }}
       >
         {value ? (

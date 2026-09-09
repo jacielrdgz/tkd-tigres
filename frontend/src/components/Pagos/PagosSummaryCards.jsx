@@ -19,38 +19,50 @@ export default function PagosSummaryCards({
   totalInscritosMes = 0,
   inscripcionesPagadasMes = 0,
   inscripcionesPendientesMes = 0,
+  isMobile: isMobileProp,
 }) {
+  const isMobile = isMobileProp !== undefined ? isMobileProp : (typeof window !== 'undefined' && window.innerWidth <= 768)
+
   if (submodulo === 'mensualidades') {
     const pctCobranza = totalAlumnos > 0 ? Math.round((alumnosPagados / totalAlumnos) * 100) : 0
     return (
-      <div style={s.grid}>
+      <div style={{
+        ...s.grid,
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+        gap: isMobile ? '10px' : '16px',
+        marginBottom: isMobile ? '18px' : '28px'
+      }}>
         <Card
           cargando={cargando}
-          icon={<FiDollarSign size={22} />}
+          icon={<FiDollarSign size={isMobile ? 18 : 22} />}
           iconColor="#10b981"
           label="Ingresos del Mes"
           sublabel={mesLabel}
           value={`$${recaudacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           valueColor="var(--text-primary)"
+          isMobile={isMobile}
         />
         <Card
           cargando={cargando}
-          icon={<FiTrendingUp size={22} />}
+          icon={<FiTrendingUp size={isMobile ? 18 : 22} />}
           iconColor={pctColor(pctCobranza)}
           label="Alumnos al Corriente"
           sublabel={`${alumnosPagados} de ${totalAlumnos} alumnos`}
           value={`${pctCobranza}%`}
           valueColor={pctColor(pctCobranza)}
           bar={pctCobranza}
+          isMobile={isMobile}
         />
         <Card
           cargando={cargando}
-          icon={<FiAlertCircle size={22} />}
+          icon={<FiAlertCircle size={isMobile ? 18 : 22} />}
           iconColor={alumnosPendientes > 0 ? '#ef4444' : '#10b981'}
           label="Mensualidades Pendientes"
           sublabel={alumnosPendientes > 0 ? 'En riesgo de mora' : 'Todo al corriente'}
           value={alumnosPendientes}
           valueColor={alumnosPendientes > 0 ? '#ef4444' : 'var(--accent-green)'}
+          spanFull={true}
+          isMobile={isMobile}
         />
       </div>
     )
@@ -59,52 +71,74 @@ export default function PagosSummaryCards({
   // submodulo === 'inscripciones'
   const pctInscripciones = totalInscritosMes > 0 ? Math.round((inscripcionesPagadasMes / totalInscritosMes) * 100) : 100
   return (
-    <div style={s.grid}>
+    <div style={{
+      ...s.grid,
+      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+      gap: isMobile ? '10px' : '16px',
+      marginBottom: isMobile ? '18px' : '28px'
+    }}>
       <Card
         cargando={cargando}
-        icon={<FiDollarSign size={22} />}
+        icon={<FiDollarSign size={isMobile ? 18 : 22} />}
         iconColor="#10b981"
         label="Recaudación Inscripciones"
         sublabel={mesLabel}
         value={`$${recaudacion.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         valueColor="var(--text-primary)"
+        isMobile={isMobile}
       />
       <Card
         cargando={cargando}
-        icon={<FiUserPlus size={22} />}
+        icon={<FiUserPlus size={isMobile ? 18 : 22} />}
         iconColor="#3b82f6"
         label="Nuevos Alumnos Inscritos"
         sublabel={`${inscripcionesPagadasMes} de ${totalInscritosMes} liquidadas`}
         value={totalInscritosMes}
         valueColor="var(--text-primary)"
         bar={totalInscritosMes > 0 ? pctInscripciones : 0}
+        isMobile={isMobile}
       />
       <Card
         cargando={cargando}
-        icon={<FiClock size={22} />}
+        icon={<FiClock size={isMobile ? 18 : 22} />}
         iconColor={inscripcionesPendientesMes > 0 ? '#f59e0b' : '#10b981'}
         label="Inscripciones Pendientes"
         sublabel={inscripcionesPendientesMes > 0 ? 'Pendiente de cobro inicial' : 'Sin pendientes este mes'}
         value={inscripcionesPendientesMes}
         valueColor={inscripcionesPendientesMes > 0 ? '#f59e0b' : 'var(--accent-green)'}
+        spanFull={true}
+        isMobile={isMobile}
       />
     </div>
   )
 }
 
-function Card({ icon, iconColor, label, sublabel, value, valueColor, bar, cargando }) {
+function Card({ icon, iconColor, label, sublabel, value, valueColor, bar, cargando, spanFull, isMobile }) {
   return (
-    <div style={s.card}>
-      <div style={{ ...s.iconBox, background: `${iconColor}18`, color: iconColor }}>
+    <div style={{
+      ...s.card,
+      gridColumn: (isMobile && spanFull) ? 'span 2' : 'auto',
+      padding: isMobile ? '12px 14px' : '20px 22px',
+      gap: isMobile ? '12px' : '16px',
+      minHeight: isMobile ? 'auto' : '122px',
+    }}>
+      <div style={{
+        ...s.iconBox,
+        background: `${iconColor}18`,
+        color: iconColor,
+        width: isMobile ? '38px' : '46px',
+        height: isMobile ? '38px' : '46px',
+        borderRadius: isMobile ? '10px' : '12px'
+      }}>
         {icon}
       </div>
       <div style={s.info}>
-        <span style={s.label}>{label}</span>
-        <span style={s.sublabel}>{sublabel || '\u00A0'}</span>
+        <span style={{ ...s.label, fontSize: isMobile ? '10.5px' : '12px' }}>{label}</span>
+        <span style={{ ...s.sublabel, fontSize: isMobile ? '10px' : '11px' }}>{sublabel || '\u00A0'}</span>
         {cargando ? (
-          <div style={s.skeleton} />
+          <div style={{ ...s.skeleton, height: isMobile ? '24px' : '28px' }} />
         ) : (
-          <span style={{ ...s.value, color: valueColor }}>{value}</span>
+          <span style={{ ...s.value, color: valueColor, fontSize: isMobile ? '20px' : '28px', minHeight: isMobile ? '24px' : '32px' }}>{value}</span>
         )}
         <div style={s.barContainer}>
           {bar !== undefined && !cargando ? (
