@@ -52,11 +52,32 @@ function Avatar({ alumno, size = 38 }) {
 
 export default function ModalRegistrar({ onCerrar, onGuardado, isMobile: propIsMobile }) {
   const { user } = useAuth()
-  const [fecha, setFecha] = useState(new Date().toLocaleDateString('sv-SE'))
-  const [alumnos, setAlumnos] = useState([])
-  const [presencias, setPresencias] = useState({})
-  const [initialPresencias, setInitialPresencias] = useState({})
-  const [cargando, setCargando] = useState(false)
+  const [fecha, setFecha] = useState(() => new Date().toLocaleDateString('sv-SE'))
+  const [alumnos, setAlumnos] = useState(() => {
+    const hoy = new Date().toLocaleDateString('sv-SE')
+    const c = getCache(`asistencias_dia_${hoy}`)?.data
+    return Array.isArray(c) ? c : []
+  })
+  const [presencias, setPresencias] = useState(() => {
+    const hoy = new Date().toLocaleDateString('sv-SE')
+    const c = getCache(`asistencias_dia_${hoy}`)?.data
+    if (!c || !Array.isArray(c)) return {}
+    const mapa = {}
+    c.forEach(a => { mapa[a.alumno_id] = !!a.presente })
+    return mapa
+  })
+  const [initialPresencias, setInitialPresencias] = useState(() => {
+    const hoy = new Date().toLocaleDateString('sv-SE')
+    const c = getCache(`asistencias_dia_${hoy}`)?.data
+    if (!c || !Array.isArray(c)) return {}
+    const mapa = {}
+    c.forEach(a => { mapa[a.alumno_id] = !!a.presente })
+    return mapa
+  })
+  const [cargando, setCargando] = useState(() => {
+    const hoy = new Date().toLocaleDateString('sv-SE')
+    return !getCache(`asistencias_dia_${hoy}`)?.data
+  })
   const [guardando, setGuardando] = useState(false)
 
   const [localIsMobile, setLocalIsMobile] = useState(() => window.innerWidth <= 768)
@@ -82,18 +103,14 @@ export default function ModalRegistrar({ onCerrar, onGuardado, isMobile: propIsM
 
   const cargar = useCallback(async (force = false) => {
     const key = `asistencias_dia_${fecha}`
-    if (!force) {
-      const cached = getCache(key)
-      if (cached && cached.data) {
-        setAlumnos(cached.data)
-        const mapa = {}
-        cached.data.forEach(a => { mapa[a.alumno_id] = !!a.presente })
-        setPresencias(mapa)
-        setInitialPresencias(mapa)
-        setCargando(false)
-      } else {
-        setCargando(true)
-      }
+    const cached = getCache(key)
+    if (cached && cached.data) {
+      setAlumnos(cached.data)
+      const mapa = {}
+      cached.data.forEach(a => { mapa[a.alumno_id] = !!a.presente })
+      setPresencias(mapa)
+      setInitialPresencias(mapa)
+      setCargando(false)
     } else {
       setCargando(true)
     }
@@ -106,7 +123,7 @@ export default function ModalRegistrar({ onCerrar, onGuardado, isMobile: propIsM
       lista.forEach(a => { mapa[a.alumno_id] = !!a.presente })
       setPresencias(mapa)
       setInitialPresencias(mapa)
-      setCache(key, lista)
+      setCache(key, lista, 15 * 60 * 1000)
     } catch {
       const cached = getCache(key)
       if (!cached || !cached.data) {
@@ -324,12 +341,16 @@ export default function ModalRegistrar({ onCerrar, onGuardado, isMobile: propIsM
       // 3. Persistir en backend en segundo plano
       api.post('/asistencias/registrar-dia', { fecha, asistencias: lista })
         .then(() => {
-          invalidateCache('asistencias')
+          invalidateCache('asistencias_resumen')
+          invalidateCache('asistencias_alumno')
+          invalidateCache('asistencias_fecha')
         })
         .catch(err => {
           console.error('Error en segundo plano al guardar asistencias:', err)
           toast.error('Error al guardar asistencias en el servidor')
-          invalidateCache('asistencias')
+          invalidateCache('asistencias_resumen')
+          invalidateCache('asistencias_alumno')
+          invalidateCache('asistencias_fecha')
         })
     } catch (err) {
       console.error('Error al procesar asistencias:', err)

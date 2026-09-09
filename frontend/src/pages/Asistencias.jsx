@@ -69,15 +69,11 @@ export default function Asistencias() {
   // ── Cargar resumen (común a ambos tabs) ──────────────────────────────────
   const cargarResumen = useCallback(async (force = false) => {
     const key = `asistencias_resumen_${mes}`
-    if (!force) {
-      const cached = getCache(key)
-      if (cached && cached.data) {
-        setResumen(cached.data)
-        setCargandoResumen(false)
-      } else {
-        setCargandoResumen(true)
-      }
-    } else {
+    const cached = getCache(key)
+    if (cached && cached.data) {
+      setResumen(cached.data)
+      setCargandoResumen(false)
+    } else if (!resumen) {
       setCargandoResumen(true)
     }
 
@@ -93,21 +89,17 @@ export default function Asistencias() {
     } finally {
       setCargandoResumen(false)
     }
-  }, [mes])
+  }, [mes, resumen])
 
   // ── Cargar datos tab Por Alumno ───────────────────────────────────────────
   const cargarPorAlumno = useCallback(async (force = false) => {
     const key = `asistencias_alumno_${mes}`
-    if (!force) {
-      const cached = getCache(key)
-      if (cached && cached.data) {
-        const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
-        setListaAlumnos(cachedList)
-        setCargandoAlumnos(false)
-      } else {
-        setCargandoAlumnos(true)
-      }
-    } else {
+    const cached = getCache(key)
+    if (cached && cached.data) {
+      const cachedList = Array.isArray(cached.data) ? cached.data : Object.values(cached.data)
+      setListaAlumnos(cachedList)
+      setCargandoAlumnos(false)
+    } else if (listaAlumnos.length === 0) {
       setCargandoAlumnos(true)
     }
 
@@ -124,20 +116,16 @@ export default function Asistencias() {
     } finally {
       setCargandoAlumnos(false)
     }
-  }, [mes])
+  }, [mes, listaAlumnos.length])
 
   // ── Cargar datos tab Por Fecha ────────────────────────────────────────────
   const cargarPorFecha = useCallback(async (force = false) => {
     const key = `asistencias_fecha_${mes}`
-    if (!force) {
-      const cached = getCache(key)
-      if (cached && cached.data) {
-        setDatosPorFecha(typeof cached.data === 'object' && cached.data !== null ? cached.data : {})
-        setCargandoFecha(false)
-      } else {
-        setCargandoFecha(true)
-      }
-    } else {
+    const cached = getCache(key)
+    if (cached && cached.data) {
+      setDatosPorFecha(typeof cached.data === 'object' && cached.data !== null ? cached.data : {})
+      setCargandoFecha(false)
+    } else if (Object.keys(datosPorFecha).length === 0) {
       setCargandoFecha(true)
     }
 
@@ -154,7 +142,18 @@ export default function Asistencias() {
     } finally {
       setCargandoFecha(false)
     }
-  }, [mes])
+  }, [mes, datosPorFecha])
+
+  // ── Precarga anticipada de la lista de asistencia de hoy para apertura instantánea ──
+  useEffect(() => {
+    const hoy = new Date().toLocaleDateString('sv-SE')
+    const key = `asistencias_dia_${hoy}`
+    if (!getCache(key)) {
+      api.get('/asistencias', { params: { fecha: hoy } })
+        .then(res => setCache(key, res.data, 15 * 60 * 1000))
+        .catch(() => {})
+    }
+  }, [])
 
   // ── Efectos ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -411,9 +410,9 @@ export default function Asistencias() {
           onGuardado={(fechaReg) => {
             setHaGuardadoEnModal(true)
             setFechaRegistroGuardada(fechaReg)
-            cargarResumen()
-            if (tab === 'alumno') cargarPorAlumno()
-            else cargarPorFecha()
+            cargarResumen(false)
+            if (tab === 'alumno') cargarPorAlumno(false)
+            else cargarPorFecha(false)
           }}
         />
       )}

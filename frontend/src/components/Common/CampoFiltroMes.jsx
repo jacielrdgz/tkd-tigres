@@ -40,7 +40,7 @@ export default function CampoFiltroMes({ value, onChange, isMobile }) {
         border: '1px solid var(--border)',
         borderRadius: '10px',
         boxSizing: 'border-box',
-        boxShadow: 'var(--shadow-sm)',
+        boxShadow: isMobile ? 'none' : 'var(--shadow-sm)',
         transition: 'all 0.15s ease',
         cursor: 'pointer',
         padding: isMobile ? '0 8px' : '0 12px',

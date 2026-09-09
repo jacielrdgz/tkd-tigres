@@ -181,20 +181,16 @@ export default function Pagos() {
   const [modalAbonosMes, setModalAbonosMes] = useState(null) // Modal para ver y gestionar abonos de un mes { mes, mesKey, anio }
 
   const cargar = async (force = false) => {
-    if (!force) {
-      const cached = getCache('pagos_main_data')
-      if (cached && cached.data) {
-        const c = cached.data
-        setAlumnos(Array.isArray(c.alumnos) ? c.alumnos : Object.values(c.alumnos || {}))
-        setPagosActivos(Array.isArray(c.pagos) ? c.pagos : Object.values(c.pagos || {}))
-        setCintas(Array.isArray(c.cintas) ? c.cintas : Object.values(c.cintas || {}))
-        setHorarios(Array.isArray(c.horarios) ? c.horarios : Object.values(c.horarios || {}))
-        setEscuelaInfo(c.escuela || null)
-        setCargando(false)
-      } else {
-        setCargando(true)
-      }
-    } else {
+    const cached = getCache('pagos_main_data')
+    if (cached && cached.data) {
+      const c = cached.data
+      setAlumnos(Array.isArray(c.alumnos) ? c.alumnos : Object.values(c.alumnos || {}))
+      setPagosActivos(Array.isArray(c.pagos) ? c.pagos : Object.values(c.pagos || {}))
+      setCintas(Array.isArray(c.cintas) ? c.cintas : Object.values(c.cintas || {}))
+      setHorarios(Array.isArray(c.horarios) ? c.horarios : Object.values(c.horarios || {}))
+      setEscuelaInfo(c.escuela || null)
+      setCargando(false)
+    } else if (alumnos.length === 0) {
       setCargando(true)
     }
 
@@ -766,29 +762,35 @@ export default function Pagos() {
       ? api.put(`/pagos/${pagoAEditar.id}`, data)
       : api.post('/pagos', data)
 
-    request
-      .then(res => {
-        if (res.data) {
-          const realPago = res.data
-          setPagosActivos(prev => prev.map(p => p.id === tempId ? { ...p, ...realPago } : p))
-          if (historialAlumno && historialAlumno.id === alumnoParaRecibo.id) {
-            setHistorial(prev => prev.map(p => p.id === tempId ? { ...p, ...realPago } : p))
+      request
+        .then(res => {
+          if (res.data) {
+            const realPago = res.data
+            setPagosActivos(prev => prev.map(p => p.id === tempId ? { ...p, ...realPago } : p))
+            if (historialAlumno && historialAlumno.id === alumnoParaRecibo.id) {
+              setHistorial(prev => prev.map(p => p.id === tempId ? { ...p, ...realPago } : p))
+            }
+            // Actualización atómica en caché en memoria sin invalidar
+            const cached = getCache('pagos_main_data')?.data
+            if (cached && Array.isArray(cached.pagos)) {
+              const updatedPagos = isEdit
+                ? cached.pagos.map(p => (p.id === tempId || p.id === pagoAEditar?.id) ? { ...p, ...realPago } : p)
+                : [realPago, ...cached.pagos.filter(p => p.id !== tempId)]
+              setCache('pagos_main_data', { ...cached, pagos: updatedPagos })
+            }
           }
-        }
-        invalidateCache('pagos')
-        invalidateCache('alumnos')
-      })
-      .catch(e => {
-        console.error("Error al guardar pago en servidor:", e.response?.data || e.message)
-        if (!isEdit) {
-          setPagosActivos(prev => prev.filter(p => p.id !== tempId))
-          if (historialAlumno && historialAlumno.id === alumnoParaRecibo.id) {
-            setHistorial(prev => prev.filter(p => p.id !== tempId))
+        })
+        .catch(e => {
+          console.error("Error al guardar pago en servidor:", e.response?.data || e.message)
+          if (!isEdit) {
+            setPagosActivos(prev => prev.filter(p => p.id !== tempId))
+            if (historialAlumno && historialAlumno.id === alumnoParaRecibo.id) {
+              setHistorial(prev => prev.filter(p => p.id !== tempId))
+            }
           }
-        }
-        const msg = e.response?.data?.message || 'Error al guardar el pago en el servidor.'
-        toast.error(msg)
-      })
+          const msg = e.response?.data?.message || 'Error al guardar el pago en el servidor.'
+          toast.error(msg)
+        })
   }
 
   const eliminarPago = async (pagoId, e) => {
@@ -805,14 +807,22 @@ export default function Pagos() {
       color: 'var(--text-primary)'
     })
     if (result.isConfirmed) {
+      // 1. Eliminación optimista inmediata en interfaz
       setPagosActivos(prev => prev.filter(p => p.id !== pagoId))
       setHistorial(prev => prev.filter(p => p.id !== pagoId))
+
+      // 2. Actualización inmediata en caché sin necesidad de recargar toda la pantalla
+      const cached = getCache('pagos_main_data')?.data
+      if (cached && Array.isArray(cached.pagos)) {
+        setCache('pagos_main_data', {
+          ...cached,
+          pagos: cached.pagos.filter(p => p.id !== pagoId)
+        })
+      }
+
       try {
         await api.delete(`/pagos/${pagoId}`)
         toast.success('Pago eliminado')
-        invalidateCache('pagos')
-        invalidateCache('alumnos')
-        cargar(true)
       } catch (err) {
         console.error("Error al eliminar pago:", err)
         toast.error('Error al eliminar pago en el servidor')
@@ -982,16 +992,14 @@ export default function Pagos() {
             />
           </div>
 
-          {/* Grid 3x2 con 6 botones alineados de igual ancho y alto */}
+          {/* Grid 3x2 con los 6 botones alineados de igual ancho */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
-            gridAutoRows: '36px',
             gap: '8px',
             width: '100%',
-            alignItems: 'stretch',
           }}>
-            {/* 1. Estatus (reemplaza Todos, Pagado, Pendiente) */}
+            {/* 1. Estatus */}
             <CustomDropdown
               label="Estatus"
               icon={<span style={{
@@ -1013,7 +1021,7 @@ export default function Pagos() {
               alignRight={false}
             />
 
-            {/* 2. Cintas con su icono */}
+            {/* 2. Cintas */}
             <CustomDropdown
               label="Cintas"
               icon={<FiAward size={12} />}
@@ -1028,7 +1036,7 @@ export default function Pagos() {
               alignRight={false}
             />
 
-            {/* 3. Horarios con su icono */}
+            {/* 3. Horarios */}
             <CustomDropdown
               label="Horarios"
               icon={<FiClock size={12} />}
@@ -1040,7 +1048,7 @@ export default function Pagos() {
               onChange={val => setFiltroHorario(val)}
               minWidth="100%"
               isMobile={true}
-              alignRight={false}
+              alignRight={true}
             />
 
             {/* 4. Mes */}
@@ -1057,14 +1065,14 @@ export default function Pagos() {
               isMobile={true}
             />
 
-          {/* 6. Exportar */}
-            <div style={{ position: 'relative', width: '100%', height: '36px' }} ref={exportRefMobile}>
+            {/* 6. Exportar */}
+            <div style={{ position: 'relative', width: '100%' }} ref={exportRefMobile}>
               <button
                 type="button"
                 style={{
                   ...s.btnSecundario,
                   width: '100%',
-                  height: '100%',
+                  height: '36px',
                   borderColor: exportOpenMobile ? 'var(--accent-blue)' : 'var(--border)',
                   boxShadow: exportOpenMobile ? '0 0 10px rgba(59, 130, 246, 0.25)' : 'none',
                   padding: '0 8px',
@@ -2863,7 +2871,7 @@ function CampoFiltroFecha({ value, onChange, isMobile }) {
         border: `1px solid ${value ? 'var(--accent-blue)' : 'var(--border)'}`,
         borderRadius: '10px',
         boxSizing: 'border-box',
-        boxShadow: 'var(--shadow-sm)',
+        boxShadow: isMobile ? 'none' : 'var(--shadow-sm)',
         transition: 'all 0.15s ease',
         cursor: 'pointer',
         padding: isMobile ? '0 8px' : '0 12px',

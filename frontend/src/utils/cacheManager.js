@@ -10,7 +10,10 @@
  */
 
 const memoryCache = new Map();
-const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutos por defecto
+export const TTL_DEFAULT = 5 * 60 * 1000; // 5 minutos por defecto
+export const TTL_STATIC = 30 * 60 * 1000; // 30 minutos para catálogos (cintas, horarios, dojo info)
+export const TTL_DAY = 15 * 60 * 1000; // 15 minutos para listas diarias de asistencia
+const DEFAULT_TTL_MS = TTL_DEFAULT;
 
 /**
  * Obtener elemento de la caché si aún está vigente.
