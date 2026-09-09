@@ -1040,7 +1040,7 @@ export default function Pagos() {
               onChange={val => setFiltroHorario(val)}
               minWidth="100%"
               isMobile={true}
-              alignRight={true}
+              alignRight={false}
             />
 
             {/* 4. Mes */}

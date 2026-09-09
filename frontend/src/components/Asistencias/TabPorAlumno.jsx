@@ -177,6 +177,7 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
             onChange={val => setFiltroGrado(val)}
             minWidth={isMobile ? '0' : '160px'}
             isMobile={isMobile}
+            alignRight={false}
             customStyle={{ flex: 1, minWidth: 0 }}
           />
 
@@ -193,40 +194,45 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
             onChange={val => setFiltroHorario(val)}
             minWidth={isMobile ? '0' : '175px'}
             isMobile={isMobile}
+            alignRight={true}
             customStyle={{ flex: 1, minWidth: 0 }}
           />
         </div>
 
-        {/* Fila de Mes y En Riesgo (50% y 50% en móvil) */}
+        {/* Fila de Mes y En Riesgo: grid 2 columnas iguales en móvil */}
         <div style={{
-          display: 'flex',
+          display: isMobile ? 'grid' : 'flex',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : undefined,
+          gridAutoRows: isMobile ? '36px' : undefined,
           gap: 8,
           width: isMobile ? '100%' : 'auto',
-          flex: isMobile ? '1 1 100%' : 'none'
+          flex: isMobile ? '1 1 100%' : 'none',
+          alignItems: 'stretch',
         }}>
-          <div style={{ flex: isMobile ? 1 : 'none', minWidth: 0, width: isMobile ? '50%' : 'auto' }}>
-            <CampoFiltroMes
-              value={mes}
-              onChange={onCambiarMes}
-              isMobile={isMobile}
-            />
-          </div>
+          <CampoFiltroMes
+            value={mes}
+            onChange={onCambiarMes}
+            isMobile={isMobile}
+          />
 
           <button
             onClick={() => setFiltroRiesgo(!filtroRiesgo)}
             style={{
               ...s.btnRiesgo,
-              flex: isMobile ? 1 : 'initial',
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
-              minWidth: 0,
-              width: isMobile ? '50%' : 'auto',
-              height: isMobile ? 36 : 38,
+              gap: isMobile ? 4 : 6,
+              width: '100%',
+              height: isMobile ? '100%' : 38,
               padding: isMobile ? '0 8px' : '0 14px',
               fontSize: isMobile ? '11.5px' : '13px',
               boxSizing: 'border-box',
               background: filtroRiesgo ? 'var(--accent-red)' : 'var(--bg-secondary)',
               color: filtroRiesgo ? '#fff' : 'var(--text-secondary)',
-              borderColor: filtroRiesgo ? 'var(--accent-red)' : 'var(--border)'
+              borderColor: filtroRiesgo ? 'var(--accent-red)' : 'var(--border)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
             }}
             onMouseEnter={e => {
               if (!filtroRiesgo) {
@@ -243,7 +249,7 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
               }
             }}
           >
-            <FiAlertTriangle size={isMobile ? 12 : 13} style={{ color: filtroRiesgo ? '#fff' : 'var(--accent-yellow)' }} />
+            <FiAlertTriangle size={isMobile ? 12 : 13} style={{ color: filtroRiesgo ? '#fff' : 'var(--accent-yellow)', flexShrink: 0 }} />
             <span>En riesgo</span>
           </button>
         </div>

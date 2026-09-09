@@ -26,10 +26,11 @@ export default function AsistenciasTopbar({
   })
 
   return (
-    <div style={{ ...s.topbar, marginBottom: isMobile ? '16px' : '24px', gap: isMobile ? '12px' : '16px' }}>
+    <div style={{ ...s.topbar, marginBottom: isMobile ? '16px' : '24px' }}>
+      {/* Título y subtítulo — siempre arriba */}
       <div>
-        <h1 style={{ ...s.titulo, fontSize: isMobile ? '20px' : '24px' }}>Control de Asistencias</h1>
-        <p style={{ ...s.subtitulo, fontSize: isMobile ? '13px' : '15px' }}>
+        <h1 style={s.titulo}>Control de Asistencias</h1>
+        <p style={s.subtitulo}>
           <span style={s.dot} />
           <span style={{ textTransform: 'capitalize' }}>{mesStr}</span>
           <span style={s.sep}>·</span>
@@ -37,7 +38,12 @@ export default function AsistenciasTopbar({
         </p>
       </div>
 
-      <div style={{ ...s.acciones, width: isMobile ? '100%' : 'auto', gap: isMobile ? '8px' : '10px' }}>
+      {/* Botones de acción */}
+      <div style={{
+        ...s.acciones,
+        width: isMobile ? '100%' : 'auto',
+        gap: isMobile ? '8px' : '10px',
+      }}>
         {/* Exportar con dropdown */}
         <div style={{ position: 'relative', flex: isMobile ? 1 : 'none' }} ref={ref}>
           <button
@@ -48,6 +54,7 @@ export default function AsistenciasTopbar({
               justifyContent: 'center',
               padding: isMobile ? '9px 12px' : '10px 18px',
               height: isMobile ? 40 : 'auto',
+              fontSize: isMobile ? '13px' : '13px',
               borderColor: exportOpen ? 'var(--accent-blue)' : 'var(--border)',
               boxShadow: exportOpen ? '0 0 12px rgba(59, 130, 246, 0.3)' : 'none'
             }}
@@ -120,6 +127,7 @@ export default function AsistenciasTopbar({
             justifyContent: 'center',
             padding: isMobile ? '9px 14px' : '10px 20px',
             height: isMobile ? 40 : 'auto',
+            fontSize: isMobile ? '13px' : '13px',
           }}
           onClick={onRegistrar}
           onMouseEnter={e => {

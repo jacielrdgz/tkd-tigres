@@ -302,7 +302,7 @@ export default function Asistencias() {
   const totalActivos = resumen?.total_alumnos ?? 0
 
   return (
-    <div style={{ ...s.page, padding: isMobile ? '12px 14px 40px' : '0 0 40px' }}>
+    <div style={{ ...s.page, paddingBottom: 40 }}>
       {/* Topbar */}
       <AsistenciasTopbar
         mesActual={mes}
