@@ -176,10 +176,27 @@ export default function ModalRegistrar({ onCerrar, onGuardado, isMobile: propIsM
       subtituloValor: formatearFechaNaturalPDF(fecha)
     })
 
+    const comparar = (a, b) => {
+      const horaA = a.horario_config?.hora_inicio || '23:59:59'
+      const horaB = b.horario_config?.hora_inicio || '23:59:59'
+      if (horaA !== horaB) return horaA.localeCompare(horaB)
+      const ordA = a.cinta_config?.orden ?? 999
+      const ordB = b.cinta_config?.orden ?? 999
+      if (ordA !== ordB) return ordA - ordB
+      const fnA = new Date(a.fecha_nacimiento || '1900-01-01').getTime()
+      const fnB = new Date(b.fecha_nacimiento || '1900-01-01').getTime()
+      if (fnA !== fnB) return fnB - fnA
+      return (a.nombre || '').localeCompare(b.nombre || '')
+    }
+
+    const presentes = filtrados.filter(a => presencias[a.alumno_id]).sort(comparar)
+    const ausentes = filtrados.filter(a => !presencias[a.alumno_id]).sort(comparar)
+    const listaReporte = [...presentes, ...ausentes]
+
     const tableColumn = ["#", "Nombre Alumno", "Cinta", "Horario", "Asistencia"]
-    const tableRows = filtrados.map((a, index) => [
+    const tableRows = listaReporte.map((a, index) => [
       index + 1,
-      `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`,
+      `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
       a.cinta_config?.nombre_nivel || 'Sin cinta',
       a.horario_config
         ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
@@ -222,9 +239,27 @@ export default function ModalRegistrar({ onCerrar, onGuardado, isMobile: propIsM
 
   const exportarExcel = async () => {
     if (filtrados.length === 0) return toast.warning('No hay datos para exportar')
-    const data = filtrados.map((a, index) => ({
+
+    const comparar = (a, b) => {
+      const horaA = a.horario_config?.hora_inicio || '23:59:59'
+      const horaB = b.horario_config?.hora_inicio || '23:59:59'
+      if (horaA !== horaB) return horaA.localeCompare(horaB)
+      const ordA = a.cinta_config?.orden ?? 999
+      const ordB = b.cinta_config?.orden ?? 999
+      if (ordA !== ordB) return ordA - ordB
+      const fnA = new Date(a.fecha_nacimiento || '1900-01-01').getTime()
+      const fnB = new Date(b.fecha_nacimiento || '1900-01-01').getTime()
+      if (fnA !== fnB) return fnB - fnA
+      return (a.nombre || '').localeCompare(b.nombre || '')
+    }
+
+    const presentes = filtrados.filter(a => presencias[a.alumno_id]).sort(comparar)
+    const ausentes = filtrados.filter(a => !presencias[a.alumno_id]).sort(comparar)
+    const listaReporte = [...presentes, ...ausentes]
+
+    const data = listaReporte.map((a, index) => ({
       "#": index + 1,
-      "Nombre Completo": `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`,
+      "Nombre Completo": `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
       "Cinta": a.cinta_config?.nombre_nivel || 'Sin cinta',
       "Horario": a.horario_config
         ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`

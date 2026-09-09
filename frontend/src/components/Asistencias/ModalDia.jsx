@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { FiX, FiCalendar, FiCheck } from 'react-icons/fi'
 import api from '../../api/axios'
 import BotonExportar from '../Common/BotonExportar'
@@ -7,6 +7,16 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { toast } from 'react-toastify'
 import { obtenerInfoEscuelaParaPDF, dibujarEncabezadoMembrete, agregarPieDePagina, guardarODescargarPDF } from '../../utils/pdfHelper'
+import { getCache, setCache } from '../../utils/cacheManager'
+
+const formatHora = (hora) => {
+  if (!hora) return ''
+  const [h, m] = hora.split(':')
+  const hrs = parseInt(h)
+  const ampm = hrs >= 12 ? 'PM' : 'AM'
+  const h12 = hrs % 12 || 12
+  return `${h12}:${m} ${ampm}`
+}
 
 function Avatar({ alumno, size = 36 }) {
   const [imgError, setImgError] = useState(false)
@@ -54,11 +64,22 @@ export default function ModalDia({ fecha, onCerrar, isMobile: propIsMobile }) {
 
   useEffect(() => {
     if (!fecha) return
-    setCargando(true)
-    setDatos(null)
+    const key = `asistencias_dia_detalle_${fecha}`
+    const cached = getCache(key)
+    if (cached && cached.data) {
+      setDatos(cached.data)
+      setCargando(false)
+    } else {
+      setCargando(true)
+      setDatos(null)
+    }
     setTab('todos')
+
     api.get(`/asistencias/dia/${fecha}`)
-      .then(r => setDatos(r.data))
+      .then(r => {
+        setDatos(r.data)
+        setCache(key, r.data)
+      })
       .catch(() => {})
       .finally(() => setCargando(false))
   }, [fecha])
@@ -75,11 +96,42 @@ export default function ModalDia({ fecha, onCerrar, isMobile: propIsMobile }) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
-  const alumnos = datos?.alumnos ?? []
+  const alumnosOrdenados = useMemo(() => {
+    const raw = datos?.alumnos ?? []
+
+    const comparar = (a, b) => {
+      // 1. Horario (hora_inicio ascendente)
+      const horaA = a.horario_config?.hora_inicio || '23:59:59'
+      const horaB = b.horario_config?.hora_inicio || '23:59:59'
+      if (horaA !== horaB) return horaA.localeCompare(horaB)
+
+      // 2. Cinta (orden ascendente)
+      const ordA = a.cinta_config?.orden ?? 999
+      const ordB = b.cinta_config?.orden ?? 999
+      if (ordA !== ordB) return ordA - ordB
+
+      // 3. Edad (menores primero = fecha de nacimiento más reciente/alta)
+      const fnA = new Date(a.fecha_nacimiento || '1900-01-01').getTime()
+      const fnB = new Date(b.fecha_nacimiento || '1900-01-01').getTime()
+      if (fnA !== fnB) return fnB - fnA
+
+      // 4. Nombre alfabético
+      const nomA = `${a.nombre || ''} ${a.apellido_paterno || ''}`.trim()
+      const nomB = `${b.nombre || ''} ${b.apellido_paterno || ''}`.trim()
+      return nomA.localeCompare(nomB)
+    }
+
+    const presentes = raw.filter(a => a.asistio).sort(comparar)
+    const ausentes = raw.filter(a => !a.asistio).sort(comparar)
+
+    return [...presentes, ...ausentes]
+  }, [datos])
+
+  const alumnos = alumnosOrdenados
   const stats = datos?.stats ?? { total: 0, asistieron: 0, faltaron: 0, pct: 0 }
 
-  const asistieron = alumnos.filter(a => a.asistio)
-  const faltaron = alumnos.filter(a => !a.asistio)
+  const asistieron = useMemo(() => alumnos.filter(a => a.asistio), [alumnos])
+  const faltaron = useMemo(() => alumnos.filter(a => !a.asistio), [alumnos])
   const listaMostrada = tab === 'todos' ? alumnos : tab === 'asistieron' ? asistieron : faltaron
 
   const exportarExcel = () => {
@@ -89,6 +141,9 @@ export default function ModalDia({ fecha, onCerrar, isMobile: propIsMobile }) {
       '#': i + 1,
       'Alumno': `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
       'Cinta / Grado': a.cinta_config?.nombre_nivel || 'Sin cinta',
+      'Horario': a.horario_config
+        ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
+        : 'Sin horario',
       'Estado': a.asistio ? 'ASISTIÓ' : 'FALTÓ',
     }))
 
@@ -127,12 +182,15 @@ export default function ModalDia({ fecha, onCerrar, isMobile: propIsMobile }) {
         i + 1,
         `${a.nombre} ${a.apellido_paterno} ${a.apellido_materno || ''}`.trim(),
         a.cinta_config?.nombre_nivel || 'Sin cinta',
+        a.horario_config
+          ? `${a.horario_config.nombre} (${formatHora(a.horario_config.hora_inicio)} - ${formatHora(a.horario_config.hora_fin)})`
+          : 'Sin horario',
         a.asistio ? 'ASISTIÓ' : 'FALTÓ',
       ])
 
       autoTable(doc, {
         startY: startY + 8,
-        head: [['#', 'Alumno', 'Cinta / Grado', 'Estado']],
+        head: [['#', 'Alumno', 'Cinta / Grado', 'Horario', 'Estado']],
         body: rows,
         theme: 'striped',
         headStyles: {
@@ -149,7 +207,7 @@ export default function ModalDia({ fecha, onCerrar, isMobile: propIsMobile }) {
           fillColor: [248, 250, 252],
         },
         didParseCell: (data) => {
-          if (data.section === 'body' && data.column.index === 3) {
+          if (data.section === 'body' && data.column.index === 4) {
             const val = data.cell.raw
             if (val === 'ASISTIÓ') {
               data.cell.styles.textColor = [16, 185, 129]

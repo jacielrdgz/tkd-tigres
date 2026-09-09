@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { FiX, FiChevronLeft, FiChevronRight, FiCheck, FiClock } from 'react-icons/fi'
 import api from '../../api/axios'
+import { getCache, setCache } from '../../utils/cacheManager'
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -66,10 +67,22 @@ export default function ModalAlumno({ alumno, onCerrar, isMobile: propIsMobile }
 
   useEffect(() => {
     if (!alumno) return
-    setCargando(true)
-    setDatos(null)
-    api.get(`/asistencias/alumno/${alumno.alumno_id ?? alumno.id}`, { params: { mes } })
-      .then(r => setDatos(r.data))
+    const aId = alumno.alumno_id ?? alumno.id
+    const key = `asistencias_alumno_detalle_${aId}_${mes}`
+    const cached = getCache(key)
+    if (cached && cached.data) {
+      setDatos(cached.data)
+      setCargando(false)
+    } else {
+      setCargando(true)
+      setDatos(null)
+    }
+
+    api.get(`/asistencias/alumno/${aId}`, { params: { mes } })
+      .then(r => {
+        setDatos(r.data)
+        setCache(key, r.data)
+      })
       .catch(() => {})
       .finally(() => setCargando(false))
   }, [alumno, mes])

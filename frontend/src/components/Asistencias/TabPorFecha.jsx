@@ -78,13 +78,15 @@ export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando
       {/* Calendario */}
       <div style={{
         ...s.calContenedor,
-        padding: isMobile ? '16px 10px' : '24px',
+        padding: isMobile ? '14px 8px' : '24px',
+        margin: isMobile ? '0 -4px' : 0,
         borderRadius: isMobile ? 16 : 20,
       }}>
         {/* Header del calendario */}
         <div style={{
           ...s.calHeader,
-          marginBottom: isMobile ? 14 : 20,
+          marginBottom: isMobile ? 12 : 20,
+          padding: isMobile ? '0 4px' : 0,
         }}>
           <span style={{
             ...s.calTitulo,
@@ -131,7 +133,8 @@ export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando
         {/* Labels días semana */}
         <div style={{
           ...s.grid,
-          gap: isMobile ? 4 : 8,
+          gridTemplateColumns: isMobile ? 'repeat(7, minmax(0, 1fr))' : 'repeat(7, 1fr)',
+          gap: isMobile ? 3 : 8,
         }}>
           {DIAS_SEMANA.map(d => (
             <div key={d} style={{
@@ -150,8 +153,10 @@ export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando
                 key={i}
                 style={{
                   ...s.celdaBase,
-                  minHeight: isMobile ? 46 : 72,
+                  minHeight: isMobile ? 'unset' : 72,
                   aspectRatio: isMobile ? '1/1' : '1.2/1',
+                  minWidth: 0,
+                  boxSizing: 'border-box',
                   background: 'var(--bg-tertiary)',
                   animation: 'shimmer 1.5s infinite',
                 }}
@@ -164,7 +169,8 @@ export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando
                     key={i}
                     style={{
                       aspectRatio: isMobile ? '1/1' : '1.2/1',
-                      minHeight: isMobile ? 46 : 72,
+                      minHeight: isMobile ? 'unset' : 72,
+                      minWidth: 0,
                     }}
                   />
                 )
@@ -175,9 +181,11 @@ export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando
                   <div key={i} style={{
                     ...s.celdaBase,
                     aspectRatio: isMobile ? '1/1' : '1.2/1',
-                    minHeight: isMobile ? 46 : 72,
-                    padding: isMobile ? '5px 4px' : '10px 8px',
+                    minHeight: isMobile ? 'unset' : 72,
+                    padding: isMobile ? '4px 3px' : '10px 8px',
                     borderRadius: isMobile ? 8 : 12,
+                    minWidth: 0,
+                    boxSizing: 'border-box',
                     background: 'var(--bg-primary)',
                     border: c.esHoy ? '2px solid var(--accent-blue)' : '1.5px solid var(--border)',
                     boxShadow: c.esHoy ? '0 0 0 3px rgba(59,130,246,0.12)' : 'none',
@@ -200,9 +208,11 @@ export default function TabPorFecha({ mes, onCambiarMes, datosPorFecha, cargando
                   style={{
                     ...s.celdaBase,
                     aspectRatio: isMobile ? '1/1' : '1.2/1',
-                    minHeight: isMobile ? 46 : 72,
-                    padding: isMobile ? '5px 4px' : '10px 8px',
+                    minHeight: isMobile ? 'unset' : 72,
+                    padding: isMobile ? '4px 3px' : '10px 8px',
                     borderRadius: isMobile ? 8 : 12,
+                    minWidth: 0,
+                    boxSizing: 'border-box',
                     background: isHovered ? (c.pct >= 80 ? 'rgba(16,185,129,0.18)' : 'rgba(239,68,68,0.18)') : pctBg(c.pct),
                     border: c.esHoy
                       ? '2px solid var(--accent-blue)'

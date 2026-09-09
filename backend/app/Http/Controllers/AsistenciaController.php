@@ -358,6 +358,7 @@ class AsistenciaController extends Controller
                     'foto_url'         => $alumno->foto_url,
                     'cinta_config'     => $alumno->cintaConfig,
                     'horario_config'   => $alumno->horarioConfig,
+                    'fecha_nacimiento' => $alumno->fecha_nacimiento,
                     'asistio'          => (bool) $registro->presente,
                 ];
                 continue;
@@ -402,11 +403,44 @@ class AsistenciaController extends Controller
                 'foto_url'         => $alumno->foto_url,
                 'cinta_config'     => $alumno->cintaConfig,
                 'horario_config'   => $alumno->horarioConfig,
+                'fecha_nacimiento' => $alumno->fecha_nacimiento,
                 'asistio'          => false,
             ];
         }
 
-        $colAlumnos = collect($listaAlumnos);
+        $colAlumnos = collect($listaAlumnos)->sort(function ($a, $b) {
+            // 1. Asistieron primero, los que faltaron al final
+            if ($a['asistio'] !== $b['asistio']) {
+                return $a['asistio'] ? -1 : 1;
+            }
+
+            // 2. Horario (hora_inicio ascendente)
+            $horaA = $a['horario_config']['hora_inicio'] ?? '23:59:59';
+            $horaB = $b['horario_config']['hora_inicio'] ?? '23:59:59';
+            if ($horaA !== $horaB) {
+                return strcmp($horaA, $horaB);
+            }
+
+            // 3. Cinta (orden ascendente)
+            $ordA = $a['cinta_config']['orden'] ?? 999;
+            $ordB = $b['cinta_config']['orden'] ?? 999;
+            if ($ordA !== $ordB) {
+                return $ordA <=> $ordB;
+            }
+
+            // 4. Edad (menores primero = fecha de nacimiento más reciente)
+            $fnA = $a['fecha_nacimiento'] ?? '1900-01-01';
+            $fnB = $b['fecha_nacimiento'] ?? '1900-01-01';
+            if ($fnA !== $fnB) {
+                return strcmp($fnB, $fnA);
+            }
+
+            // 5. Nombre alfabético
+            $nomA = trim(($a['nombre'] ?? '') . ' ' . ($a['apellido_paterno'] ?? ''));
+            $nomB = trim(($b['nombre'] ?? '') . ' ' . ($b['apellido_paterno'] ?? ''));
+            return strcmp($nomA, $nomB);
+        })->values();
+
         $total      = $colAlumnos->count();
         $asistieron = $colAlumnos->where('asistio', true)->count();
         $faltaron   = $colAlumnos->where('asistio', false)->count();
@@ -420,7 +454,7 @@ class AsistenciaController extends Controller
                 'faltaron'   => $faltaron,
                 'pct'        => $pct,
             ],
-            'alumnos' => $colAlumnos->values(),
+            'alumnos' => $colAlumnos,
         ]);
     }
 
