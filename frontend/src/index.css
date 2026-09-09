@@ -5,6 +5,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
+  color-scheme: light;
   /* --- Light Theme (Default) --- */
   --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
@@ -54,6 +55,7 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
   /* --- Dark Theme --- */
   --bg-primary: #0f1117;
   --bg-secondary: #13151f;
@@ -264,6 +266,18 @@ body {
 
 .input::placeholder {
   color: var(--text-dim);
+}
+
+input[type="date"],
+input[type="month"],
+input[type="time"] {
+  color-scheme: light;
+}
+
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="month"],
+[data-theme="dark"] input[type="time"] {
+  color-scheme: dark;
 }
 
 .label {
@@ -583,10 +597,25 @@ button.btn-cerrar-circular:hover {
   transform: scale(0.93);
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator {
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="month"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(1.5);
   opacity: 0.85;
-  cursor: pointer;
 }
 
 .hide-native-picker::-webkit-calendar-picker-indicator {
@@ -657,7 +686,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 12px !important;
   }
   
-  .mobile-fullscreen-modal input[type="date"] {
+  .mobile-fullscreen-modal input[type="date"]:not(.campo-picker-wrapper input) {
     max-width: 100% !important;
     width: 100% !important;
     min-width: 0 !important;
@@ -666,6 +695,24 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 13.5px !important;
     height: 38px !important;
     min-height: 38px !important;
+    display: block !important;
+  }
+
+  .campo-picker-wrapper input,
+  .mobile-fullscreen-modal .campo-picker-wrapper input,
+  .mobile-fullscreen-modal .campo-picker-wrapper input[type="date"],
+  .mobile-fullscreen-modal .campo-picker-wrapper input[type="month"] {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    cursor: pointer !important;
+    z-index: 2 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    min-height: unset !important;
     display: block !important;
   }
 
@@ -881,6 +928,107 @@ body.swal2-height-auto {
 }
 .btn-historial-icon:active {
   transform: scale(0.92) !important;
+}
+
+/* ============================================================
+   Badge PAGADO & INSCRITO Premium (Módulo Pagos)
+   ============================================================ */
+.badge-pagado-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 11px 0 6px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.22) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.38);
+  color: #059669;
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  user-select: none;
+  line-height: 1;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .badge-pagado-premium {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.32) 100%);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #34d399;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.badge-pagado-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #059669;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .badge-pagado-icon {
+  background: rgba(16, 185, 129, 0.32);
+  border-color: rgba(52, 211, 153, 0.6);
+  color: #34d399;
+}
+
+.badge-inscrito-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 11px 0 6px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.22) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.38);
+  color: #2563eb;
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  user-select: none;
+  line-height: 1;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .badge-inscrito-premium {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(37, 99, 235, 0.32) 100%);
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  color: #60a5fa;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.badge-inscrito-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.25);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .badge-inscrito-icon {
+  background: rgba(59, 130, 246, 0.32);
+  border-color: rgba(96, 165, 250, 0.6);
+  color: #60a5fa;
 }
 
 

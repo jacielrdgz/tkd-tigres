@@ -27,7 +27,7 @@ export default function CustomDropdown({
 
   const selectedOption = options.find((o) => String(o.value) === String(value))
   const displayLabel = selectedOption ? selectedOption.label : label
-  const isFilterActive = selectedOption && selectedOption.value !== '' && selectedOption.value !== 'id' && selectedOption.value !== 'activo'
+  const isFilterActive = selectedOption && selectedOption.value !== '' && selectedOption.value !== 'id' && selectedOption.value !== 'activo' && selectedOption.value !== 'todos'
 
   return (
     <div
@@ -50,8 +50,8 @@ export default function CustomDropdown({
           justifyContent: 'space-between',
           gap: isMobile ? '4px' : '6px',
           width: '100%',
-          height: isMobile ? '36px' : 'auto',
-          padding: isMobile ? '0 8px' : '9px 12px',
+          height: isMobile ? '36px' : '38px',
+          padding: isMobile ? '0 8px' : '0 12px',
           background: open ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
           border: '1px solid',
           borderColor: open ? 'var(--accent-blue)' : 'var(--border)',

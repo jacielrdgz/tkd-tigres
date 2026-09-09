@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { FiSearch, FiEye, FiChevronDown, FiAlertTriangle, FiClock } from 'react-icons/fi'
 import { toast } from 'react-toastify'
 import CustomDropdown from '../Common/CustomDropdown'
+import CampoFiltroMes from '../Common/CampoFiltroMes'
 
 const formatHora = (hora) => {
   if (!hora) return ''
@@ -144,7 +145,7 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
     <div>
       {/* Buscador + Filtro Grado + Filtro Horario + Mes */}
       {/* Buscador + Filtro Grado + Filtro Horario + Mes */}
-      <div style={{ ...s.filtros, gap: isMobile ? 8 : 12, marginBottom: isMobile ? 14 : 20 }}>
+      <div style={{ ...s.filtros, gap: isMobile ? 8 : 12, marginBottom: isMobile ? 18 : 20 }}>
         <div style={{ ...s.searchWrapper, flex: isMobile ? '1 1 100%' : '1 1 260px', maxWidth: isMobile ? '100%' : 380 }}>
           <FiSearch size={15} style={s.searchIcon} />
           <input
@@ -203,17 +204,13 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
           width: isMobile ? '100%' : 'auto',
           flex: isMobile ? '1 1 100%' : 'none'
         }}>
-          <input
-            type="month"
-            style={{
-              ...s.selectMonth,
-              flex: isMobile ? 1 : 'initial',
-              width: isMobile ? '100%' : 'auto',
-              minWidth: 0
-            }}
-            value={mes}
-            onChange={e => onCambiarMes(e.target.value)}
-          />
+          <div style={{ flex: isMobile ? 1 : 'none', minWidth: 0, width: isMobile ? '50%' : 'auto' }}>
+            <CampoFiltroMes
+              value={mes}
+              onChange={onCambiarMes}
+              isMobile={isMobile}
+            />
+          </div>
 
           <button
             onClick={() => setFiltroRiesgo(!filtroRiesgo)}
@@ -222,12 +219,31 @@ export default function TabPorAlumno({ alumnos, cargando, onVerAlumno, mes, onCa
               flex: isMobile ? 1 : 'initial',
               justifyContent: 'center',
               minWidth: 0,
+              width: isMobile ? '50%' : 'auto',
+              height: isMobile ? 36 : 38,
+              padding: isMobile ? '0 8px' : '0 14px',
+              fontSize: isMobile ? '11.5px' : '13px',
+              boxSizing: 'border-box',
               background: filtroRiesgo ? 'var(--accent-red)' : 'var(--bg-secondary)',
               color: filtroRiesgo ? '#fff' : 'var(--text-secondary)',
               borderColor: filtroRiesgo ? 'var(--accent-red)' : 'var(--border)'
             }}
+            onMouseEnter={e => {
+              if (!filtroRiesgo) {
+                e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+                e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }
+            }}
+            onMouseLeave={e => {
+              if (!filtroRiesgo) {
+                e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'
+                e.currentTarget.style.borderColor = 'var(--border)'
+                e.currentTarget.style.transform = 'none'
+              }
+            }}
           >
-            <FiAlertTriangle size={13} style={{ color: filtroRiesgo ? '#fff' : 'var(--accent-yellow)' }} />
+            <FiAlertTriangle size={isMobile ? 12 : 13} style={{ color: filtroRiesgo ? '#fff' : 'var(--accent-yellow)' }} />
             <span>En riesgo</span>
           </button>
         </div>
@@ -643,6 +659,7 @@ const s = {
     display: 'flex',
     flexDirection: 'column',
     gap: 10,
+    paddingBottom: 20,
   },
   cardItemMobile: {
     background: 'var(--bg-secondary)',
