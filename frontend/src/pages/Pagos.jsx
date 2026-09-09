@@ -982,12 +982,14 @@ export default function Pagos() {
             />
           </div>
 
-          {/* Grid 3x2 con 6 botones alineados de igual ancho */}
+          {/* Grid 3x2 con 6 botones alineados de igual ancho y alto */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
+            gridAutoRows: '36px',
             gap: '8px',
             width: '100%',
+            alignItems: 'stretch',
           }}>
             {/* 1. Estatus (reemplaza Todos, Pagado, Pendiente) */}
             <CustomDropdown
@@ -1055,14 +1057,14 @@ export default function Pagos() {
               isMobile={true}
             />
 
-            {/* 6. Exportar */}
-            <div style={{ position: 'relative', width: '100%' }} ref={exportRefMobile}>
+          {/* 6. Exportar */}
+            <div style={{ position: 'relative', width: '100%', height: '36px' }} ref={exportRefMobile}>
               <button
                 type="button"
                 style={{
                   ...s.btnSecundario,
                   width: '100%',
-                  height: '36px',
+                  height: '100%',
                   borderColor: exportOpenMobile ? 'var(--accent-blue)' : 'var(--border)',
                   boxShadow: exportOpenMobile ? '0 0 10px rgba(59, 130, 246, 0.25)' : 'none',
                   padding: '0 8px',
@@ -1129,38 +1131,6 @@ export default function Pagos() {
                 />
                 <span>Histórico</span>
               </label>
-            </div>
-          )}
-
-          {/* Badge para Limpiar filtros activos en móvil */}
-          {(filtroCinta || filtroHorario || filtroMes || filtroFechaPago || filtro !== 'todos' || busquedaInput) && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setFiltroCinta('')
-                  setFiltroHorario('')
-                  setFiltroMes('')
-                  setFiltroFechaPago('')
-                  setFiltro('todos')
-                  setBusquedaInput('')
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 12px',
-                  background: 'var(--accent-red-bg)',
-                  border: '1px solid var(--accent-red)',
-                  borderRadius: '20px',
-                  color: 'var(--accent-red)',
-                  fontSize: '11.5px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                }}
-              >
-                <FiX size={12} /> Limpiar filtros
-              </button>
             </div>
           )}
         </div>
@@ -2984,7 +2954,7 @@ function CampoFiltroFecha({ value, onChange, isMobile }) {
           height: '100%',
           opacity: 0,
           cursor: 'pointer',
-          pointerEvents: 'none',
+          pointerEvents: isMobile ? 'auto' : 'none',
           zIndex: 2,
           colorScheme: currentTheme === 'dark' ? 'dark' : 'light',
         }}

@@ -101,7 +101,7 @@ export default function CampoFiltroMes({ value, onChange, isMobile }) {
           height: '100%',
           opacity: 0,
           cursor: 'pointer',
-          pointerEvents: 'none',
+          pointerEvents: isMobile ? 'auto' : 'none',
           zIndex: 2,
           colorScheme: currentTheme === 'dark' ? 'dark' : 'light',
         }}
