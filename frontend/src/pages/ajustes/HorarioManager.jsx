@@ -306,9 +306,13 @@ export default function HorarioManager() {
 
               <div style={s.inputGroup}>
                 <label style={s.label}>Días de clase</label>
-                <div style={s.diasContainer}>
+                <div style={{
+                  ...s.diasContainer,
+                  gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fit, minmax(90px, 1fr))'
+                }}>
                   {diasSemana.map(dia => {
                     const activo = form.dias ? form.dias.split(',').map(d => d.trim()).includes(dia) : false;
+                    const isDomingo = dia === 'Domingo';
                     return (
                       <button
                         key={dia}
@@ -316,6 +320,7 @@ export default function HorarioManager() {
                         onClick={() => handleToggleDia(dia)}
                         style={{
                           ...s.diaBtn,
+                          ...(isDomingo && isMobile ? { gridColumn: '1 / -1' } : {}),
                           ...(activo ? s.diaBtnActive : {})
                         }}
                       >
@@ -327,9 +332,42 @@ export default function HorarioManager() {
               </div>
             </div>
 
-            <div style={s.modalFooter}>
-              <button style={s.btnCancel} onClick={() => setShowModal(false)}>Cancelar</button>
-              <button style={s.btnSave} onClick={handleSave} disabled={saving}>{saving ? 'Guardando...' : 'Guardar Horario'}</button>
+            <div style={{
+              ...s.modalFooter,
+              flexDirection: 'row',
+              padding: isMobile ? '16px' : '20px 24px',
+              gap: '10px'
+            }}>
+              <button
+                type="button"
+                style={{
+                  ...s.btnCancel,
+                  flex: isMobile ? 1 : 'initial',
+                  justifyContent: 'center',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)'
+                }}
+                onClick={() => setShowModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                style={{
+                  ...s.btnSave,
+                  flex: isMobile ? 1 : 'initial',
+                  justifyContent: 'center',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? 'Guardando...' : 'Guardar Horario'}
+              </button>
             </div>
           </div>
         </div>
@@ -418,9 +456,9 @@ const s = {
   label: { fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' },
   input: { width: '100%', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' },
   modalFooter: { padding: '20px 24px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' },
-  btnCancel: { background: 'none', border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 20px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' },
-  btnSave: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 24px', fontWeight: '800', cursor: 'pointer' },
-  diasContainer: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' },
-  diaBtn: { padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
-  diaBtnActive: { background: 'var(--accent-blue)', color: '#fff', borderColor: 'var(--accent-blue)' }
+  btnCancel: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 20px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s ease' },
+  btnSave: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s ease' },
+  diasContainer: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '4px' },
+  diaBtn: { padding: '10px 8px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', width: '100%', boxSizing: 'border-box' },
+  diaBtnActive: { background: 'var(--accent-blue)', color: '#fff', borderColor: 'var(--accent-blue)', boxShadow: '0 2px 8px rgba(59, 130, 246, 0.35)' }
 }

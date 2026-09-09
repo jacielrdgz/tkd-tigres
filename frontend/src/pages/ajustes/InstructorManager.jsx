@@ -462,23 +462,40 @@ export default function InstructorManager() {
               </div>
             </div>
 
-            <div style={s.modalFooter}>
+            <div style={{
+              ...s.modalFooter,
+              flexDirection: 'row',
+              padding: isMobile ? '16px' : '24px',
+              gap: '10px'
+            }}>
               <button 
-                style={s.btnCancel} 
+                type="button"
+                style={{
+                  ...s.btnCancel,
+                  flex: isMobile ? 1 : 'initial',
+                  justifyContent: 'center',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
                 onClick={() => setShowModal(false)}
                 onMouseOver={e => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
                   e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
                 }}
                 onMouseOut={e => {
-                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.background = 'var(--bg-secondary)';
                   e.currentTarget.style.color = 'var(--text-secondary)';
-                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >Cancelar</button>
               <button 
-                style={s.btnSave} 
+                type="button"
+                style={{
+                  ...s.btnSave,
+                  flex: isMobile ? 1 : 'initial',
+                  justifyContent: 'center',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
                 onClick={handleSave} 
                 disabled={saving}
                 onMouseOver={e => {
@@ -708,8 +725,8 @@ const s = {
   label: { fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
   input: { width: '100%', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 14px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' },
   modalFooter: { padding: '24px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' },
-  btnCancel: { background: 'none', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s' },
-  btnSave: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 30px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' },
+  btnCancel: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s ease' },
+  btnSave: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 30px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s ease' },
 
   credCard: { background: 'var(--bg-secondary)', borderRadius: '30px', width: '400px', maxWidth: '95vw', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' },
   credHeader: { padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' },

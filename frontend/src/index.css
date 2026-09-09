@@ -1191,4 +1191,13 @@ body.swal2-height-auto {
   color: #60a5fa;
 }
 
+/* ============================================================
+   Responsive utilities for Grados y Cintas
+   ============================================================ */
+@media (max-width: 768px) {
+  .cintas-desktop-only {
+    display: none !important;
+  }
+}
+
 

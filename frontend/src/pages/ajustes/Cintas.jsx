@@ -493,21 +493,22 @@ export default function Cintas({ isEmbedded = false }) {
                   }}
                 >
                   <div style={{ ...s.toolRowLeft, gap: isMobile ? '8px' : '14px' }}>
-                    {!isMobile && <span style={s.toolDragHandle} title="Arrastra para reordenar">⠿</span>}
+                    {!isMobile && <span className="cintas-desktop-only" style={s.toolDragHandle} title="Arrastra para reordenar">⠿</span>}
                     <span style={s.toolOrder}>#{i + 1}</span>
                     <div style={{
                       ...s.rowBeltPreview,
-                      minWidth: isMobile ? '70px' : '150px',
-                      padding: isMobile ? '6px 12px' : '8px 18px',
+                      minWidth: isMobile ? '65px' : '150px',
+                      maxWidth: isMobile ? '120px' : '220px',
+                      padding: isMobile ? '6px 10px' : '8px 18px',
                       backgroundColor: c.color_hex,
                       color: c.color_texto,
                       boxShadow: `inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 4px ${c.color_hex}25`
                     }}>
                       <span style={{ position: 'relative', zIndex: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre_nivel}</span>
                     </div>
-                    {!isMobile && <span style={s.toolHex}>{c.color_hex.toUpperCase()}</span>}
+                    {!isMobile && <span className="cintas-desktop-only" style={s.toolHex}>{c.color_hex.toUpperCase()}</span>}
                   </div>
-                  <div style={s.toolActions}>
+                  <div style={{ ...s.toolActions, gap: isMobile ? '6px' : '8px', flexShrink: 0 }}>
                     <button className="btn-action-icon btn-action-move" onClick={() => moveItem(i, -1)} disabled={i === 0} title="Subir">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
                     </button>
@@ -694,7 +695,7 @@ const s = {
     borderRadius: '20px',
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
   },
-  toolRowLeft: { display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: 0 },
+  toolRowLeft: { display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: 0, overflow: 'hidden' },
   toolDragHandle: { fontSize: '16px', color: 'var(--text-muted)', cursor: 'grab', padding: '0 4px', userSelect: 'none', ':hover': { color: 'var(--accent-purple)' } },
   toolOrder: { fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifySelf: 'center', justifyContent: 'center' },
   rowBeltPreview: {
@@ -714,7 +715,7 @@ const s = {
   toolHex: { fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', opacity: 0.8 },
 
   // Action buttons inside rows
-  toolActions: { display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' },
+  toolActions: { display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   btnIcon: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', },
   btnEdit: { background: 'rgba(59,130,246,0.1)', color: 'var(--accent-blue)', borderColor: 'rgba(59,130,246,0.2)', ':hover': { background: 'var(--accent-blue)', color: '#fff' } },
   btnDel: { background: 'rgba(239,68,68,0.1)', color: 'var(--accent-red)', borderColor: 'rgba(239,68,68,0.2)', ':hover': { background: 'var(--accent-red)', color: '#fff' } },

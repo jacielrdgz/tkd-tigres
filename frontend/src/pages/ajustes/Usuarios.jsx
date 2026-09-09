@@ -292,7 +292,7 @@ export default function Usuarios() {
 
       {showModal && (
         <div style={s.overlay}>
-          <div style={s.modal}>
+          <div style={{ ...s.modal, width: isMobile ? '92vw' : '450px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>{selected ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
               <button style={s.btnClose} onClick={() => setShowModal(false)}>×</button>
@@ -330,9 +330,42 @@ export default function Usuarios() {
                 </select>
               </div>
             </div>
-            <div style={s.modalFooter}>
-              <button style={s.btnCancel} onClick={() => setShowModal(false)}>Cancelar</button>
-              <button style={s.btnSave} onClick={handleSave} disabled={saving}>{saving ? 'Procesando...' : 'Guardar Usuario'}</button>
+            <div style={{
+              ...s.modalFooter,
+              flexDirection: 'row',
+              padding: isMobile ? '16px' : '24px',
+              gap: '10px'
+            }}>
+              <button
+                type="button"
+                style={{
+                  ...s.btnCancel,
+                  flex: isMobile ? 1 : 'initial',
+                  justifyContent: 'center',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)'
+                }}
+                onClick={() => setShowModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                style={{
+                  ...s.btnSave,
+                  flex: isMobile ? 1 : 'initial',
+                  justifyContent: 'center',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? 'Procesando...' : 'Guardar Usuario'}
+              </button>
             </div>
           </div>
         </div>
@@ -388,6 +421,6 @@ const s = {
   label: { fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
   input: { width: '100%', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 14px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', transition: 'border-color 0.2s' },
   modalFooter: { padding: '24px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' },
-  btnCancel: { background: 'none', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 20px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' },
-  btnSave: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer' }
+  btnCancel: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 20px', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s ease' },
+  btnSave: { background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s ease' }
 }
