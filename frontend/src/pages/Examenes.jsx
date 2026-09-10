@@ -284,7 +284,7 @@ export default function Examenes() {
       return
     }
 
-    Swal.fire({
+    const result = await Swal.fire({
       title: '¿Eliminar examen?',
       text: 'Se eliminará la convocatoria de examen y los registros de inscripción asociados.',
       icon: 'warning',
@@ -294,25 +294,29 @@ export default function Examenes() {
       confirmButtonColor: 'var(--accent-red)',
       background: 'var(--bg-secondary)',
       color: 'var(--text-primary)'
-    }).then(async r => {
-      if (r.isConfirmed) {
-        try {
-          await api.delete(`/eventos/${id}`)
-          invalidateCache('examenes')
-          invalidateCache('eventos')
-          cargarExamenes(true)
-        } catch (err) {
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudo eliminar el examen.',
-            icon: 'error',
-            confirmButtonColor: 'var(--accent-blue)',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-primary)'
-          })
-        }
-      }
     })
+
+    if (!result.isConfirmed) return
+
+    // 1. Eliminación optimista instantánea (0 ms)
+    const examenesOriginales = [...examenes]
+    const nuevaLista = examenes.filter(e => e.id !== id)
+    setExamenes(nuevaLista)
+    setCache('examenes_lista', nuevaLista)
+    toast.success('Examen eliminado')
+
+    // 2. Persistir en segundo plano
+    try {
+      await api.delete(`/eventos/${id}`)
+      invalidateCache('examenes')
+      invalidateCache('eventos')
+      invalidateCache('examenes_lista')
+    } catch (err) {
+      console.error('Error al eliminar examen:', err)
+      setExamenes(examenesOriginales)
+      setCache('examenes_lista', examenesOriginales)
+      toast.error('No se pudo eliminar el examen en el servidor')
+    }
   }
 
   const hoy = new Date()

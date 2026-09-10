@@ -4,9 +4,9 @@ import { setCache } from './cacheManager'
 let precargaIniciada = false
 
 /**
- * Precarga en segundo plano todos los módulos clave de la escuela
- * tan pronto como el usuario entra al sistema para que cada módulo
- * abra de inmediato al hacer clic sin tiempos de espera.
+ * Precarga escalonada e inteligente en segundo plano.
+ * No satura la conexión celular del teléfono móvil al entrar;
+ * prioriza la vista inicial y precarga los demás módulos suavemente.
  */
 export function precargarTodosLosModulos(user) {
   if (precargaIniciada || !user || user.is_superadmin) return
@@ -14,8 +14,9 @@ export function precargarTodosLosModulos(user) {
 
   const hoy = new Date()
   const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
+  const hoyStr = hoy.toLocaleDateString('sv-SE')
 
-  // 1. Dashboard
+  // FASE 1 (Inmediata): Métricas ligeras del Dashboard para pintar la vista principal
   api.get('/dashboard')
     .then(res => {
       const rawEvs = res.data?.eventos_proximos
@@ -35,107 +36,71 @@ export function precargarTodosLosModulos(user) {
     })
     .catch(() => {})
 
-  // 2. Alumnos (Lista completa)
-  api.get('/alumnos')
-    .then(res => {
-      const list = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
-      setCache('alumnos_search_all', list)
-    })
-    .catch(() => {})
-
-  // 3. Pagos y Ajustes Maestros
-  Promise.all([
-    api.get('/alumnos', { params: { estatus: 'activo' } }),
-    api.get('/pagos'),
-    api.get('/configuraciones-cintas'),
-    api.get('/horarios'),
-    api.get('/configuracion-escuela')
-  ])
-    .then(([resAlumnos, resPagos, resCintas, resHorarios, resEscuela]) => {
-      const listAlu = Array.isArray(resAlumnos.data) ? resAlumnos.data : (resAlumnos.data?.data || [])
-      const listPag = Array.isArray(resPagos.data) ? resPagos.data : (resPagos.data?.data || [])
-      const listCin = Array.isArray(resCintas.data) ? resCintas.data : (resCintas.data?.data || [])
-      const listHor = Array.isArray(resHorarios.data) ? resHorarios.data : (resHorarios.data?.data || [])
-
-      setCache('pagos_main_data', {
-        alumnos: listAlu,
-        pagos: listPag,
-        cintas: listCin,
-        horarios: listHor,
-        escuela: resEscuela.data
-      })
-      setCache('cintas_config', listCin)
-      setCache('horarios_lista', listHor)
-      setCache('configuracion_escuela', resEscuela.data)
-    })
-    .catch(() => {})
-
-  // 4. Asistencias (Mes actual y lista de hoy)
-  const hoyStr = hoy.toLocaleDateString('sv-SE')
-  api.get('/asistencias', { params: { fecha: hoyStr } })
-    .then(res => setCache(`asistencias_dia_${hoyStr}`, res.data, 15 * 60 * 1000))
-    .catch(() => {})
-
-  api.get('/asistencias/resumen', { params: { mes: mesActual } })
-    .then(res => setCache(`asistencias_resumen_${mesActual}`, res.data))
-    .catch(() => {})
-
-  api.get('/asistencias/por-alumno', { params: { mes: mesActual } })
-    .then(res => {
-      const list = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
-      setCache(`asistencias_alumno_${mesActual}`, list)
-    })
-    .catch(() => {})
-
-  api.get('/asistencias/por-fecha', { params: { mes: mesActual } })
-    .then(res => {
-      const obj = typeof res.data === 'object' && res.data !== null ? res.data : {}
-      setCache(`asistencias_fecha_${mesActual}`, obj)
-    })
-    .catch(() => {})
-
-  // 5. Eventos y Exámenes
-  api.get('/eventos?excluir=examen')
-    .then(res => {
-      const rawList = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
-      const evs = [...rawList]
-      evs.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-      setCache('eventos_lista', evs)
-    })
-    .catch(() => {})
-
-  api.get('/eventos?tipo=examen')
-    .then(res => {
-      const rawList = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
-      const soloExamenes = [...rawList]
-      soloExamenes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-      setCache('examenes_lista', soloExamenes)
-    })
-    .catch(() => {})
-
-  // 6. Ajustes: Usuarios, Instructores y Academias
-  if (user.role === 'owner' || user.is_superadmin) {
-    api.get('/users')
+  // FASE 2 (Tras 1.2s cuando el inicio ya pintó): Alumnos y Cintas clave
+  setTimeout(() => {
+    api.get('/alumnos')
       .then(res => {
-        const list = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-        setCache('usuarios_lista', list)
+        const list = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+        setCache('alumnos_search_all', list)
       })
       .catch(() => {})
-  }
 
-  if (user.is_superadmin) {
-    api.get('/admin/academias')
+    api.get('/configuraciones-cintas')
       .then(res => {
         const list = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-        setCache('admin_academias_lista', list)
+        setCache('cintas_config', list)
       })
       .catch(() => {})
-  }
+  }, 1200)
 
-  api.get('/instructores')
-    .then(res => {
-      const list = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-      setCache('instructores_lista', list)
-    })
-    .catch(() => {})
+  // FASE 3 (Tras 2.4s): Eventos y Exámenes
+  setTimeout(() => {
+    api.get('/eventos?excluir=examen')
+      .then(res => {
+        const rawList = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+        const evs = [...rawList]
+        evs.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+        setCache('eventos_lista', evs)
+      })
+      .catch(() => {})
+
+    api.get('/eventos?tipo=examen')
+      .then(res => {
+        const rawList = Array.isArray(res.data) ? res.data : (res.data?.data ? Object.values(res.data.data) : Object.values(res.data || {}))
+        const soloExamenes = [...rawList]
+        soloExamenes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+        setCache('examenes_lista', soloExamenes)
+      })
+      .catch(() => {})
+  }, 2400)
+
+  // FASE 4 (Tras 3.8s): Pagos, Horarios y Asistencias
+  setTimeout(() => {
+    Promise.all([
+      api.get('/alumnos', { params: { estatus: 'activo' } }),
+      api.get('/pagos'),
+      api.get('/horarios'),
+      api.get('/configuracion-escuela')
+    ])
+      .then(([resAlumnos, resPagos, resHorarios, resEscuela]) => {
+        const listAlu = Array.isArray(resAlumnos.data) ? resAlumnos.data : (resAlumnos.data?.data || [])
+        const listPag = Array.isArray(resPagos.data) ? resPagos.data : (resPagos.data?.data || [])
+        const listHor = Array.isArray(resHorarios.data) ? resHorarios.data : (resHorarios.data?.data || [])
+
+        setCache('pagos_main_data', {
+          alumnos: listAlu,
+          pagos: listPag,
+          cintas: [],
+          horarios: listHor,
+          escuela: resEscuela.data
+        })
+        setCache('horarios_lista', listHor)
+        setCache('configuracion_escuela', resEscuela.data)
+      })
+      .catch(() => {})
+
+    api.get('/asistencias', { params: { fecha: hoyStr } })
+      .then(res => setCache(`asistencias_dia_${hoyStr}`, res.data, 15 * 60 * 1000))
+      .catch(() => {})
+  }, 3800)
 }

@@ -29,15 +29,6 @@ class Evento extends Model
             if ($evento->costo === '') {
                 $evento->costo = null;
             }
-            if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'precios_cintas')) {
-                unset($evento->precios_cintas);
-            }
-            if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'lugar')) {
-                unset($evento->lugar);
-            }
-            if (!\Illuminate\Support\Facades\Schema::hasColumn('eventos', 'costo')) {
-                unset($evento->costo);
-            }
             if (empty($evento->tenant_id)) {
                 $evento->tenant_id = auth()->user()?->tenant_id ?? \App\Models\Tenant::first()?->id ?? 1;
             }

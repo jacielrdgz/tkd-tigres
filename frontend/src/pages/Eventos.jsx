@@ -261,14 +261,23 @@ export default function Eventos() {
 
     if (!result.isConfirmed) return
 
+    // 1. Eliminación optimista instantánea (0 ms)
+    const eventosOriginales = [...eventos]
+    const nuevaLista = eventos.filter(e => e.id !== id)
+    setEventos(nuevaLista)
+    setCache('eventos_lista', nuevaLista)
+    toast.success('Evento eliminado')
+
+    // 2. Persistir en segundo plano
     try {
       await api.delete(`/eventos/${id}`)
-      toast.success('Evento eliminado correctamente')
       invalidateCache('eventos')
       invalidateCache('eventos_lista')
-      cargarEventos(true)
     } catch (err) {
-      toast.error('No se pudo eliminar el evento')
+      console.error('Error al eliminar evento:', err)
+      setEventos(eventosOriginales)
+      setCache('eventos_lista', eventosOriginales)
+      toast.error('No se pudo eliminar el evento en el servidor')
     }
   }
 

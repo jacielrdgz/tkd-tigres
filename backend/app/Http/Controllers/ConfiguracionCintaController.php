@@ -51,19 +51,20 @@ class ConfiguracionCintaController extends Controller
                     }
                 }
 
-                return $list;
+                return $list->values()->toArray();
             });
 
-            if (!$cintas || $cintas->isEmpty()) {
+            if (empty($cintas)) {
                 Cache::forget($cacheKey);
                 DefaultCintasService::asegurarCintasGlobales();
-                $cintas = ConfiguracionCinta::forTenant($tenantId)->orderBy('orden')->get();
-                if ($cintas->isEmpty()) {
-                    $cintas = ConfiguracionCinta::orderBy('orden')->get();
+                $rawList = ConfiguracionCinta::forTenant($tenantId)->orderBy('orden')->get();
+                if ($rawList->isEmpty()) {
+                    $rawList = ConfiguracionCinta::orderBy('orden')->get();
                 }
+                $cintas = $rawList->values()->toArray();
             }
 
-            return response()->json($cintas ? $cintas->values() : []);
+            return response()->json($cintas ?: []);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error en ConfiguracionCintaController@index: ' . $e->getMessage());
             try {
