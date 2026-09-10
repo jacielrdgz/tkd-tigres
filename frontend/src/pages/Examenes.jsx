@@ -121,10 +121,6 @@ export default function Examenes() {
 
   const abrirEditar = (e, ev) => {
     ev.stopPropagation()
-    if (String(e.id).startsWith('temp_')) {
-      toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
-      return
-    }
     setFormExamen({
       nombre: e.nombre || '',
       tipo: 'examen',
@@ -175,112 +171,62 @@ export default function Examenes() {
       costo: formExamen.costo === '' || formExamen.costo === null || formExamen.costo === undefined ? null : Number(formExamen.costo)
     }
 
-    if (isEdit) {
-      const originalExamen = examenes.find(e => e.id === examenId)
-      const optimisticExamen = {
-        ...originalExamen,
-        ...payload
+    try {
+      if (isEdit) {
+        const res = await api.put(`/eventos/${examenId}`, payload)
+        const updated = res.data?.evento || res.data || payload
+        setExamenes(prev => {
+          const next = prev.map(e => e.id === examenId ? { ...e, ...updated } : e)
+          next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+          setCache('examenes_lista', next)
+          return next
+        })
+        invalidateCache('examenes')
+        invalidateCache('eventos')
+        setModalExamen(false)
+        toast.success('Examen actualizado')
+      } else {
+        const res = await api.post('/eventos', payload)
+        const nuevo = {
+          alumnos_count: 0,
+          total_recaudado: 0,
+          pendientes_pago: 0,
+          alumnos: [],
+          examen_alumnos: [],
+          ...(res.data?.evento || res.data)
+        }
+        setExamenes(prev => {
+          const next = [...prev, nuevo]
+          next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+          setCache('examenes_lista', next)
+          return next
+        })
+        invalidateCache('examenes')
+        invalidateCache('eventos')
+        setModalExamen(false)
+        toast.success('Convocatoria creada')
       }
-
-      // 1. Guardar y mostrar en UI de inmediato
-      setExamenes(prev => {
-        const next = prev.map(e => e.id === examenId ? optimisticExamen : e)
-        next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-        return next
+    } catch (err) {
+      console.error('Error al guardar examen:', err)
+      const msg = err.response?.data?.message || (err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : 'No se pudo guardar la convocatoria del examen en el servidor.')
+      Swal.fire({
+        title: 'Error',
+        text: msg,
+        icon: 'error',
+        confirmButtonColor: 'var(--accent-blue)',
+        background: 'var(--bg-secondary)',
+        color: 'var(--text-primary)'
       })
-      setModalExamen(false)
+    } finally {
       setGuardando(false)
-      toast.success('Examen actualizado')
-
-      // 2. Persistir en backend en segundo plano
-      api.put(`/eventos/${examenId}`, payload)
-        .then(res => {
-          if (res.data) {
-            setExamenes(prev => {
-              const next = prev.map(e => e.id === examenId ? { ...optimisticExamen, ...res.data } : e)
-              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-              return next
-            })
-          }
-          invalidateCache('examenes')
-          invalidateCache('eventos')
-        })
-        .catch(err => {
-          console.error('Error en segundo plano al actualizar examen:', err)
-          if (originalExamen) {
-            setExamenes(prev => {
-              const next = prev.map(e => e.id === examenId ? originalExamen : e)
-              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-              return next
-            })
-          }
-          const msg = err.response?.data?.message || 'No se pudo guardar la convocatoria del examen en el servidor.'
-          Swal.fire({
-            title: 'Error',
-            text: msg,
-            icon: 'error',
-            confirmButtonColor: 'var(--accent-blue)',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-primary)'
-          })
-        })
-
-    } else {
-      const tempId = 'temp_' + Date.now()
-      const optimisticExamen = {
-        ...payload,
-        id: tempId,
-        alumnos_count: 0,
-        total_recaudado: 0,
-        pendientes_pago: 0,
-        alumnos: [],
-        examen_alumnos: [],
-        created_at: new Date().toISOString()
-      }
-
-      // 1. Inserción optimista instantánea
-      setExamenes(prev => {
-        const next = [...prev, optimisticExamen]
-        next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-        return next
-      })
-      setModalExamen(false)
-      setGuardando(false)
-      toast.success('Convocatoria creada')
-
-      // 2. Persistir en backend en segundo plano
-      api.post('/eventos', payload)
-        .then(res => {
-          if (res.data) {
-            setExamenes(prev => {
-              const next = prev.map(e => e.id === tempId ? { ...optimisticExamen, ...res.data } : e)
-              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-              return next
-            })
-          }
-          invalidateCache('examenes')
-          invalidateCache('eventos')
-        })
-        .catch(err => {
-          console.error('Error en segundo plano al crear examen:', err)
-          setExamenes(prev => prev.filter(e => e.id !== tempId))
-          const msg = err.response?.data?.message || 'No se pudo guardar la convocatoria del examen en el servidor.'
-          Swal.fire({
-            title: 'Error',
-            text: msg,
-            icon: 'error',
-            confirmButtonColor: 'var(--accent-blue)',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-primary)'
-          })
-        })
     }
   }
 
   const eliminarExamen = async (id, ev) => {
     ev.stopPropagation()
     if (String(id).startsWith('temp_')) {
-      toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
+      setExamenes(prev => prev.filter(e => e.id !== id))
+      toast.success('Examen eliminado')
       return
     }
 
@@ -549,13 +495,7 @@ export default function Examenes() {
               <div
                 key={e.id}
                 style={{ ...s.card, opacity: esPasado ? 0.88 : 1 }}
-                onClick={() => {
-                  if (String(e.id).startsWith('temp_')) {
-                    toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
-                    return
-                  }
-                  navigate(`/examenes/${e.id}`)
-                }}
+                onClick={() => navigate(`/examenes/${e.id}`)}
                 onMouseEnter={ev => {
                   ev.currentTarget.style.transform = 'translateY(-3px)'
                   ev.currentTarget.style.borderColor = 'var(--accent-blue)'

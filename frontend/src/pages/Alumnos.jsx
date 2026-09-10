@@ -633,7 +633,8 @@ export default function Alumnos() {
   const abrirEliminar = (alumno) => {
     if (!alumno) return
     if (String(alumno.id).startsWith('temp_')) {
-      toast('Sincronizando con el servidor, espera un momento...', { icon: '⏳' })
+      setTodosLosAlumnos(prev => prev.filter(a => a.id !== alumno.id))
+      toastSuccess('Alumno eliminado')
       return
     }
 

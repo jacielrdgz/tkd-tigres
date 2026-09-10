@@ -117,10 +117,6 @@ export default function Eventos() {
 
   const abrirEditar = (e, ev) => {
     ev.stopPropagation()
-    if (String(e.id).startsWith('temp_')) {
-      toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
-      return
-    }
     const tipoNormalizado = e.tipo === 'demostracion' ? 'fogueo' : (e.tipo || 'torneo')
     setFormEvento({
       nombre: e.nombre || '',
@@ -153,97 +149,52 @@ export default function Eventos() {
       costo: formEvento.costo !== '' && formEvento.costo !== null && formEvento.costo !== undefined ? parseFloat(formEvento.costo) : null
     }
 
-    if (isEdit) {
-      const originalEvento = eventos.find(e => e.id === eventoId)
-      const optimisticEvento = {
-        ...originalEvento,
-        ...payload
+    try {
+      if (isEdit) {
+        const res = await api.put(`/eventos/${eventoId}`, payload)
+        const updated = res.data?.evento || res.data || payload
+        setEventos(prev => {
+          const next = prev.map(e => e.id === eventoId ? { ...e, ...updated } : e)
+          next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+          setCache('eventos_lista', next)
+          return next
+        })
+        invalidateCache('eventos')
+        setModalEvento(false)
+        toast.success('Evento actualizado exitosamente')
+      } else {
+        const res = await api.post('/eventos', payload)
+        const nuevo = {
+          alumnos_count: 0,
+          total_recaudado: 0,
+          pendientes_pago: 0,
+          alumnos: [],
+          ...(res.data?.evento || res.data)
+        }
+        setEventos(prev => {
+          const next = [...prev, nuevo]
+          next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+          setCache('eventos_lista', next)
+          return next
+        })
+        invalidateCache('eventos')
+        setModalEvento(false)
+        toast.success('Evento creado exitosamente')
       }
-
-      // 1. Guardar y mostrar en UI de inmediato
-      setEventos(prev => {
-        const next = prev.map(e => e.id === eventoId ? optimisticEvento : e)
-        next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-        return next
-      })
-      setModalEvento(false)
+    } catch (err) {
+      console.error('Error al guardar evento:', err)
+      const msg = err.response?.data?.message || (err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : 'Error al guardar el evento en el servidor')
+      toast.error(msg)
+    } finally {
       setGuardando(false)
-      toast.success('Evento actualizado exitosamente')
-
-      // 2. Persistir en segundo plano
-      api.put(`/eventos/${eventoId}`, payload)
-        .then(res => {
-          if (res.data) {
-            setEventos(prev => {
-              const next = prev.map(e => e.id === eventoId ? { ...optimisticEvento, ...res.data } : e)
-              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-              return next
-            })
-          }
-          invalidateCache('eventos')
-          invalidateCache('eventos_lista')
-        })
-        .catch(err => {
-          console.error('Error en segundo plano al actualizar evento:', err)
-          if (originalEvento) {
-            setEventos(prev => {
-              const next = prev.map(e => e.id === eventoId ? originalEvento : e)
-              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-              return next
-            })
-          }
-          const msg = err.response?.data?.message || 'Error al guardar el evento en el servidor'
-          toast.error(msg)
-        })
-
-    } else {
-      const tempId = 'temp_' + Date.now()
-      const optimisticEvento = {
-        ...payload,
-        id: tempId,
-        alumnos_count: 0,
-        total_recaudado: 0,
-        pendientes_pago: 0,
-        alumnos: [],
-        created_at: new Date().toISOString()
-      }
-
-      // 1. Inserción optimista instantánea
-      setEventos(prev => {
-        const next = [...prev, optimisticEvento]
-        next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-        return next
-      })
-      setModalEvento(false)
-      setGuardando(false)
-      toast.success('Evento creado exitosamente')
-
-      // 2. Persistir en segundo plano
-      api.post('/eventos', payload)
-        .then(res => {
-          if (res.data) {
-            setEventos(prev => {
-              const next = prev.map(e => e.id === tempId ? { ...optimisticEvento, ...res.data } : e)
-              next.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
-              return next
-            })
-          }
-          invalidateCache('eventos')
-          invalidateCache('eventos_lista')
-        })
-        .catch(err => {
-          console.error('Error en segundo plano al crear evento:', err)
-          setEventos(prev => prev.filter(e => e.id !== tempId))
-          const msg = err.response?.data?.message || 'Error al guardar el evento en el servidor'
-          toast.error(msg)
-        })
     }
   }
 
   const eliminarEvento = async (id, ev) => {
     ev.stopPropagation()
     if (String(id).startsWith('temp_')) {
-      toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
+      setEventos(prev => prev.filter(e => e.id !== id))
+      toast.success('Evento eliminado')
       return
     }
 
@@ -409,13 +360,7 @@ export default function Eventos() {
           ...s.card,
           opacity: esPasado ? 0.8 : 1
         }}
-        onClick={() => {
-          if (String(e.id).startsWith('temp_')) {
-            toast('Sincronizando con el servidor, un momento...', { icon: '⏳' })
-            return
-          }
-          navigate(`/eventos/${e.id}`)
-        }}
+        onClick={() => navigate(`/eventos/${e.id}`)}
         onMouseEnter={ev => {
           ev.currentTarget.style.transform = 'translateY(-3px)'
           ev.currentTarget.style.boxShadow = 'var(--shadow-lg)'
